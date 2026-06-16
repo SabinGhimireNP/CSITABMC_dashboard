@@ -24,53 +24,66 @@ import {
   Users,
   Award,
   FileText,
+  CalendarDays,
+  UserCheck,
+  ShieldAlert,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const sidebarSections = [
   {
-    label: "Overview",
+    label: "Analytics",
     items: [
       {
-        title: "Dashboard",
+        title: "Overview",
         url: "/dashboard",
         icon: LayoutDashboard,
       },
     ],
   },
   {
-    label: "Contents",
+    label: "Communications",
     items: [
-      {
-        title: "Certificates",
-        url: "/certificates",
-        icon: Award,
-      },
-      {
-        title: "Events",
-        url: "/events",
-        icon: Calendars,
-      },
-      {
-        title: "Mentors",
-        url: "/mentors",
-        icon: User,
-      },
       {
         title: "Notices",
         url: "/notices",
         icon: FileText,
       },
+    ],
+  },
+  {
+    label: "Event Engine",
+    items: [
       {
-        title: "Admins",
-        url: "/admins",
-        icon: ShieldCheck,
+        title: "Manage Events",
+        url: "/events",
+        icon: CalendarDays,
       },
       {
-        title: "Members",
+        title: "Event Mentors",
+        url: "/mentors",
+        icon: UserCheck,
+      },
+      {
+        title: "Certificates",
+        url: "/certificates",
+        icon: Award,
+      },
+    ],
+  },
+  {
+    label: "Management",
+    items: [
+      {
+        title: "Team Members",
         url: "/members",
         icon: Users,
+      },
+      {
+        title: "Admin Access",
+        url: "/admins",
+        icon: ShieldAlert,
       },
     ],
   },
@@ -108,7 +121,7 @@ export function SideBar() {
                       className={cn(
                         "group flex items-center px-2.5 py-2 text-sm rounded-md transition-all duration-200",
                         isActive
-                          ? "bg-brand-primary text-white border-l-4 border-brand-tertiary shadow-md hover:bg-brand-primary/90! hover:text-white!"
+                          ? "bg-brand-primary text-white shadow-md hover:bg-brand-primary/90! hover:text-white!"
                           : "text-brand-text hover:bg-brand-primary/10! hover:text-brand-secondary!",
                       )}
                     >
