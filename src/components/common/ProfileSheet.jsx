@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, LogOut, Settings, ShieldCheck, User } from "lucide-react";
+import { Building2, Edit, LogOut, Settings, ShieldCheck, User } from "lucide-react";
 
 const ProfileSheet = () => {
   const router = useRouter();
@@ -65,39 +65,18 @@ const ProfileSheet = () => {
           </div>
 
           {/* button for profile sheets if needed to add settings and other things here in future */}
-          {/* <div className="p-1">
-            <button
-              onClick={() => {
-                setOpen(false);
-                router.push("/profile");
-              }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-brand-secondary hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2 text-sm font-medium">
-                {user?.type === "company" ? (
-                  <>
-                    <Building2 className="size-4" />
-                    <span>Company Details</span>
-                  </>
-                ) : (
-                  <>
-                    <User className="size-4" />
-                    <span>Personal Details</span>
-                  </>
-                )}
-              </div>
-            </button>
+          <div className="p-1">
 
             <button
               onClick={() => {
                 setOpen(false);
                 router.push("/settings");
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-brand-secondary hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-brand-primary hover:bg-brand-primary/10 hover:text-brand-primary transition-colors cursor-pointer"
             >
-              <Settings className="size-4" /> Settings
+              <Edit className="size-4" /> Change Password
             </button>
-          </div> */}
+          </div>
 
           <div className="p-1 border-t border-brand-primary/10">
             <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer">
