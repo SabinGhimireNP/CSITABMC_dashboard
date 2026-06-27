@@ -190,7 +190,7 @@ export default function NoticeHistoryPage() {
          <NoticeTabs activeTab={activeTab} onTabChange={setActiveTab} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
 
-      <div className="w-full bg-card rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
         <NoticeTable 
           notices={paginatedNotices} 
           onEditNotice={handleEditNoticeTrigger} 

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowUpDown, Eye, FileText, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, Copy } from "lucide-react";
-import { NoticePagination } from "./noticePagination";
+import { ArrowUpDown, FileText, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, Copy } from "lucide-react";
+import { Pagination } from "@/components/common/pagination";
 
 export function NoticeTable({ 
   notices = [], 
@@ -41,6 +41,7 @@ export function NoticeTable({
   const getStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
       case "published":
+      case "active":
         return "bg-emerald-50 text-emerald-700 border-emerald-200/60";
       case "draft":
         return "bg-amber-50 text-amber-700 border-amber-200/60";
@@ -67,56 +68,64 @@ export function NoticeTable({
     <div className="w-full flex flex-col" ref={dropdownRef}>
       {/* Scrollable table data region */}
       <div className="w-full overflow-x-auto scrollbar-thin">
-        <table className="w-full text-left border-collapse min-w-[750px]">
+        <table className="w-full text-left border-collapse min-w-[800px] table-fixed">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-500 font-semibold text-xs select-none">
+            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
               <th 
                 onClick={() => onHeaderClick("id")}
-                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-20"
+                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[10%]"
               >
                 <div className="flex items-center gap-1.5">ID <SortIndicator field="id" /></div>
               </th>
-              <th className="py-3.5 px-4 w-16">Image</th>
+              <th className="py-3 px-4 w-[10%]">Image</th>
               <th 
                 onClick={() => onHeaderClick("title")}
-                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[35%]"
+                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[40%]"
               >
                 <div className="flex items-center gap-1.5">Title <SortIndicator field="title" /></div>
               </th>
               <th 
                 onClick={() => onHeaderClick("category")}
-                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors"
+                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[15%]"
               >
                 <div className="flex items-center gap-1.5">Category <SortIndicator field="category" /></div>
               </th>
               <th 
                 onClick={() => onHeaderClick("createdAt")}
-                className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors"
+                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[13%]"
               >
                 <div className="flex items-center gap-1.5">Date Created <SortIndicator field="createdAt" /></div>
               </th>
-              <th className="py-3.5 px-4">Status</th>
-              <th className="py-3.5 px-4 text-right pr-6">Actions</th>
+              <th className="py-3 px-4 w-[12%]">Status</th>
+              <th className="py-3 px-4 text-right pr-6 w-[10%]">Actions</th>
             </tr>
           </thead>
           
-          <tbody className="divide-y divide-slate-100/70 text-slate-700 text-xs">
+          <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
             {notices.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium bg-white">
                   No matching notices discovered.
                 </td>
               </tr>
             ) : (
               notices.map((notice) => (
-                <tr key={notice.id} className="hover:bg-slate-50/40 transition-colors group">
-                  <td className="py-3.5 px-4 font-semibold text-slate-900 tabular-nums">
+                <tr key={notice.id} className="hover:bg-slate-50/40 transition-colors group h-14 bg-white">
+                  {/* ID */}
+                  <td className="py-2 px-4 font-semibold text-slate-900 tabular-nums truncate">
                     {notice.id}
                   </td>
-                  <td className="py-3.5 px-4">
+                  
+                  {/* Image Container */}
+                  <td className="py-2 px-4 vertical-middle">
                     {notice.image ? (
                       <div className="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 shrink-0">
-                        <img src={notice.image} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                        <img 
+                          src={notice.image} 
+                          alt="" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.target.style.display = 'none'; }} 
+                        />
                       </div>
                     ) : (
                       <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200/60 text-slate-400 shrink-0">
@@ -124,37 +133,52 @@ export function NoticeTable({
                       </div>
                     )}
                   </td>
-                  <td className="py-3.5 px-4 max-w-[320px]">
-                    <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                  
+                  {/* Title */}
+                  <td className="py-2 px-4 max-w-xs truncate">
+                    <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors block truncate">
                       {notice.title}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 font-medium text-slate-600">{notice.category}</td>
-                  <td className="py-3.5 px-4 font-normal text-slate-500 tabular-nums">{notice.createdAt}</td>
-                  <td className="py-3.5 px-4">
+                  
+                  {/* Category */}
+                  <td className="py-2 px-4 font-medium text-slate-600 truncate">
+                    {notice.category}
+                  </td>
+                  
+                  {/* Date Created */}
+                  <td className="py-2 px-4 font-normal text-slate-500 tabular-nums truncate">
+                    {notice.createdAt}
+                  </td>
+                  
+                  {/* Status Badge */}
+                  <td className="py-2 px-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusStyle(notice.status)}`}>
-                      {(notice.status).toUpperCase()}
+                      {(notice.status || "DRAFT").toUpperCase()}
                     </span>
                   </td>
                   
-                  {/* Action Menu Trigger Button */}
-                  <td className="py-3.5 px-4 text-right pr-6 relative">
-                    <div className="inline-block text-left">
+                  {/* Action Dropdown Isolation Cell */}
+                  <td className="py-2 px-4 text-right pr-6">
+                    <div className="relative inline-block text-left">
                       <button 
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActiveMenuId(activeMenuId === notice.id ? null : notice.id);
                         }}
                         className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                          activeMenuId === notice.id ? "bg-slate-100 text-slate-800 relative z-30" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                          activeMenuId === notice.id 
+                            ? "bg-slate-100 text-slate-800" 
+                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                       </button>
 
-                      {/* Dropdown Menu Overlay */}
+                      {/* Stabilized Dropdown Overlay Context */}
                       {activeMenuId === notice.id && (
-                        <div className="absolute right-6 mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-40 animate-in fade-in slide-in-from-top-1 duration-100 origin-top-right">
+                        <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-40 animate-in fade-in slide-in-from-top-1 duration-100 origin-top-right">
                           <button
                             type="button"
                             onClick={() => {
@@ -201,9 +225,9 @@ export function NoticeTable({
         </table>
       </div>
 
-      {/* Embedded Table Footer */}
-      <div className="border-t border-slate-100 bg-slate-50/30">
-        <NoticePagination
+      {/* Table Footer Boundary */}
+      <div className="border-t border-slate-200/80 bg-slate-50/30">
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           totalRows={totalRows}
@@ -214,7 +238,7 @@ export function NoticeTable({
         />
       </div>
 
-      {/* GLOBAL DELETE CONFIRMATION DIALOG MODAL */}
+      {/* DELETE DIALOG MODAL LAYOUT OVERLAY */}
       {noticeToDelete && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
           <div 
@@ -222,6 +246,7 @@ export function NoticeTable({
             onClick={(e) => e.stopPropagation()}
           >
             <button 
+              type="button"
               onClick={() => setNoticeToDelete(null)}
               className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer"
             >

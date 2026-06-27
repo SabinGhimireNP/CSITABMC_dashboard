@@ -3,7 +3,7 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export function NoticePagination({
+export function Pagination({
   currentPage,
   totalPages,
   totalRows,
