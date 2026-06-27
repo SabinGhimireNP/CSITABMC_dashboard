@@ -376,7 +376,7 @@ export function NoticeFormModal({
                   >
                     <Heading3 className="h-3.5 w-3.5" />
                   </button>
-                  <div className="w-[1px] h-4 bg-slate-200 mx-1" />
+                  <div className="w-px h-4 bg-slate-200 mx-1" />
                   <button
                     type="button"
                     onClick={() => injectMarkdownSyntax("bold")}
@@ -398,7 +398,7 @@ export function NoticeFormModal({
                   >
                     <Quote className="h-3.5 w-3.5" />
                   </button>
-                  <div className="w-[1px] h-4 bg-slate-200 mx-1" />
+                  <div className="w-px h-4 bg-slate-200 mx-1" />
                   <button
                     type="button"
                     onClick={() => injectMarkdownSyntax("ul")}
@@ -427,7 +427,7 @@ export function NoticeFormModal({
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <div className="w-[1px] h-4 bg-slate-200 mx-1" />
+                  <div className="w-px h-4 bg-slate-200 mx-1" />
                   <button
                     type="button"
                     onClick={() => injectMarkdownSyntax("code-inline")}
@@ -471,11 +471,11 @@ export function NoticeFormModal({
                   onChange={handleInputChange}
                   rows={6}
                   placeholder="Type or compile documentation components..."
-                  className="w-full p-4 focus:outline-none resize-y min-h-[150px] border-0 text-slate-700 leading-relaxed font-mono text-[11px] bg-transparent"
+                  className="w-full p-4 focus:outline-none resize-y min-h-37.5 border-0 text-slate-700 leading-relaxed font-mono text-[11px] bg-transparent"
                 />
               ) : (
                 <div
-                  className="w-full p-5 min-h-[150px] max-h-[300px] overflow-y-auto bg-slate-50/40 text-slate-700 leading-relaxed prose prose-slate max-w-none prose-sm"
+                  className="w-full p-5 min-h-37.5 max-h-75 overflow-y-auto bg-slate-50/40 text-slate-700 leading-relaxed prose prose-slate max-w-none prose-sm"
                   dangerouslySetInnerHTML={{
                     __html: renderMarkdownToHtml(formData.description),
                   }}

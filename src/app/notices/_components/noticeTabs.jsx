@@ -11,7 +11,7 @@ export function NoticeTabs({ activeTab, onTabChange, searchQuery, onSearchChange
   ];
 
   return (
-    <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
       {/* Tabs Container */}
       <div className="inline-flex items-center bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-xl max-w-full overflow-x-auto scrollbar-none select-none shrink-0">
         {tabs.map((tab) => {

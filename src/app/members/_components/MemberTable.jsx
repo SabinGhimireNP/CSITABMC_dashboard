@@ -84,7 +84,7 @@ export function MemberTable({
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ position: "absolute", top: menuPosition.top, left: menuPosition.left }}
-        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-[9999] animate-in fade-in slide-in-from-top-1 duration-100"
+        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-99999 animate-in fade-in slide-in-from-top-1 duration-100"
       >
         <button type="button"
           onClick={() => { if (onEditMember) onEditMember(member); setActiveMenuId(null); }}
@@ -105,7 +105,7 @@ export function MemberTable({
   return (
     <div className="w-full flex flex-col">
       <div className="w-full overflow-x-auto scrollbar-thin">
-        <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
+        <table className="w-full text-left border-collapse min-w-225 table-fixed">
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
               <th onClick={() => onHeaderClick("memberId")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
