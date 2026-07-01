@@ -21,6 +21,7 @@ export const Events = [
     image: null,
     description: "A hands-on 3-day bootcamp covering HTML, CSS, and JavaScript fundamentals for absolute beginners.",
     mentors: [1, 2],
+    status: "published",
   },
   {
     id: 2,
@@ -41,6 +42,7 @@ export const Events = [
     image: null,
     description: "48-hour hackathon focused on building practical machine learning applications.",
     mentors: [2, 3],
+    status: "published",
   },
   {
     id: 3,
@@ -61,6 +63,7 @@ export const Events = [
     image: null,
     description: "A live session exploring scalable cloud architecture patterns and best practices.",
     mentors: [3],
+    status: "draft",
   },
   {
     id: 4,
@@ -81,5 +84,6 @@ export const Events = [
     image: null,
     description: "An evening of mingling and idea exchange for early-stage founders and investors.",
     mentors: [1],
+    status: "published",
   },
 ];

@@ -82,6 +82,7 @@ export const eventSchema = z
       if (Array.isArray(val)) return val;
       return val ? [val] : [];
     }),
+    status: z.enum(["published", "draft"]).default("published"),
   })
   .refine(
     (data) => {

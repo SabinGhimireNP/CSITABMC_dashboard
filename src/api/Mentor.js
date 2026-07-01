@@ -9,6 +9,7 @@ export const Mentors = [
     image: null,
     events: [1, 4],
     role: "Lead Mentor",
+    status: "published",
   },
   {
     id: 2,
@@ -17,6 +18,7 @@ export const Mentors = [
     image: null,
     events: [1, 2],
     role: "Technical Mentor",
+    status: "draft",
   },
   {
     id: 3,
@@ -25,5 +27,6 @@ export const Mentors = [
     image: null,
     events: [2, 3],
     role: "Co-Mentor",
+    status: "published",
   },
 ];

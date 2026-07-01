@@ -10,6 +10,7 @@ export function EventTable({
   onDeleteEvent,
   onEditEvent,
   onDuplicateEvent,
+  onUpdateEventStatus,
   sortField,
   sortOrder,
   onHeaderClick,
@@ -120,8 +121,9 @@ export function EventTable({
               <th onClick={() => onHeaderClick("startDate")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[16%]">
                 <div className="flex items-center gap-1.5">Dates <SortIndicator field="startDate" /></div>
               </th>
-              <th className="py-3 px-4 w-[12%]">Seats</th>
-              <th className="py-3 px-4 w-[12%]">Registration</th>
+              <th onClick={() => onHeaderClick("status")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
+                <div className="flex items-center gap-1.5">Status <SortIndicator field="status" /></div>
+              </th>
               <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
             </tr>
           </thead>
@@ -129,7 +131,7 @@ export function EventTable({
           <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
             {events.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium bg-white">
+                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium bg-white">
                   No matching events discovered.
                 </td>
               </tr>
@@ -164,12 +166,19 @@ export function EventTable({
                     {formatDateRange(event.startDate, event.endDate)}
                   </td>
 
-                  <td className="py-2 px-4 font-medium text-slate-600 tabular-nums truncate">{event.availableSeats}</td>
-
-                  <td className="py-2 px-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getRegistrationStyle(event.registrationOpen)}`}>
-                      {event.registrationOpen ? "OPEN" : "CLOSED"}
-                    </span>
+                  <td className="py-2 px-4 truncate">
+                    <div className="flex items-center justify-start gap-2">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${event.status === "published" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-amber-50 text-amber-700 border-amber-200/60"}`}>
+                        {event.status || "—"}
+                      </span>
+                      {onUpdateEventStatus && (
+                        event.status === "published" ? (
+                          <button onClick={(e) => { e.stopPropagation(); onUpdateEventStatus(event.id, "draft"); }} className="text-[11px] text-slate-500 hover:text-rose-600">Save as Draft</button>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); onUpdateEventStatus(event.id, "published"); }} className="text-[11px] text-slate-500 hover:text-emerald-700">Publish</button>
+                        )
+                      )}
+                    </div>
                   </td>
 
                   <td className="py-2 px-4 text-right pr-6">

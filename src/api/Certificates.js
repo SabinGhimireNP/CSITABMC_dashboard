@@ -25,5 +25,5 @@ export const Certificates = [
     event: 3,
     fullName: "Kiran Basnet",
     isProjectComplete: true,
-  },
+  } 
 ];

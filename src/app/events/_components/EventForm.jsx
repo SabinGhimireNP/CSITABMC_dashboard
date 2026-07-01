@@ -26,6 +26,7 @@ export function EventFormModal({
     registrationFee: "",
     location: "",
     category: "",
+    status: "published",
     tags: "",
     image: undefined,
     description: "",
@@ -54,6 +55,7 @@ export function EventFormModal({
         registrationFee: initialData?.registrationFee ?? "",
         location: initialData?.location || "",
         category: initialData?.category || "",
+        status: initialData?.status || "published",
         tags: Array.isArray(initialData?.tags)
           ? initialData.tags.join(", ")
           : initialData?.tags || "",
@@ -234,6 +236,26 @@ export function EventFormModal({
               {errors.category && (
                 <p className="text-rose-500 text-[11px] font-medium mt-0.5">
                   {errors.category}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-semibold text-slate-700">Status</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className={`w-full h-9 px-2.5 border rounded-lg bg-white focus:outline-none focus:ring-1 transition-all cursor-pointer ${
+                  errors.status ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
+                }`}
+              >
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+              {errors.status && (
+                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
+                  {errors.status}
                 </p>
               )}
             </div>

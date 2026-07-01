@@ -8,6 +8,8 @@ export function EventTabs({ activeTab, onTabChange, searchQuery, onSearchChange 
     { id: "all", label: "All Events" },
     { id: "open", label: "Registration Open" },
     { id: "closed", label: "Registration Closed" },
+    { id: "published", label: "Published" },
+    { id: "draft", label: "Drafts" },
   ];
 
   return (

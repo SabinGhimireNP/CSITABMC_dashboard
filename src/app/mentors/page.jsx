@@ -1,18 +1,18 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Events as initialEvents } from "@/api/Events";
 import { Mentors as initialMentors } from "@/api/Mentor";
-import { EventTable } from "./_components/EventTable";
-import { EventTabs } from "./_components/EventTabs";
-import { EventFormModal } from "./_components/EventForm";
+import { Events as initialEvents } from "@/api/Events";
+import { MENTOR_ROLES } from "@/lib/Schema/mentorSchema";
+import { MentorTable } from "./_components/MentorsTable";
+import { MentorTabs } from "./_components/MentorTabs";
+import { MentorFormModal } from "./_components/MentorForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
-export default function EventsHistoryPage() {
-  const [liveEvents, setLiveEvents] = useState(initialEvents);
-  // Mentors are read-only here — managed on the Mentors page — but needed for the multi-select
-  const [mentorsList] = useState(initialMentors);
+export default function MentorsPage() {
+  const [liveMentors, setLiveMentors] = useState(initialMentors);
+  const [eventsList] = useState(initialEvents);
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,10 +32,7 @@ export default function EventsHistoryPage() {
     } else {
       if (sortOrder === "none") setSortOrder("asc");
       else if (sortOrder === "asc") setSortOrder("desc");
-      else {
-        setSortOrder("none");
-        setSortField(null);
-      }
+      else { setSortOrder("none"); setSortField(null); }
     }
     setCurrentPage(1);
   };
@@ -47,42 +44,30 @@ export default function EventsHistoryPage() {
     setCurrentPage(1);
   };
 
-  const handleDeleteEvent = (id) => {
-    setLiveEvents((prev) => prev.filter((e) => e.id !== id));
+  const handleDeleteMentor = (id) => {
+    setLiveMentors((prev) => prev.filter((m) => m.id !== id));
   };
 
-  const handleEditEventTrigger = (event) => {
-    setFormMode({ isOpen: true, editData: event });
+  const handleEditMentorTrigger = (mentor) => {
+    setFormMode({ isOpen: true, editData: mentor });
   };
 
-  const handleDuplicateEventTrigger = (event) => {
+  const handleDuplicateMentorTrigger = (mentor) => {
     setFormMode({
       isOpen: true,
       editData: {
-        title: `${event.title} (Copy)`,
-        registrationOpen: event.registrationOpen,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        startTime: event.startTime,
-        endTime: event.endTime,
-        organizer: event.organizer,
-        availableSeats: event.availableSeats,
-        registrationFormUrl: event.registrationFormUrl,
-        registrationFeeBMC: event.registrationFeeBMC,
-        registrationFee: event.registrationFee,
-        location: event.location,
-        category: event.category,
-        tags: event.tags,
-        image: event.image,
-        description: event.description,
-        mentors: event.mentors,
+        fullName: `${mentor.fullName} (Copy)`,
+        socialLink: mentor.socialLink,
+        image: mentor.image,
+        events: mentor.events,
+        role: mentor.role,
       },
     });
   };
 
   const handleFormSubmitSuccess = (formData) => {
     if (formMode.editData && formMode.editData.id) {
-      setLiveEvents((prev) =>
+      setLiveMentors((prev) =>
         prev.map((item) =>
           item.id === formMode.editData.id
             ? {
@@ -96,44 +81,34 @@ export default function EventsHistoryPage() {
         )
       );
     } else {
-      const nextId = liveEvents.length > 0 ? Math.max(...liveEvents.map((e) => Number(e.id) || 0)) + 1 : 1;
-      const freshEvent = {
+      const nextId = liveMentors.length > 0 ? Math.max(...liveMentors.map((m) => Number(m.id) || 0)) + 1 : 1;
+      const freshMentor = {
         id: nextId,
         ...formData,
         image: formData.image instanceof File
           ? URL.createObjectURL(formData.image)
           : (formMode.editData?.image || null),
       };
-      setLiveEvents((prev) => [freshEvent, ...prev]);
+      setLiveMentors((prev) => [freshMentor, ...prev]);
       setCurrentPage(1);
     }
-
     setFormMode({ isOpen: false, editData: null });
   };
 
-  const processedEvents = useMemo(() => {
-    let dataset = [...liveEvents];
+  const processedMentors = useMemo(() => {
+    let dataset = [...liveMentors];
 
-    if (activeTab === "open") {
-      dataset = dataset.filter((e) => e.registrationOpen);
-    } else if (activeTab === "closed") {
-      dataset = dataset.filter((e) => !e.registrationOpen);
-    }
-    // status filter
-    if (activeTab === "published") {
-      dataset = dataset.filter((e) => e.status === "published");
-    } else if (activeTab === "draft") {
-      dataset = dataset.filter((e) => e.status === "draft");
+    // Tab filters by status
+    if (activeTab !== "all") {
+      dataset = dataset.filter((m) => m.status === activeTab);
     }
 
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
       dataset = dataset.filter(
-        (e) =>
-          e.title?.toLowerCase().includes(query) ||
-          e.category?.toLowerCase().includes(query) ||
-          e.organizer?.toLowerCase().includes(query) ||
-          e.location?.toLowerCase().includes(query)
+        (m) =>
+          m.fullName?.toLowerCase().includes(query) ||
+          m.role?.toLowerCase().includes(query)
       );
     }
 
@@ -148,14 +123,6 @@ export default function EventsHistoryPage() {
           return sortOrder === "asc" ? numA - numB : numB - numA;
         }
 
-        if (sortField === "startDate") {
-          const timeA = valA ? new Date(valA).getTime() : 0;
-          const timeB = valB ? new Date(valB).getTime() : 0;
-          if (!isNaN(timeA) && !isNaN(timeB)) {
-            return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
-          }
-        }
-
         valA = valA?.toString().toLowerCase() || "";
         valB = valB?.toString().toLowerCase() || "";
         return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -163,27 +130,27 @@ export default function EventsHistoryPage() {
     }
 
     return dataset;
-  }, [liveEvents, activeTab, searchQuery, sortField, sortOrder]);
+  }, [liveMentors, activeTab, searchQuery, sortField, sortOrder]);
 
-  const handleUpdateEventStatus = (id, status) => {
-    setLiveEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+  const handleUpdateMentorStatus = (id, status) => {
+    setLiveMentors((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
   };
 
-  const totalRows = processedEvents.length;
+  const totalRows = processedMentors.length;
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
-  const paginatedEvents = useMemo(() => {
+  const paginatedMentors = useMemo(() => {
     const startOffset = (currentPage - 1) * rowsPerPage;
-    return processedEvents.slice(startOffset, startOffset + rowsPerPage);
-  }, [processedEvents, currentPage, rowsPerPage]);
+    return processedMentors.slice(startOffset, startOffset + rowsPerPage);
+  }, [processedMentors, currentPage, rowsPerPage]);
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Events</h1>
-          <p className="text-sm text-muted-foreground font-normal">Manage, schedule, and review your platform events.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-primary">Mentors</h1>
+          <p className="text-sm text-muted-foreground font-normal">Manage mentors and their linked events.</p>
         </div>
         <div className="shrink-0">
           <Button
@@ -192,22 +159,29 @@ export default function EventsHistoryPage() {
             className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" />
-            Create Event
+            Add Mentor
           </Button>
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <EventTabs activeTab={activeTab} onTabChange={setActiveTab} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <MentorTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          roles={MENTOR_ROLES}
+        />
       </div>
 
       <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
-        <EventTable
-          events={paginatedEvents}
-          onEditEvent={handleEditEventTrigger}
-          onDuplicateEvent={handleDuplicateEventTrigger}
-          onDeleteEvent={handleDeleteEvent}
-          onUpdateEventStatus={handleUpdateEventStatus}
+        <MentorTable
+          mentors={paginatedMentors}
+          eventsList={eventsList}
+          onEditMentor={handleEditMentorTrigger}
+          onDuplicateMentor={handleDuplicateMentorTrigger}
+          onDeleteMentor={handleDeleteMentor}
+          onUpdateMentorStatus={handleUpdateMentorStatus}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleRowsPerPageChange}
           currentPage={currentPage}
@@ -220,10 +194,10 @@ export default function EventsHistoryPage() {
         />
       </div>
 
-      <EventFormModal
+      <MentorFormModal
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
-        mentorsList={mentorsList}
+        eventsList={eventsList}
         onSubmitSuccess={handleFormSubmitSuccess}
         onCancel={() => setFormMode({ isOpen: false, editData: null })}
       />

@@ -36,4 +36,5 @@ export const mentorSchema = z.object({
     }),
 
   role: z.string().min(1, "Role is required"),
+  status: z.enum(["published", "draft"]).default("published"),
 });
