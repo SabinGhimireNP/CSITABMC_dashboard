@@ -6,8 +6,6 @@ import { Search } from "lucide-react";
 export function EventTabs({ activeTab, onTabChange, searchQuery, onSearchChange }) {
   const tabs = [
     { id: "all", label: "All Events" },
-    { id: "open", label: "Registration Open" },
-    { id: "closed", label: "Registration Closed" },
     { id: "published", label: "Published" },
     { id: "draft", label: "Drafts" },
   ];
@@ -31,11 +29,11 @@ export function EventTabs({ activeTab, onTabChange, searchQuery, onSearchChange 
             >
               {tab.label}
 
-              {tab.id === "open" && (
+              {tab.id === "published" && (
                 <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-emerald-500"}`} />
               )}
-              {tab.id === "closed" && (
-                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-rose-400"}`} />
+              {tab.id === "draft" && (
+                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-amber-400"}`} />
               )}
             </button>
           );

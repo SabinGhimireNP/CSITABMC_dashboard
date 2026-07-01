@@ -135,14 +135,14 @@ export function EventFormModal({
     .filter(Boolean);
 
   const handleActionClick = async (e, chosenStatus) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setSubmitType(chosenStatus);
     setErrors({});
 
     const dataToValidate = {
       ...formData,
-      registrationOpen:
-        chosenStatus === "open" ? true : formData.registrationOpen,
+      status: chosenStatus === "draft" || chosenStatus === "published" ? chosenStatus : formData.status,
+      registrationOpen: chosenStatus === "open" ? true : formData.registrationOpen,
     };
     const result = eventSchema.safeParse(dataToValidate);
 
@@ -236,26 +236,6 @@ export function EventFormModal({
               {errors.category && (
                 <p className="text-rose-500 text-[11px] font-medium mt-0.5">
                   {errors.category}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-2.5 border rounded-lg bg-white focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.status ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              >
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-              </select>
-              {errors.status && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.status}
                 </p>
               )}
             </div>
@@ -660,27 +640,40 @@ export function EventFormModal({
             type="button"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+            className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
           >
             Cancel
           </button>
 
-          <button
-            type="button"
-            disabled={submitType !== null}
-            onClick={(e) => handleActionClick(e, "save")}
-            className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
-          >
-            {submitType === "save" ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
-              </>
-            ) : initialData ? (
-              "Save Changes"
-            ) : (
-              "Create Event"
-            )}
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-2">
+            <button
+              type="button"
+              disabled={submitType !== null}
+              onClick={(e) => handleActionClick(e, "draft")}
+              className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              {submitType === "draft" ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+              ) : (
+                "Save as Draft"
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={submitType !== null}
+              onClick={(e) => handleActionClick(e, "published")}
+              className="h-9 px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+            >
+              {submitType === "publish" ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Publishing...</>
+              ) : initialData ? (
+                "Save Changes"
+              ) : (
+                "Publish"
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

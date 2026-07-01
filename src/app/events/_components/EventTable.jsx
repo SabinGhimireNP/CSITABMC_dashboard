@@ -167,18 +167,9 @@ export function EventTable({
                   </td>
 
                   <td className="py-2 px-4 truncate">
-                    <div className="flex items-center justify-start gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${event.status === "published" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-amber-50 text-amber-700 border-amber-200/60"}`}>
-                        {event.status || "—"}
-                      </span>
-                      {onUpdateEventStatus && (
-                        event.status === "published" ? (
-                          <button onClick={(e) => { e.stopPropagation(); onUpdateEventStatus(event.id, "draft"); }} className="text-[11px] text-slate-500 hover:text-rose-600">Save as Draft</button>
-                        ) : (
-                          <button onClick={(e) => { e.stopPropagation(); onUpdateEventStatus(event.id, "published"); }} className="text-[11px] text-slate-500 hover:text-emerald-700">Publish</button>
-                        )
-                      )}
-                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${event.status === "published" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-amber-50 text-amber-700 border-amber-200/60"}`}>
+                      {(event.status && event.status.toUpperCase()) || "—"}
+                    </span>
                   </td>
 
                   <td className="py-2 px-4 text-right pr-6">

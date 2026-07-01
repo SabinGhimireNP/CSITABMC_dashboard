@@ -96,12 +96,18 @@ export function MentorFormModal({
     .map((id) => eventsList.find((e) => String(e.id) === String(id))?.title)
     .filter(Boolean);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitType("save");
+  const handleSubmit = async (e, statusOverride) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const targetType = statusOverride === "draft" ? "draft" : "publish";
+    setSubmitType(targetType);
     setErrors({});
 
-    const result = mentorSchema.safeParse(formData);
+    const dataToValidate = {
+      ...formData,
+      status: statusOverride || formData.status,
+    };
+
+    const result = mentorSchema.safeParse(dataToValidate);
 
     if (!result.success) {
       const formattedErrors = {};
@@ -178,22 +184,6 @@ export function MentorFormModal({
                 ))}
               </select>
               {errors.role && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.role}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-2.5 border rounded-lg bg-white focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.status ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              >
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-              </select>
-              {errors.status && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.status}</p>}
             </div>
           </div>
 
@@ -301,22 +291,40 @@ export function MentorFormModal({
             type="button"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+            className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
           >
             Cancel
           </button>
-          <button
-            type="button"
-            disabled={submitType !== null}
-            onClick={handleSubmit}
-            className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
-          >
-            {submitType === "save" ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
-            ) : (
-              initialData ? "Save Changes" : "Add Mentor"
-            )}
-          </button>
+
+          <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-2">
+            <button
+              type="button"
+              disabled={submitType !== null}
+              onClick={(e) => handleSubmit(e, "draft")}
+              className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              {submitType === "draft" ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+              ) : (
+                "Save as Draft"
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={submitType !== null}
+              onClick={(e) => handleSubmit(e, "published")}
+              className="h-9 px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+            >
+              {submitType === "publish" ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Publishing...</>
+              ) : initialData ? (
+                "Save Changes"
+              ) : (
+                "Publish"
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
