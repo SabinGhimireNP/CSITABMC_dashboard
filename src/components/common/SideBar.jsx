@@ -27,10 +27,10 @@ import {
   CalendarDays,
   UserCheck,
   ShieldAlert,
+  FileKey,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-
 const sidebarSections = [
   {
     label: "Analytics",
@@ -42,6 +42,7 @@ const sidebarSections = [
       },
     ],
   },
+
   {
     label: "Communications",
     items: [
@@ -69,6 +70,16 @@ const sidebarSections = [
         title: "Certificates",
         url: "/certificates",
         icon: Award,
+      },
+    ],
+  },
+  {
+    label: "Academic Resources",
+    items: [
+      {
+        title: "Past Papers",
+        url: "/past-papers",
+        icon: FileKey, // Or FileSpreadsheet, Notebook, etc.
       },
     ],
   },
@@ -111,7 +122,8 @@ export function SideBar() {
 
             <SidebarMenu className="space-y-1">
               {section.items.map((item) => {
-                const isActive = pathname === item.url || pathname.startsWith(item.url + "/");
+                const isActive =
+                  pathname === item.url || pathname.startsWith(item.url + "/");
                 const Icon = item.icon;
 
                 return (
