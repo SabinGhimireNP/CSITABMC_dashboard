@@ -44,7 +44,7 @@ export function CertificateTabs({ activeTab, onTabChange, searchQuery, onSearchC
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search certificates..."
+          placeholder="Search certificates by Name/Event"
           className="w-full h-9 pl-9 pr-4 bg-white border border-slate-200 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-2xs"
         />
       </div>

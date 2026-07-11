@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Certificates as initialCertificates } from "@/api/Certificates";
+import React, { useState, useMemo, useEffect } from "react";
+import { Certificates} from "@/api/Certificates";
 import { Events as initialEvents } from "@/api/Events";
 import { CertificateTable } from "./_components/CertificateTable";
 import { CertificateTabs } from "./_components/CertificateTabs";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 export default function CertificatesPage() {
-  const [liveCertificates, setLiveCertificates] = useState(initialCertificates);
+  const [liveCertificates, setLiveCertificates] = useState([]);
   const [eventsList] = useState(initialEvents);
 
   const [activeTab, setActiveTab] = useState("all");
@@ -23,6 +23,18 @@ export default function CertificatesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+
+  useEffect(()=>{
+    const fetchCertificates= async ()=>{
+      try {
+        const response = await Certificates();
+        if(response && response.data) setLiveCertificates(response.data)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchCertificates()
+  },[])
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -84,6 +96,7 @@ export default function CertificatesPage() {
   };
 
   const processedCertificates = useMemo(() => {
+    console.log(liveCertificates)
     let dataset = [...liveCertificates];
 
     if (activeTab === "complete") {

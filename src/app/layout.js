@@ -28,23 +28,7 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full bg-background">
-        <SidebarProvider>
-          <div className="flex h-screen w-full overflow-hidden">
-            {/* 1. Left Sidebar */}
-            <SideBar />
-
-            {/* 2. Right Side Workspace Container */}
-            <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-              {/* Top Header */}
-              <Header />
-
-              {/* Main Scrollable Content Dashboard Area */}
-              <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-muted/20">
-                {children}
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+          {children}
       </body>
     </html>
   );

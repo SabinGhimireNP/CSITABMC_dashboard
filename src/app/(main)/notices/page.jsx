@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Notices as initialNotices } from "@/api/Notice";
+import React, { useState, useMemo, useEffect } from "react";
+import { Notices } from "@/api/Notice";
 import { NoticeTable } from "./_components/noticeTable";
 import { NoticeTabs } from "./_components/noticeTabs";
 import { NoticeFormModal } from "./_components/noticeForm"; 
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 export default function NoticeHistoryPage() {
-  const [liveNotices, setLiveNotices] = useState(initialNotices);
+  const [liveNotices, setLiveNotices] = useState([]);
+  
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -21,6 +22,20 @@ export default function NoticeHistoryPage() {
 
   // Tracks form view state and active dataset node for modifications
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+
+  useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        const response = await Notices();
+        if (response && response.data) {
+          setLiveNotices(response.data);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchNotices();
+  }, []);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -63,7 +78,7 @@ export default function NoticeHistoryPage() {
         title: `${notice.title} (Copy)`,
         category: notice.category,
         description: notice.description,
-        image: notice.image
+        image: ""
       }
     });
   };
@@ -163,6 +178,7 @@ export default function NoticeHistoryPage() {
     const startOffset = (currentPage - 1) * rowsPerPage;
     return processedNotices.slice(startOffset, startOffset + rowsPerPage);
   }, [processedNotices, currentPage, rowsPerPage]);
+
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

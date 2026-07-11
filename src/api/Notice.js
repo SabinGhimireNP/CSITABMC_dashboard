@@ -1,153 +1,33 @@
-export const Notices = [
-  {
-    id: "1",
-    title: "System Maintenance: Core Database Upgrade",
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60",
-    category: "Maintenance",
-    status:"published",
-    description: "<p>Our databases are undergoing a scheduled upgrade to improve read latencies. Expect <strong>up to 5 minutes</strong> of intermittent downtime.</p>",
-    createdBy: "Alex Rivera (DevOps)",
-    createdAt: "2026-06-22 14:30",
-  },
-  {
-    id: "2",
-    title: "New Security Policy Enforced for API Keys",
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=150&auto=format&fit=crop&q=60",
-    category: "Security",
-    status:"published",
-    description: "<p>All developer API tokens must now rotate every 90 days. Please review your dashboard settings to avoid active service disruptions.</p>",
-    createdAt: "2026-06-19 09:15",
-  },
-  {
-    id: "3",
-    title: "Q3 Feature Roadmap Review Available",
-    image: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60",
-    category: "Product Updates",
-    status:"draft",
-    description: "<p>The comprehensive review of our client-facing portal improvements is up. Check out the interactive prototype link inside the sync doc.</p>",
-    createdAt: "2026-06-15 11:00",
-  },
-  {
-    id: "4",
-    title: "System Maintenance: Core Database Upgrade",
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60",
-    category: "Maintenance",
-    status:"published",
-    description: "<p>Our databases are undergoing a scheduled upgrade to improve read latencies. Expect <strong>up to 5 minutes</strong> of intermittent downtime.</p>",
-    createdBy: "Alex Rivera (DevOps)",
-    createdAt: "2026-06-22 14:30",
-  },
-  {
-    id: "5",
-    title: "New Security Policy Enforced for API Keys",
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=150&auto=format&fit=crop&q=60",
-    category: "Security",
-    status:"published",
-    description: "<p>All developer API tokens must now rotate every 90 days. Please review your dashboard settings to avoid active service disruptions.</p>",
-    createdAt: "2026-06-19 09:15",
-  },
-  {
-    id: "6",
-    title: "Q3 Feature Roadmap Review Available",
-    image: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60",
-    category: "Product Updates",
-    status:"draft",
-    description: "<p>The comprehensive review of our client-facing portal improvements is up. Check out the interactive prototype link inside the sync doc.</p>",
-    createdAt: "2026-06-15 11:00",
-  },
-  {
-    id: "7",
-    title: "System Maintenance: Core Database Upgrade",
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60",
-    category: "Maintenance",
-    status:"published",
-    description: "<p>Our databases are undergoing a scheduled upgrade to improve read latencies. Expect <strong>up to 5 minutes</strong> of intermittent downtime.</p>",
-    createdBy: "Alex Rivera (DevOps)",
-    createdAt: "2026-06-22 14:30",
-  },
-  {
-    id: "8",
-    title: "New Security Policy Enforced for API Keys",
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=150&auto=format&fit=crop&q=60",
-    category: "Security",
-    status:"published",
-    description: "<p>All developer API tokens must now rotate every 90 days. Please review your dashboard settings to avoid active service disruptions.</p>",
-    createdAt: "2026-06-19 09:15",
-  },
-  {
-    id: "9",
-    title: "Q3 Feature Roadmap Review Available",
-    image: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60",
-    category: "Product Updates",
-    status:"draft",
-    description: "<p>The comprehensive review of our client-facing portal improvements is up. Check out the interactive prototype link inside the sync doc.</p>",
-    createdAt: "2026-06-15 11:00",
-  },
-  {
-    id: "10",
-    title: "System Maintenance: Core Database Upgrade",
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60",
-    category: "Maintenance",
-    status:"published",
-    description: "<p>Our databases are undergoing a scheduled upgrade to improve read latencies. Expect <strong>up to 5 minutes</strong> of intermittent downtime.</p>",
-    createdBy: "Alex Rivera (DevOps)",
-    createdAt: "2026-06-22 14:30",
-  },
-  {
-    id: "12",
-    title: "New Security Policy Enforced for API Keys",
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=150&auto=format&fit=crop&q=60",
-    category: "Security",
-    status:"published",
-    description: "<p>All developer API tokens must now rotate every 90 days. Please review your dashboard settings to avoid active service disruptions.</p>",
-    createdAt: "2026-06-19 09:15",
-  },
-  {
-    id: "13",
-    title: "Q3 Feature Roadmap Review Available",
-    image: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60",
-    category: "Product Updates",
-    status:"draft",
-    description: "<p>The comprehensive review of our client-facing portal improvements is up. Check out the interactive prototype link inside the sync doc.</p>",
-    createdAt: "2026-06-15 11:00",
-  },
-  {
-    id: "11",
-    title: "System Maintenance: Core Database Upgrade",
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60",
-    category: "Maintenance",
-    status:"published",
-    description: "<p>Our databases are undergoing a scheduled upgrade to improve read latencies. Expect <strong>up to 5 minutes</strong> of intermittent downtime.</p>",
-    createdBy: "Alex Rivera (DevOps)",
-    createdAt: "2026-06-22 14:30",
-  },
-  {
-    id: "14",
-    title: "New Security Policy Enforced for API Keys",
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=150&auto=format&fit=crop&q=60",
-    category: "Security",
-    status:"published",
-    description: "<p>All developer API tokens must now rotate every 90 days. Please review your dashboard settings to avoid active service disruptions.</p>",
-    createdAt: "2026-06-19 09:15",
-  },
-  {
-    id: "15",
-    title: "Q3 Feature Roadmap Review Available",
-    image: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=150&auto=format&fit=crop&q=60",
-    category: "Product Updates",
-    status:"draft",
-    description: "<p>The comprehensive review of our client-facing portal improvements is up. Check out the interactive prototype link inside the sync doc.</p>",
-    createdAt: "2026-06-15 11:00",
-  },
-  {
-    id: "16",
-    title: "System Maintenance: Core Database Upgrade",
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60",
-    category: "Maintenance",
-    status:"published",
-    description: "<p>Our databases are undergoing a scheduled upgrade to improve read latencies. Expect <strong>up to 5 minutes</strong> of intermittent downtime.</p>",
-    createdBy: "Alex Rivera (DevOps)",
-    createdAt: "2026-06-22 14:30",
-  },
 
-];
+import axios from "axios";
+
+export const Notices = async () => {
+  try {
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_URL}/notices`,
+    );
+
+    const data = response.data;
+
+    const fetchedNotices = data.results.map((notice) => {
+
+      return {
+        id: notice.id,
+        title: notice.title,
+        image: notice.image,
+        category: notice.category,
+        status: notice.status,
+        description: notice.description,
+        createdAt: notice.updated_at,
+      };
+    });
+
+    return {
+      count: data.count,
+      data: fetchedNotices,
+    };
+  } catch (error) {
+    console.error("Error fetching notices:", error);
+    throw error;
+  }
+};

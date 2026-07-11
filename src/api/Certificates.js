@@ -1,33 +1,28 @@
-// Dummy data source for Certificates. Mirrors the shape produced by certificateSchema.
-// event: event ID (see Events.js) this certificate was issued for.
+import axios from "axios";
 
-export const Certificates = [
-  {
-    id: 1,
-    event: 1,
-    fullName: "Sujata Gurung",
-    isProjectComplete: true,
-    createdAt: "2023-08-15",
-  },
-  {
-    id: 2,
-    event: 1,
-    fullName: "Rajan Maharjan",
-    isProjectComplete: false,
-    createdAt: "2023-08-16",
-  },
-  {
-    id: 3,
-    event: 2,
-    fullName: "Anjali Rai",
-    isProjectComplete: true,
-    createdAt: "2023-08-17",
-  },
-  {
-    id: 4,
-    event: 3,
-    fullName: "Kiran Basnet",
-    isProjectComplete: true,
-    createdAt: "2023-08-18",
-  } 
-];
+export const Certificates = async () => {
+  try {
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_URL}/certificates`,
+    );
+    const data = response.data;
+
+    const FetchedCertificates = data.map((certificate) => {
+      return {
+        id: certificate.certificate_id,
+        event: certificate.event,
+        fullName: certificate.full_name,
+        createdAt: certificate.issued_at,
+        isProjectComplete: false,
+      };
+    });
+
+    return {
+      // count: data.count,
+      data: FetchedCertificates,
+    };
+  } catch (error) {
+    console.error("Error fetching certificates:", error);
+    throw error;
+  }
+};
