@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { PAST_PAPERS } from "@/api/PastPaper";
 import { PastPaperTable } from "./_components/pastPaperTable";
 import { PastPaperTabs } from "./_components/pastPaperTabs";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 export default function PastPapersPage() {
-  const [livePapers, setLivePapers] = useState(PAST_PAPERS);
+  const [livePapers, setLivePapers] = useState([]);
   const [activeTab, setActiveTab] = useState("all"); // "all" | "board" | "model"
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -20,6 +20,18 @@ export default function PastPapersPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+
+  useEffect(() => {
+    const fetchPAST_PAPERS = async () => {
+      try {
+        const response = await PAST_PAPERS();
+        if (response && response.data) setLivePapers(response.data);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchPAST_PAPERS()
+  }, []);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
