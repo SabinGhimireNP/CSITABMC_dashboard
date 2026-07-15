@@ -5,13 +5,8 @@ import { FileText, CalendarDays, Award, AlertCircle } from "lucide-react";
 import RecentCard from "./RecentCard";
 import RecentItem from "./RecentItem";
 import EmptyState from "./EmptyState";
-import { getRecentNotices, getRecentEvents, getRecentCertificates } from "@/api/dashboard";
 
-export default function RecentActivity() {
-  const notices = getRecentNotices();
-  const events = getRecentEvents();
-  const certificates = getRecentCertificates();
-
+export default function RecentActivity({ notices = [], events = [], certificates = [] }) {
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start w-full">
       <RecentCard title="Notices Content" icon={FileText} viewAllHref="/dashboard/notices">

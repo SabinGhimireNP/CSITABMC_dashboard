@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { MemberTable } from "./_components/MemberTable";
 import { MemberTabs } from "./_components/MemberTabs";
 import { MemberFormModal } from "./_components/MemberForm";
@@ -8,7 +8,7 @@ import { TenureListView } from "./_components/TenureListView";
 import { TenureFormModal } from "./_components/TenureFormModal";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, UserPlus } from "lucide-react";
-import { Members, TENURES } from "@/api/Member";
+import { Tenure } from "@/api/Member";
 
 function generateMemberId() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -23,8 +23,8 @@ export default function MembersPage() {
   const [selectedTenure, setSelectedTenure] = useState(null);
 
   // --- Data state ---
-  const [liveTenures, setLiveTenures] = useState(TENURES);
-  const [liveMembers, setLiveMembers] = useState(Members);
+  const [liveTenures, setLiveTenures] = useState([]);
+  const [liveMembers, setLiveMembers] = useState([]);
 
   // --- Modal state ---
   const [tenureFormMode, setTenureFormMode] = useState({ isOpen: false, editData: null });
@@ -40,6 +40,21 @@ export default function MembersPage() {
 
   // --- Delete confirmation ---
   const [tenureToDelete, setTenureToDelete] = useState(null);
+
+  useEffect(() => {
+    const fetchedTenure = async ()=>{
+    try {
+      const response = await Tenure()
+      console.log(response)
+      if(response && response.data){
+        setLiveTenures(response.data)
+        setLiveMembers(response.Members.data)
+      }
+    } catch (error) {
+      console.log(error)
+    }}
+    fetchedTenure()
+  }, []);
 
   // ────────────────────────────
   //  TENURE HANDLERS

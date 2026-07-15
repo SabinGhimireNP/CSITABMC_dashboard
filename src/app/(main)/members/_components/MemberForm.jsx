@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Loader2, X, Plus } from "lucide-react";
 
-import { POST_OPTIONS } from "@/api/Member";
+import { POST_OPTIONS } from "@/lib/Constants/MembersPost";
 import { memberFormSchema } from "@/lib/Schema/memberSchema";
 import { MarkdownEditor } from "@/components/common/MarkdownEditor"; // <-- Import the clean editor component
 

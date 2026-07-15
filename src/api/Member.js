@@ -1,67 +1,43 @@
-export const TENURES = [
-  { id: 1, name: "2024-2025", startDate: "2024-01-01", endDate: "2024-12-31" },
-  { id: 2, name: "2025-2026", startDate: "2025-01-01", endDate: "2025-12-31" },
-];
+import axios from "axios";
 
-export const Members = [
-  {
-    id: 1,
-    tenureId: 1,
-    memberId: "MEM-A1B2C",
-    fullName: "Aarav Sharma",
-    post: "President",
-    email: "aarav@csitabmc.edu.np",
-    facebookLink: "",
-    linkedinLink: "",
-    githubLink: "",
-    tags: ["Leadership", "Event Management"],
-    description: "Club president and founding member.",
-    image: null,
-    status: "active",
-    createdAt: "2025-01-10",
-  },
-  {
-    id: 2,
-    tenureId: 1,
-    memberId: "MEM-D3E4F",
-    fullName: "Priya Thapa",
-    post: "Technical Lead",
-    email: "priya@csitabmc.edu.np",
-    facebookLink: "",
-    linkedinLink: "",
-    githubLink: "https://github.com/priyathapa",
-    tags: ["React", "Node.js"],
-    description: "Leads all technical initiatives.",
-    image: null,
-    status: "active",
-    createdAt: "2025-02-14",
-  },
-  {
-    id: 3,
-    tenureId: 1,
-    memberId: "MEM-G5H6I",
-    fullName: "Rohan Bista",
-    post: "Design Lead",
-    email: "rohan@csitabmc.edu.np",
-    facebookLink: "",
-    linkedinLink: "",
-    githubLink: "",
-    tags: ["UI/UX", "Figma"],
-    description: "Responsible for all design assets.",
-    image: null,
-    status: "draft",
-    createdAt: "2025-03-01",
-  },
-];
+export const Tenure = async () => {
+  try {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_URL}/tenures`);
+    const data = response.data;
 
-export const POST_OPTIONS = [
-  "President",
-  "Vice President",
-  "Secretary",
-  "Treasurer",
-  "Event Coordinator",
-  "Tech Lead",
-  "Assistant Tech Lead",
-  "Design Lead",
-  "Member",
-];
+    const fetchedTenures = data.map((tenure) => {
+      return {
+        id: tenure.id,
+        Members: tenure.members.map((member) => {
+          return {
+            id: member.id,
+            tenureName: member.tenure,
+            memberId: member.id,
+            fullName: member.name,
+            post: member.role,
+            email: member.email,
+            facebookLink: member.fb_link,
+            linkedinLink: member.linkedin_link,
+            githubLink: member.github_link,
+            tags: ["Leadership", "Event Management"],
+            description: "Club president and founding member.",
+            image: member.image,
+            status: "active",
+            createdAt: member.created_at,
+          };
+        }),
+        name: tenure.name,
+        startDate: tenure.start_date,
+        endDate: tenure.end_date,
+        slug: tenure.slug,
+      };
+    });
+
+    return {
+      count: fetchedTenures.length,
+      data: fetchedTenures,
+    };
+  } catch (error) {
+    console.error("Error fetching Tenure detatils", error);
+  }
+};
