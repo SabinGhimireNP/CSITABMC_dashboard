@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Certificates} from "@/api/Certificates";
-import { Events as initialEvents } from "@/api/Events";
+import { Events  } from "@/api/Events";
 import { CertificateTable } from "./_components/CertificateTable";
 import { CertificateTabs } from "./_components/CertificateTabs";
 import { CertificateFormModal } from "./_components/CertificateFormModel";
@@ -11,7 +11,7 @@ import { PlusCircle } from "lucide-react";
 
 export default function CertificatesPage() {
   const [liveCertificates, setLiveCertificates] = useState([]);
-  const [eventsList] = useState(initialEvents);
+  const [eventsList, setEventList] = useState([]);
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,8 +27,10 @@ export default function CertificatesPage() {
   useEffect(()=>{
     const fetchCertificates= async ()=>{
       try {
-        const response = await Certificates();
-        if(response && response.data) setLiveCertificates(response.data)
+        const [response, responseEvent] = await Promise.all([Certificates(), Events()])
+        console.log(response.data)
+        if(response?.data) setLiveCertificates(response.data)
+        if(responseEvent?.data) setEventList(responseEvent.data)
       } catch (error) {
         console.log(error)
       }

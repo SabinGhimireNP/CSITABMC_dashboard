@@ -43,23 +43,3 @@ export const Events = async () => {
     throw error;
   }
 };
-
-
-export const fetchEventTitles = async () => {
-  try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_URL}/events`);
-    const data = response.data;
-    const results = data.results || [];
-
-    // Map down to just an array of title strings
-    const titles = results.map((event) => event.title);
-
-    return {
-      count: data.count || titles.length,
-      data: titles, // This will be an array of strings: ["Web Bootcamp", "React Workshop", ...]
-    };
-  } catch (error) {
-    console.error("Failed to fetch event titles:", error);
-    throw error;
-  }
-};

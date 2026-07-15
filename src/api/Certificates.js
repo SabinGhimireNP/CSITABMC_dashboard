@@ -18,7 +18,7 @@ export const Certificates = async () => {
     });
 
     return {
-      // count: data.count,
+      count: FetchedCertificates.length,
       data: FetchedCertificates,
     };
   } catch (error) {
