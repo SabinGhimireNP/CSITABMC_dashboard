@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Mentors as initialMentors } from "@/api/Mentor";
-import { Events as initialEvents } from "@/api/Events";
+import React, { useState, useMemo, useEffect } from "react";
+import { Mentors } from "@/api/Mentor";
+import { Events as fetchEvents } from "@/api/Events";
 import { MENTOR_ROLES } from "@/lib/Schema/mentorSchema";
 import { MentorTable } from "./_components/MentorsTable";
 import { MentorTabs } from "./_components/MentorTabs";
@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 export default function MentorsPage() {
-  const [liveMentors, setLiveMentors] = useState(initialMentors);
-  const [eventsList] = useState(initialEvents);
+  const [liveMentors, setLiveMentors] = useState([]);
+  const [eventsList, setEventsList] = useState([]);
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +24,19 @@ export default function MentorsPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [mentorsRes, eventsRes] = await Promise.all([Mentors(), fetchEvents()]);
+        if (mentorsRes?.data) setLiveMentors(mentorsRes.data);
+        if (eventsRes?.data) setEventsList(eventsRes.data);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {

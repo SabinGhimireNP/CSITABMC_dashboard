@@ -1,89 +1,65 @@
-// Dummy data source for Events. Mirrors the shape produced by eventSchema.
-// mentors: array of mentor IDs (see Mentors.js) referencing this event.
+import axios from "axios";
 
-export const Events = [
-  {
-    id: 1,
-    title: "Intro to Web Development Bootcamp",
-    registrationOpen: true,
-    startDate: "2026-07-10",
-    endDate: "2026-07-12",
-    startTime: "09:00",
-    endTime: "17:00",
-    organizer: "Code Collective",
-    availableSeats: 40,
-    registrationFormUrl: "https://forms.example.com/web-dev-bootcamp",
-    registrationFeeBMC: 5,
-    registrationFee: 0,
-    location: "Innovation Hub, Kathmandu",
-    category: "Bootcamp",
-    tags: ["web", "beginner", "frontend"],
-    image: null,
-    description: "A hands-on 3-day bootcamp covering HTML, CSS, and JavaScript fundamentals for absolute beginners.",
-    mentors: [1, 2],
-    status: "published",
-  },
-  {
-    id: 2,
-    title: "AI & Machine Learning Hackathon",
-    registrationOpen: true,
-    startDate: "2026-08-01",
-    endDate: "2026-08-02",
-    startTime: "08:00",
-    endTime: "20:00",
-    organizer: "ML Society",
-    availableSeats: 60,
-    registrationFormUrl: "https://forms.example.com/ml-hackathon",
-    registrationFeeBMC: 0,
-    registrationFee: 500,
-    location: "Tech Park Auditorium",
-    category: "Hackathon",
-    tags: ["ai", "ml", "hackathon"],
-    image: null,
-    description: "48-hour hackathon focused on building practical machine learning applications.",
-    mentors: [2, 3],
-    status: "published",
-  },
-  {
-    id: 3,
-    title: "Cloud Architecture Webinar",
-    registrationOpen: false,
-    startDate: "2026-06-15",
-    endDate: "2026-06-15",
-    startTime: "18:00",
-    endTime: "19:30",
-    organizer: "DevOps Nepal",
-    availableSeats: 200,
-    registrationFormUrl: "https://forms.example.com/cloud-webinar",
-    registrationFeeBMC: 0,
-    registrationFee: 0,
-    location: "Online",
-    category: "Webinar",
-    tags: ["cloud", "architecture", "aws"],
-    image: null,
-    description: "A live session exploring scalable cloud architecture patterns and best practices.",
-    mentors: [3],
-    status: "draft",
-  },
-  {
-    id: 4,
-    title: "Startup Founders Networking Night",
-    registrationOpen: true,
-    startDate: "2026-07-25",
-    endDate: "2026-07-25",
-    startTime: "17:30",
-    endTime: "21:00",
-    organizer: "Founders Guild",
-    availableSeats: 80,
-    registrationFormUrl: "https://forms.example.com/founders-night",
-    registrationFeeBMC: 10,
-    registrationFee: 0,
-    location: "Skyline Lounge, Lalitpur",
-    category: "Networking",
-    tags: ["startup", "networking"],
-    image: null,
-    description: "An evening of mingling and idea exchange for early-stage founders and investors.",
-    mentors: [1],
-    status: "published",
-  },
-];
+export const Events = async () => {
+  try {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_URL}/events`);
+
+    const data = response.data;
+
+
+    const fetchedEvents = data.results.map((event) => {
+      return {
+        id: event.id,
+        title: event.title,
+        registrationOpen: true,
+        startDate: "2026-07-10",
+        endDate: "2026-07-12",
+        startTime: "09:00",
+        endTime: "17:00",
+        organizer: "Code Collective",
+        availableSeats: 40,
+        registrationFeeBMC: 5,
+        registrationFee: 0,
+        location: "Innovation Hub, Kathmandu",
+        category: "Bootcamp",
+        tags: ["web", "beginner", "frontend"],
+        registrationFormUrl: event.registration_link,
+        image: event.image,
+        description: event.description,
+        mentors: event.mentors,
+        status: event.status,
+        created_at: event.created_at,
+        updated_at: event.updated_at,
+        slug: event.slug,
+      };
+    });
+
+    return{
+      count: data.count,
+      data: fetchedEvents
+    }
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+
+export const fetchEventTitles = async () => {
+  try {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_URL}/events`);
+    const data = response.data;
+    const results = data.results || [];
+
+    // Map down to just an array of title strings
+    const titles = results.map((event) => event.title);
+
+    return {
+      count: data.count || titles.length,
+      data: titles, // This will be an array of strings: ["Web Bootcamp", "React Workshop", ...]
+    };
+  } catch (error) {
+    console.error("Failed to fetch event titles:", error);
+    throw error;
+  }
+};

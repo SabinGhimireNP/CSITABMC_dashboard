@@ -23,8 +23,8 @@ export const PAST_PAPERS = async () => {
     const fetchedPastPapers = data.results.map((paper) => {
       return {
         id: paper.id,
-        subject_code: paper.subject_code,
-        subject_name: findSubjectName(paper.subject_code),
+        subject_code: paper.subject_name,
+        subject_name: findSubjectName(paper.subject_name),
         semester: paper.semester,
         model_set: paper.model_set,
         exam_year: paper.exam_year,

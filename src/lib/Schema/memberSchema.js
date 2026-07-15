@@ -34,4 +34,26 @@ export const memberFormSchema = z.object({
     .refine((file) => file !== undefined && file !== null && file !== "", {
       message: "Profile image asset is required.",
     }),
+
+  // Tenure ID — required, will be auto-set
+  tenureId: z
+    .number({ message: "Tenure is required." }),
 });
+
+export const tenureFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, { message: "Tenure name is required." }),
+  startDate: z
+    .string()
+    .min(1, { message: "Start date is required." }),
+  endDate: z
+    .string()
+    .min(1, { message: "End date is required." }),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return new Date(data.endDate) >= new Date(data.startDate);
+  }
+  return true;
+}, { message: "End date must be on or after start date.", path: ["endDate"] });

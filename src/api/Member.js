@@ -1,6 +1,12 @@
+export const TENURES = [
+  { id: 1, name: "2024-2025", startDate: "2024-01-01", endDate: "2024-12-31" },
+  { id: 2, name: "2025-2026", startDate: "2025-01-01", endDate: "2025-12-31" },
+];
+
 export const Members = [
   {
     id: 1,
+    tenureId: 1,
     memberId: "MEM-A1B2C",
     fullName: "Aarav Sharma",
     post: "President",
@@ -16,6 +22,7 @@ export const Members = [
   },
   {
     id: 2,
+    tenureId: 1,
     memberId: "MEM-D3E4F",
     fullName: "Priya Thapa",
     post: "Technical Lead",
@@ -31,6 +38,7 @@ export const Members = [
   },
   {
     id: 3,
+    tenureId: 1,
     memberId: "MEM-G5H6I",
     fullName: "Rohan Bista",
     post: "Design Lead",

@@ -12,6 +12,7 @@ export function MemberFormModal({
   isOpen,
   onSubmitSuccess,
   onCancel,
+  tenureId,
 }) {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -23,6 +24,7 @@ export function MemberFormModal({
     tags: [],
     description: "",
     image: undefined,
+    tenureId: tenureId || null,
   });
 
   const [tagInput, setTagInput] = useState("");
@@ -42,6 +44,7 @@ export function MemberFormModal({
         tags: initialData?.tags || [],
         description: initialData?.description || "",
         image: initialData?.image || undefined,
+        tenureId: initialData?.tenureId || tenureId || null,
       });
       setFileMeta({
         preview: initialData?.image || null,
@@ -50,7 +53,7 @@ export function MemberFormModal({
       setTagInput("");
       setErrors({});
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, tenureId]);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";

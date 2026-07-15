@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Events as initialEvents } from "@/api/Events";
-import { Mentors as initialMentors } from "@/api/Mentor";
+import React, { useState, useMemo, useEffect } from "react";
+import { Events  } from "@/api/Events";
+import { Mentors as fetchMentors  } from "@/api/Mentor";
 import { EventTable } from "./_components/EventTable";
 import { EventTabs } from "./_components/EventTabs";
 import { EventFormModal } from "./_components/EventForm";
@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
 export default function EventsHistoryPage() {
-  const [liveEvents, setLiveEvents] = useState(initialEvents);
+  const [liveEvents, setLiveEvents] = useState([]);
   // Mentors are read-only here — managed on the Mentors page — but needed for the multi-select
-  const [mentorsList] = useState(initialMentors);
+  const [mentorsList, setMentorsList] = useState([]);
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +24,21 @@ export default function EventsHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+
+  useEffect(()=>{
+     const fetchedEvents = async ()=>{
+       try {
+        const [responseMentors, responseEvents] = await Promise.all([fetchMentors(), Events()]);
+        console.log("Mentors:", responseMentors);
+        console.log("Events:", responseEvents);
+        if (responseMentors?.data) setMentorsList(responseMentors.data);
+        if (responseEvents?.data) setLiveEvents(responseEvents.data);
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchedEvents()
+  },[])
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
