@@ -8,9 +8,11 @@ import { CertificateTabs } from "./_components/CertificateTabs";
 import { CertificateFormModal } from "./_components/CertificateFormModel";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import CertificatesSkeleton from "./_components/CertificatesSkeleton";
 
 export default function CertificatesPage() {
   const [liveCertificates, setLiveCertificates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [eventsList, setEventList] = useState([]);
 
   const [activeTab, setActiveTab] = useState("all");
@@ -28,11 +30,12 @@ export default function CertificatesPage() {
     const fetchCertificates= async ()=>{
       try {
         const [response, responseEvent] = await Promise.all([Certificates(), Events()])
-        console.log(response.data)
         if(response?.data) setLiveCertificates(response.data)
         if(responseEvent?.data) setEventList(responseEvent.data)
       } catch (error) {
         console.log(error)
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchCertificates()
@@ -154,6 +157,10 @@ export default function CertificatesPage() {
     const startOffset = (currentPage - 1) * rowsPerPage;
     return processedCertificates.slice(startOffset, startOffset + rowsPerPage);
   }, [processedCertificates, currentPage, rowsPerPage]);
+
+  if (isLoading) {
+    return <CertificatesSkeleton />;
+  }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

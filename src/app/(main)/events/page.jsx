@@ -8,9 +8,11 @@ import { EventTabs } from "./_components/EventTabs";
 import { EventFormModal } from "./_components/EventForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import EventsSkeleton from "./_components/EventsSkeleton";
 
 export default function EventsHistoryPage() {
   const [liveEvents, setLiveEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   // Mentors are read-only here — managed on the Mentors page — but needed for the multi-select
   const [mentorsList, setMentorsList] = useState([]);
 
@@ -29,12 +31,12 @@ export default function EventsHistoryPage() {
      const fetchedEvents = async ()=>{
        try {
         const [responseMentors, responseEvents] = await Promise.all([fetchMentors(), Events()]);
-        console.log("Mentors:", responseMentors);
-        console.log("Events:", responseEvents);
         if (responseMentors?.data) setMentorsList(responseMentors.data);
         if (responseEvents?.data) setLiveEvents(responseEvents.data);
       } catch (error) {
         console.log(error)
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchedEvents()
@@ -191,6 +193,10 @@ export default function EventsHistoryPage() {
     const startOffset = (currentPage - 1) * rowsPerPage;
     return processedEvents.slice(startOffset, startOffset + rowsPerPage);
   }, [processedEvents, currentPage, rowsPerPage]);
+
+  if (isLoading) {
+    return <EventsSkeleton />;
+  }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

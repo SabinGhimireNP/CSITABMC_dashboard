@@ -9,9 +9,11 @@ import { MentorTabs } from "./_components/MentorTabs";
 import { MentorFormModal } from "./_components/MentorForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import MentorsSkeleton from "./_components/MentorsSkeleton";
 
 export default function MentorsPage() {
   const [liveMentors, setLiveMentors] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [eventsList, setEventsList] = useState([]);
 
   const [activeTab, setActiveTab] = useState("all");
@@ -33,6 +35,8 @@ export default function MentorsPage() {
         if (eventsRes?.data) setEventsList(eventsRes.data);
       } catch (error) {
         console.log(error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
@@ -156,6 +160,10 @@ export default function MentorsPage() {
     const startOffset = (currentPage - 1) * rowsPerPage;
     return processedMentors.slice(startOffset, startOffset + rowsPerPage);
   }, [processedMentors, currentPage, rowsPerPage]);
+
+  if (isLoading) {
+    return <MentorsSkeleton />;
+  }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

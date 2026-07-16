@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MoreHorizontal, Users, Calendar, Copy, Pencil, Trash2, Eye } from "lucide-react";
 import { createPortal } from "react-dom";
 
 export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, onEdit, onDelete }) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [buttonRef, setButtonRef] = useState(null);
@@ -38,6 +40,10 @@ export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, onEdit, o
     };
   }, [menuOpen]);
 
+  const handleOpenTenure = () => {
+    router.push(`/members/${tenure.id}`);
+  };
+
   const DropdownMenu = () =>
     createPortal(
       <div
@@ -46,7 +52,7 @@ export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, onEdit, o
         className="w-36 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-99999 animate-in fade-in slide-in-from-top-1 duration-100"
       >
         <button type="button"
-          onClick={() => { setMenuOpen(false); if (onOpen) onOpen(tenure); }}
+          onClick={() => { setMenuOpen(false); handleOpenTenure(); }}
           className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer"
         >
           <Eye className="h-3.5 w-3.5 text-slate-400" /> Open
@@ -109,7 +115,7 @@ export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, onEdit, o
         {/* Open Button */}
         <button
           type="button"
-          onClick={() => onOpen && onOpen(tenure)}
+          onClick={handleOpenTenure}
           className="w-full h-9 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-indigo-100/60"
         >
           <Eye className="h-3.5 w-3.5" />

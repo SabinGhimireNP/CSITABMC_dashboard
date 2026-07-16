@@ -7,9 +7,11 @@ import { PastPaperTabs } from "./_components/pastPaperTabs";
 import { PastPaperFormModal } from "./_components/pastPaperFormModel";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import PastPapersSkeleton from "./_components/PastPapersSkeleton";
 
 export default function PastPapersPage() {
   const [livePapers, setLivePapers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all"); // "all" | "board" | "model"
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -28,6 +30,8 @@ export default function PastPapersPage() {
         if (response && response.data) setLivePapers(response.data);
       } catch (error) {
         console.log(error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchPAST_PAPERS()
@@ -141,6 +145,10 @@ export default function PastPapersPage() {
     const startOffset = (currentPage - 1) * rowsPerPage;
     return processedPapers.slice(startOffset, startOffset + rowsPerPage);
   }, [processedPapers, currentPage, rowsPerPage]);
+
+  if (isLoading) {
+    return <PastPapersSkeleton />;
+  }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

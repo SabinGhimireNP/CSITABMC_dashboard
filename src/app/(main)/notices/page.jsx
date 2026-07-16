@@ -7,9 +7,11 @@ import { NoticeTabs } from "./_components/noticeTabs";
 import { NoticeFormModal } from "./_components/noticeForm"; 
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import NoticesSkeleton from "./_components/NoticesSkeleton";
 
 export default function NoticeHistoryPage() {
   const [liveNotices, setLiveNotices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +34,8 @@ export default function NoticeHistoryPage() {
         }
       } catch (error) {
         console.log(error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchNotices();
@@ -179,6 +183,10 @@ export default function NoticeHistoryPage() {
     return processedNotices.slice(startOffset, startOffset + rowsPerPage);
   }, [processedNotices, currentPage, rowsPerPage]);
 
+
+  if (isLoading) {
+    return <NoticesSkeleton />;
+  }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

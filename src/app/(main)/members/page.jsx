@@ -9,6 +9,7 @@ import { TenureFormModal } from "./_components/TenureFormModal";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { Tenure } from "@/api/Member";
+import MembersSkeleton from "./_components/MembersSkeleton";
 
 function generateMemberId() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -18,6 +19,7 @@ function generateMemberId() {
 }
 
 export default function MembersPage() {
+  const [isLoading, setIsLoading] = useState(true);
   // --- View state ---
   const [currentView, setCurrentView] = useState("tenures"); // "tenures" | "members"
   const [selectedTenure, setSelectedTenure] = useState(null);
@@ -42,18 +44,28 @@ export default function MembersPage() {
   const [tenureToDelete, setTenureToDelete] = useState(null);
 
   useEffect(() => {
-    const fetchedTenure = async ()=>{
-    try {
-      const response = await Tenure()
-      console.log(response)
-      if(response && response.data){
-        setLiveTenures(response.data)
-        setLiveMembers(response.Members.data)
+    const fetchTenures = async () => {
+      try {
+        const response = await Tenure();
+        if (response && response.data) {
+          const tenures = response.data;
+          setLiveTenures(tenures);
+          // Extract all members from all tenures into a flat array, adding tenureId
+          const allMembers = tenures.flatMap((tenure) =>
+            (tenure.Members || []).map((member) => ({
+              ...member,
+              tenureId: tenure.id,
+            }))
+          );
+          setLiveMembers(allMembers);
+        }
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.log(error)
-    }}
-    fetchedTenure()
+    };
+    fetchTenures();
   }, []);
 
   // ────────────────────────────
@@ -81,7 +93,7 @@ export default function MembersPage() {
     } else {
       // CREATE
       const nextId = liveTenures.length > 0 ? Math.max(...liveTenures.map((t) => t.id)) + 1 : 1;
-      const newTenure = { id: nextId, ...formData };
+      const newTenure = { id: nextId, ...formData, Members: [] };
       setLiveTenures((prev) => [...prev, newTenure]);
     }
     setTenureFormMode({ isOpen: false, editData: null });
@@ -246,6 +258,10 @@ export default function MembersPage() {
     const start = (currentPage - 1) * rowsPerPage;
     return processedMembers.slice(start, start + rowsPerPage);
   }, [processedMembers, currentPage, rowsPerPage]);
+
+  if (isLoading) {
+    return <MembersSkeleton />;
+  }
 
   // ────────────────────────────
   //  RENDER: Tenures View
