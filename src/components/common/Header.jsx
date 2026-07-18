@@ -1,16 +1,14 @@
 // Header.jsx
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Globe } from "lucide-react";
 
 import ProfileSheet from "./ProfileSheet";
-// import { useAuthStore } from "@/store/useAuthstore";
 
 const Header = () => {
-  // const userName = useAuthStore((state) => state.user)?.name;
-  const userName = "Rakesh Kumar";
-
   return (
     <header className="h-16 flex items-center sticky top-0 justify-between px-4 md:px-6 border-b bg-background z-50">
       <div className="flex items-center gap-3">

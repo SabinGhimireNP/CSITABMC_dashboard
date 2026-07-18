@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useTenures } from "@/hooks/useMembers";
 import { MemberTable } from "./_components/MemberTable";
 import { MemberTabs } from "./_components/MemberTabs";
 import { MemberFormModal } from "./_components/MemberForm";
@@ -8,7 +9,6 @@ import { TenureListView } from "./_components/TenureListView";
 import { TenureFormModal } from "./_components/TenureFormModal";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, UserPlus } from "lucide-react";
-import { Tenure } from "@/api/Member";
 import MembersSkeleton from "./_components/MembersSkeleton";
 
 function generateMemberId() {
@@ -19,7 +19,8 @@ function generateMemberId() {
 }
 
 export default function MembersPage() {
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: tenuresData, isLoading: tenuresLoading, isError: tenuresError } = useTenures();
+
   // --- View state ---
   const [currentView, setCurrentView] = useState("tenures"); // "tenures" | "members"
   const [selectedTenure, setSelectedTenure] = useState(null);
@@ -43,30 +44,20 @@ export default function MembersPage() {
   // --- Delete confirmation ---
   const [tenureToDelete, setTenureToDelete] = useState(null);
 
+  // Sync react-query data to local state for CRUD
   useEffect(() => {
-    const fetchTenures = async () => {
-      try {
-        const response = await Tenure();
-        if (response && response.data) {
-          const tenures = response.data;
-          setLiveTenures(tenures);
-          // Extract all members from all tenures into a flat array, adding tenureId
-          const allMembers = tenures.flatMap((tenure) =>
-            (tenure.Members || []).map((member) => ({
-              ...member,
-              tenureId: tenure.id,
-            }))
-          );
-          setLiveMembers(allMembers);
-        }
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTenures();
-  }, []);
+    if (tenuresData?.data) {
+      const tenures = tenuresData.data;
+      setLiveTenures(tenures);
+      const allMembers = tenures.flatMap((tenure) =>
+        (tenure.Members || []).map((member) => ({
+          ...member,
+          tenureId: tenure.id,
+        }))
+      );
+      setLiveMembers(allMembers);
+    }
+  }, [tenuresData]);
 
   // ────────────────────────────
   //  TENURE HANDLERS
@@ -82,7 +73,6 @@ export default function MembersPage() {
 
   const handleTenureFormSubmit = (formData) => {
     if (tenureFormMode.editData) {
-      // EDIT
       setLiveTenures((prev) =>
         prev.map((t) =>
           t.id === tenureFormMode.editData.id
@@ -91,7 +81,6 @@ export default function MembersPage() {
         )
       );
     } else {
-      // CREATE
       const nextId = liveTenures.length > 0 ? Math.max(...liveTenures.map((t) => t.id)) + 1 : 1;
       const newTenure = { id: nextId, ...formData, Members: [] };
       setLiveTenures((prev) => [...prev, newTenure]);
@@ -101,7 +90,6 @@ export default function MembersPage() {
 
   const handleDeleteTenureConfirm = () => {
     if (!tenureToDelete) return;
-    // Remove tenure and its members
     setLiveTenures((prev) => prev.filter((t) => t.id !== tenureToDelete.id));
     setLiveMembers((prev) => prev.filter((m) => m.tenureId !== tenureToDelete.id));
     setTenureToDelete(null);
@@ -118,7 +106,6 @@ export default function MembersPage() {
       endDate: `${sourceYearStart + 1}-12-31`,
     };
 
-    // Clone all members from source tenure
     const sourceMembers = liveMembers.filter((m) => m.tenureId === sourceTenure.id);
     const maxMemberId = liveMembers.length > 0 ? Math.max(...liveMembers.map((m) => m.id)) : 0;
     const clonedMembers = sourceMembers.map((m, index) => ({
@@ -173,7 +160,6 @@ export default function MembersPage() {
 
   const handleMemberFormSubmitSuccess = (formData) => {
     if (memberFormMode.editData && memberFormMode.editData.id) {
-      // EDIT — update in place
       setLiveMembers((prev) =>
         prev.map((item) =>
           item.id === memberFormMode.editData.id
@@ -189,7 +175,6 @@ export default function MembersPage() {
         )
       );
     } else {
-      // CREATE — prepend new record
       const nextId =
         liveMembers.length > 0
           ? Math.max(...liveMembers.map((m) => Number(m.id) || 0)) + 1
@@ -211,13 +196,12 @@ export default function MembersPage() {
   };
 
   // ────────────────────────────
-  //  MEMBER FILTERING (within selected tenure)
+  //  MEMBER FILTERING
   // ────────────────────────────
 
   const processedMembers = useMemo(() => {
     let dataset = [...liveMembers];
 
-    // Filter by selected tenure
     if (selectedTenure) {
       dataset = dataset.filter((m) => m.tenureId === selectedTenure.id);
     }
@@ -259,8 +243,16 @@ export default function MembersPage() {
     return processedMembers.slice(start, start + rowsPerPage);
   }, [processedMembers, currentPage, rowsPerPage]);
 
-  if (isLoading) {
+  if (tenuresLoading) {
     return <MembersSkeleton />;
+  }
+
+  if (tenuresError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Failed to load members. Please try again later.</p>
+      </div>
+    );
   }
 
   // ────────────────────────────
@@ -280,7 +272,6 @@ export default function MembersPage() {
           onCreate={handleCreateTenure}
         />
 
-        {/* Tenure Form Modal */}
         <TenureFormModal
           isOpen={tenureFormMode.isOpen}
           initialData={tenureFormMode.editData}
@@ -288,7 +279,6 @@ export default function MembersPage() {
           onCancel={() => setTenureFormMode({ isOpen: false, editData: null })}
         />
 
-        {/* Delete Tenure Confirmation */}
         {tenureToDelete && (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
             <div
@@ -328,7 +318,7 @@ export default function MembersPage() {
   }
 
   // ────────────────────────────
-  //  RENDER: Members View (within a tenure)
+  //  RENDER: Members View
   // ────────────────────────────
 
   const formatDate = (dateStr) => {
@@ -339,7 +329,6 @@ export default function MembersPage() {
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
-      {/* Back Button + Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
@@ -377,7 +366,6 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* Tabs & Search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <MemberTabs
           activeTab={activeTab}
@@ -387,7 +375,6 @@ export default function MembersPage() {
         />
       </div>
 
-      {/* Table Card */}
       <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
         <MemberTable
           members={paginatedMembers}
@@ -405,7 +392,6 @@ export default function MembersPage() {
         />
       </div>
 
-      {/* Member Form Modal */}
       <MemberFormModal
         isOpen={memberFormMode.isOpen}
         initialData={memberFormMode.editData}

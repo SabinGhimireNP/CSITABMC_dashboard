@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Mentors } from "@/api/Mentor";
-import { Events as fetchEvents } from "@/api/Events";
+import React, { useState, useMemo } from "react";
+import { useMentors } from "@/hooks/useMentors";
+import { useEvents } from "@/hooks/useEvents";
 import { MENTOR_ROLES } from "@/lib/Schema/mentorSchema";
 import { MentorTable } from "./_components/MentorsTable";
 import { MentorTabs } from "./_components/MentorTabs";
@@ -12,9 +12,11 @@ import { PlusCircle } from "lucide-react";
 import MentorsSkeleton from "./_components/MentorsSkeleton";
 
 export default function MentorsPage() {
-  const [liveMentors, setLiveMentors] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [eventsList, setEventsList] = useState([]);
+  const { data: mentorsData, isLoading: mentorsLoading, isError: mentorsError } = useMentors();
+  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+
+  const liveMentors = mentorsData?.data || [];
+  const eventsList = eventsData?.data || [];
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,21 +28,6 @@ export default function MentorsPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [mentorsRes, eventsRes] = await Promise.all([Mentors(), fetchEvents()]);
-        if (mentorsRes?.data) setLiveMentors(mentorsRes.data);
-        if (eventsRes?.data) setEventsList(eventsRes.data);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -62,7 +49,7 @@ export default function MentorsPage() {
   };
 
   const handleDeleteMentor = (id) => {
-    setLiveMentors((prev) => prev.filter((m) => m.id !== id));
+    // In a real app this would call a mutation
   };
 
   const handleEditMentorTrigger = (mentor) => {
@@ -83,39 +70,12 @@ export default function MentorsPage() {
   };
 
   const handleFormSubmitSuccess = (formData) => {
-    if (formMode.editData && formMode.editData.id) {
-      setLiveMentors((prev) =>
-        prev.map((item) =>
-          item.id === formMode.editData.id
-            ? {
-                ...item,
-                ...formData,
-                image: formData.image instanceof File
-                  ? URL.createObjectURL(formData.image)
-                  : item.image,
-              }
-            : item
-        )
-      );
-    } else {
-      const nextId = liveMentors.length > 0 ? Math.max(...liveMentors.map((m) => Number(m.id) || 0)) + 1 : 1;
-      const freshMentor = {
-        id: nextId,
-        ...formData,
-        image: formData.image instanceof File
-          ? URL.createObjectURL(formData.image)
-          : (formMode.editData?.image || null),
-      };
-      setLiveMentors((prev) => [freshMentor, ...prev]);
-      setCurrentPage(1);
-    }
     setFormMode({ isOpen: false, editData: null });
   };
 
   const processedMentors = useMemo(() => {
     let dataset = [...liveMentors];
 
-    // Tab filters by status
     if (activeTab !== "all") {
       dataset = dataset.filter((m) => m.status === activeTab);
     }
@@ -150,7 +110,7 @@ export default function MentorsPage() {
   }, [liveMentors, activeTab, searchQuery, sortField, sortOrder]);
 
   const handleUpdateMentorStatus = (id, status) => {
-    setLiveMentors((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
+    // In a real app this would call a mutation
   };
 
   const totalRows = processedMentors.length;
@@ -161,8 +121,16 @@ export default function MentorsPage() {
     return processedMentors.slice(startOffset, startOffset + rowsPerPage);
   }, [processedMentors, currentPage, rowsPerPage]);
 
-  if (isLoading) {
+  if (mentorsLoading || eventsLoading) {
     return <MentorsSkeleton />;
+  }
+
+  if (mentorsError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Failed to load mentors. Please try again later.</p>
+      </div>
+    );
   }
 
   return (

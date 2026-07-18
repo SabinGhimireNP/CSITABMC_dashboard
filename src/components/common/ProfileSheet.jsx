@@ -1,22 +1,20 @@
-// ProfileSheet.jsx
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Edit, LogOut, Settings, ShieldCheck, User } from "lucide-react";
+import { Edit, LogOut, User } from "lucide-react";
+import { useUser, useLogout } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const ProfileSheet = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  const user = {
-    name: "Rakesh Kumar",
-    email: "test@example.com",
-    type: "Super Admin",
-  };
+  const { data: user } = useUser();
+  const logout = useLogout();
 
-  const typeLabel = user?.type;
+  const typeLabel = user?.type || user?.username || "User";
 
   useEffect(() => {
     function handleClick(e) {
@@ -27,6 +25,13 @@ const ProfileSheet = () => {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  const handleLogout = () => {
+    setOpen(false);
+    logout();
+    toast.success("Logged out successfully");
+    router.push("/login");
+  };
 
   return (
     <div className="relative" ref={ref}>
@@ -53,7 +58,7 @@ const ProfileSheet = () => {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate text-brand-secondary">
-                {user?.name || "User"}
+                {user?.username || user?.name || "User"}
               </p>
               <p className="text-xs text-brand-text truncate">
                 {user?.email || "No email available"}
@@ -64,9 +69,7 @@ const ProfileSheet = () => {
             </div>
           </div>
 
-          {/* button for profile sheets if needed to add settings and other things here in future */}
           <div className="p-1">
-
             <button
               onClick={() => {
                 setOpen(false);
@@ -79,7 +82,10 @@ const ProfileSheet = () => {
           </div>
 
           <div className="p-1 border-t border-brand-primary/10">
-            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            >
               <LogOut className="size-4" /> Sign out
             </button>
           </div>

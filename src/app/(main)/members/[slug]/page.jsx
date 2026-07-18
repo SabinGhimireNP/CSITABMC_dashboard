@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTenures } from "@/hooks/useMembers";
 import { MemberTable } from "../_components/MemberTable";
 import { MemberTabs } from "../_components/MemberTabs";
 import { MemberFormModal } from "../_components/MemberForm";
-import { Tenure } from "@/api/Member";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, UserPlus } from "lucide-react";
 
@@ -21,9 +21,10 @@ export default function TenureMembersPage() {
   const router = useRouter();
   const slug = params.slug;
 
+  const { data: tenuresData, isLoading: tenuresLoading } = useTenures();
+
   const [liveTenures, setLiveTenures] = useState([]);
   const [liveMembers, setLiveMembers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,29 +35,18 @@ export default function TenureMembersPage() {
   const [memberFormMode, setMemberFormMode] = useState({ isOpen: false, editData: null });
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await Tenure();
-        if (response && response.data) {
-          const tenures = response.data;
-          setLiveTenures(tenures);
-          // Extract all members from all tenures into a flat array, adding tenureId
-          const allMembers = tenures.flatMap((tenure) =>
-            (tenure.Members || []).map((member) => ({
-              ...member,
-              tenureId: tenure.id,
-            }))
-          );
-          setLiveMembers(allMembers);
-        }
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    if (tenuresData?.data) {
+      const tenures = tenuresData.data;
+      setLiveTenures(tenures);
+      const allMembers = tenures.flatMap((tenure) =>
+        (tenure.Members || []).map((member) => ({
+          ...member,
+          tenureId: tenure.id,
+        }))
+      );
+      setLiveMembers(allMembers);
+    }
+  }, [tenuresData]);
 
   const selectedTenure = liveTenures.find((t) => String(t.id) === slug);
 
@@ -142,7 +132,7 @@ export default function TenureMembersPage() {
     return processedMembers.slice(start, start + rowsPerPage);
   }, [processedMembers, currentPage, rowsPerPage]);
 
-  if (isLoading) {
+  if (tenuresLoading) {
     return (
       <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6 animate-pulse">
         <div className="h-8 w-48 rounded-md bg-slate-200" />

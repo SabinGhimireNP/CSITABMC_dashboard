@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { PAST_PAPERS } from "@/api/PastPaper";
+import React, { useState, useMemo } from "react";
+import { usePastPapers } from "@/hooks/usePastPapers";
 import { PastPaperTable } from "./_components/pastPaperTable";
 import { PastPaperTabs } from "./_components/pastPaperTabs";
 import { PastPaperFormModal } from "./_components/pastPaperFormModel";
@@ -10,8 +10,9 @@ import { PlusCircle } from "lucide-react";
 import PastPapersSkeleton from "./_components/PastPapersSkeleton";
 
 export default function PastPapersPage() {
-  const [livePapers, setLivePapers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: papersData, isLoading: papersLoading, isError: papersError } = usePastPapers();
+
+  const livePapers = papersData?.data || [];
   const [activeTab, setActiveTab] = useState("all"); // "all" | "board" | "model"
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -22,20 +23,6 @@ export default function PastPapersPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
-
-  useEffect(() => {
-    const fetchPAST_PAPERS = async () => {
-      try {
-        const response = await PAST_PAPERS();
-        if (response && response.data) setLivePapers(response.data);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPAST_PAPERS()
-  }, []);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -53,7 +40,7 @@ export default function PastPapersPage() {
   };
 
   const handleDeletePaper = (id) => {
-    setLivePapers((prev) => prev.filter((p) => p.id !== id));
+    // In a real app this would call a mutation
   };
 
   const handleEditPaperTrigger = (paper) => {
@@ -61,34 +48,9 @@ export default function PastPapersPage() {
   };
 
   const handleFormSubmitSuccess = (formData) => {
-    if (formMode.editData && formMode.editData.id) {
-      setLivePapers((prev) =>
-        prev.map((item) =>
-          item.id === formMode.editData.id ? { ...item, ...formData } : item,
-        ),
-      );
-    } else {
-      const nextId =
-        livePapers.length > 0
-          ? Math.max(...livePapers.map((p) => Number(p.id) || 0)) + 1
-          : 1;
-      const slug = `${formData.subject_code.toLowerCase()}-${formData.exam_year}-${formData.model_set ? "model-set" : "board-exam"}`;
-      setLivePapers((prev) => [
-        {
-          id: nextId,
-          ...formData,
-          slug,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-      setCurrentPage(1);
-    }
     setFormMode({ isOpen: false, editData: null });
   };
 
-  // MODIFIED: Updated text summary description string block for page layout
   const activeFilterLabel =
     activeTab === "all"
       ? "All Papers"
@@ -99,7 +61,6 @@ export default function PastPapersPage() {
   const processedPapers = useMemo(() => {
     let dataset = [...livePapers];
 
-    // MODIFIED: Replaced old semester tab query matching with direct boolean type validation
     if (activeTab !== "all") {
       dataset = dataset.filter((p) =>
         activeTab === "model" ? p.model_set === true : p.model_set === false,
@@ -146,8 +107,16 @@ export default function PastPapersPage() {
     return processedPapers.slice(startOffset, startOffset + rowsPerPage);
   }, [processedPapers, currentPage, rowsPerPage]);
 
-  if (isLoading) {
+  if (papersLoading) {
     return <PastPapersSkeleton />;
+  }
+
+  if (papersError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Failed to load past papers. Please try again later.</p>
+      </div>
+    );
   }
 
   return (

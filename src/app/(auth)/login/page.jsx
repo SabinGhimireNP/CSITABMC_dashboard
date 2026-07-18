@@ -5,34 +5,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, LogIn } from "lucide-react";
-import axios from "axios";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useLogin } from "@/hooks/useAuth";
+import { loginSchema } from "@/lib/Schema/loginSchema";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
+  const router = useRouter();
+
+  const loginMutation = useLogin();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
+    setErrors({});
 
-    try {
-      // TODO: Replace with actual authentication API call
-      console.log("Login attempt:", formData);
-
-     const response = await axios.post(`${process.env.NEXT_PUBLIC_URL}/login/`, formData);
-      console.log("Login response:", response.data);
-      alert("Login successful! (This is a demo)");
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Invalid email or password");
-    } finally {
-      setIsLoading(false);
+    // Validate with Zod
+    const result = loginSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors = {};
+      result.error.issues.forEach((issue) => { 
+        const pathKey = issue.path[0];
+        if (!fieldErrors[pathKey]) fieldErrors[pathKey] = issue.message;
+      });
+      setErrors(fieldErrors);
+      return;
     }
+
+    loginMutation.mutate(formData, {
+      onSuccess: () => {
+        toast.success("Login successful! Welcome back.");
+        router.push("/dashboard");
+      },
+      onError: () => {
+        toast.error("Invalid email or password. Please try again.");
+        setError("Invalid email or password");
+      },
+    });
   };
 
   const handleChange = (e) => {
@@ -41,6 +56,8 @@ export default function LoginPage() {
       ...prev,
       [name]: value
     }));
+    // Clear field error on change
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   return (
@@ -58,7 +75,7 @@ export default function LoginPage() {
         {/* Login Form Card */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Message */}
+            {/* Server Error Message */}
             {error && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                 {error}
@@ -80,10 +97,13 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="pl-10 h-11"
-                  disabled={isLoading}
+                  className={`pl-10 h-11 ${errors.email ? "border-red-500 focus:ring-red-500" : ""}`}
+                  disabled={loginMutation.isPending}
                 />
               </div>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -101,10 +121,13 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="pl-10 h-11"
-                  disabled={isLoading}
+                  className={`pl-10 h-11 ${errors.password ? "border-red-500 focus:ring-red-500" : ""}`}
+                  disabled={loginMutation.isPending}
                 />
               </div>
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              )}
             </div>
 
             {/* Remember Me & Forgot Password */}
@@ -128,9 +151,9 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full h-11 bg-[#0b2574] hover:bg-[#0b2574]/90 text-white font-medium"
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
             >
-              {isLoading ? (
+              {loginMutation.isPending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                   Signing in...

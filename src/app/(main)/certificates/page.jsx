@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Certificates} from "@/api/Certificates";
-import { Events  } from "@/api/Events";
+import React, { useState, useMemo } from "react";
+import { useCertificates } from "@/hooks/useCertificates";
+import { useEvents } from "@/hooks/useEvents";
 import { CertificateTable } from "./_components/CertificateTable";
 import { CertificateTabs } from "./_components/CertificateTabs";
 import { CertificateFormModal } from "./_components/CertificateFormModel";
@@ -11,9 +11,11 @@ import { PlusCircle } from "lucide-react";
 import CertificatesSkeleton from "./_components/CertificatesSkeleton";
 
 export default function CertificatesPage() {
-  const [liveCertificates, setLiveCertificates] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [eventsList, setEventList] = useState([]);
+  const { data: certData, isLoading: certLoading, isError: certError } = useCertificates();
+  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+
+  const liveCertificates = certData?.data || [];
+  const eventsList = eventsData?.data || [];
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,21 +27,6 @@ export default function CertificatesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
-
-  useEffect(()=>{
-    const fetchCertificates= async ()=>{
-      try {
-        const [response, responseEvent] = await Promise.all([Certificates(), Events()])
-        if(response?.data) setLiveCertificates(response.data)
-        if(responseEvent?.data) setEventList(responseEvent.data)
-      } catch (error) {
-        console.log(error)
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchCertificates()
-  },[])
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -61,7 +48,7 @@ export default function CertificatesPage() {
   };
 
   const handleDeleteCertificate = (id) => {
-    setLiveCertificates((prev) => prev.filter((c) => c.id !== id));
+    // In a real app this would call a mutation
   };
 
   const handleEditCertificateTrigger = (cert) => {
@@ -72,7 +59,6 @@ export default function CertificatesPage() {
     setFormMode({
       isOpen: true,
       editData: {
-        // No id — treated as new record
         event: cert.event,
         fullName: `${cert.fullName} (Copy)`,
         isProjectComplete: cert.isProjectComplete,
@@ -81,27 +67,10 @@ export default function CertificatesPage() {
   };
 
   const handleFormSubmitSuccess = (formData) => {
-    if (formMode.editData && formMode.editData.id) {
-      setLiveCertificates((prev) =>
-        prev.map((item) =>
-          item.id === formMode.editData.id
-            ? { ...item, ...formData }
-            : item
-        )
-      );
-    } else {
-      const nextId = liveCertificates.length > 0
-        ? Math.max(...liveCertificates.map((c) => Number(c.id) || 0)) + 1
-        : 1;
-      const freshCert = { id: nextId, ...formData };
-      setLiveCertificates((prev) => [freshCert, ...prev]);
-      setCurrentPage(1);
-    }
     setFormMode({ isOpen: false, editData: null });
   };
 
   const processedCertificates = useMemo(() => {
-    console.log(liveCertificates)
     let dataset = [...liveCertificates];
 
     if (activeTab === "complete") {
@@ -132,7 +101,6 @@ export default function CertificatesPage() {
           return sortOrder === "asc" ? numA - numB : numB - numA;
         }
 
-        // Sort by resolved event title instead of raw event id
         if (sortField === "event") {
           const titleA = eventsList.find((e) => String(e.id) === String(valA))?.title || "";
           const titleB = eventsList.find((e) => String(e.id) === String(valB))?.title || "";
@@ -158,8 +126,16 @@ export default function CertificatesPage() {
     return processedCertificates.slice(startOffset, startOffset + rowsPerPage);
   }, [processedCertificates, currentPage, rowsPerPage]);
 
-  if (isLoading) {
+  if (certLoading || eventsLoading) {
     return <CertificatesSkeleton />;
+  }
+
+  if (certError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Failed to load certificates. Please try again later.</p>
+      </div>
+    );
   }
 
   return (

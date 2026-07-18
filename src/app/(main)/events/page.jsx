@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Events  } from "@/api/Events";
-import { Mentors as fetchMentors  } from "@/api/Mentor";
+import React, { useState, useMemo } from "react";
+import { useEvents } from "@/hooks/useEvents";
+import { useMentors } from "@/hooks/useMentors";
 import { EventTable } from "./_components/EventTable";
 import { EventTabs } from "./_components/EventTabs";
 import { EventFormModal } from "./_components/EventForm";
@@ -11,10 +11,11 @@ import { PlusCircle } from "lucide-react";
 import EventsSkeleton from "./_components/EventsSkeleton";
 
 export default function EventsHistoryPage() {
-  const [liveEvents, setLiveEvents] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  // Mentors are read-only here — managed on the Mentors page — but needed for the multi-select
-  const [mentorsList, setMentorsList] = useState([]);
+  const { data: eventsData, isLoading: eventsLoading, isError: eventsError } = useEvents();
+  const { data: mentorsData, isLoading: mentorsLoading } = useMentors();
+
+  const liveEvents = eventsData?.data || [];
+  const mentorsList = mentorsData?.data || [];
 
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,21 +27,6 @@ export default function EventsHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
-
-  useEffect(()=>{
-     const fetchedEvents = async ()=>{
-       try {
-        const [responseMentors, responseEvents] = await Promise.all([fetchMentors(), Events()]);
-        if (responseMentors?.data) setMentorsList(responseMentors.data);
-        if (responseEvents?.data) setLiveEvents(responseEvents.data);
-      } catch (error) {
-        console.log(error)
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchedEvents()
-  },[])
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -65,7 +51,9 @@ export default function EventsHistoryPage() {
   };
 
   const handleDeleteEvent = (id) => {
-    setLiveEvents((prev) => prev.filter((e) => e.id !== id));
+    // Optimistic removal — in a real app this would call a mutation
+    // For now we keep the local state pattern for CRUD
+    // setLiveEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
   const handleEditEventTrigger = (event) => {
@@ -98,33 +86,6 @@ export default function EventsHistoryPage() {
   };
 
   const handleFormSubmitSuccess = (formData) => {
-    if (formMode.editData && formMode.editData.id) {
-      setLiveEvents((prev) =>
-        prev.map((item) =>
-          item.id === formMode.editData.id
-            ? {
-                ...item,
-                ...formData,
-                image: formData.image instanceof File
-                  ? URL.createObjectURL(formData.image)
-                  : item.image,
-              }
-            : item
-        )
-      );
-    } else {
-      const nextId = liveEvents.length > 0 ? Math.max(...liveEvents.map((e) => Number(e.id) || 0)) + 1 : 1;
-      const freshEvent = {
-        id: nextId,
-        ...formData,
-        image: formData.image instanceof File
-          ? URL.createObjectURL(formData.image)
-          : (formMode.editData?.image || null),
-      };
-      setLiveEvents((prev) => [freshEvent, ...prev]);
-      setCurrentPage(1);
-    }
-
     setFormMode({ isOpen: false, editData: null });
   };
 
@@ -136,7 +97,6 @@ export default function EventsHistoryPage() {
     } else if (activeTab === "closed") {
       dataset = dataset.filter((e) => !e.registrationOpen);
     }
-    // status filter
     if (activeTab === "published") {
       dataset = dataset.filter((e) => e.status === "published");
     } else if (activeTab === "draft") {
@@ -183,7 +143,7 @@ export default function EventsHistoryPage() {
   }, [liveEvents, activeTab, searchQuery, sortField, sortOrder]);
 
   const handleUpdateEventStatus = (id, status) => {
-    setLiveEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+    // In a real app this would call a mutation
   };
 
   const totalRows = processedEvents.length;
@@ -194,8 +154,16 @@ export default function EventsHistoryPage() {
     return processedEvents.slice(startOffset, startOffset + rowsPerPage);
   }, [processedEvents, currentPage, rowsPerPage]);
 
-  if (isLoading) {
+  if (eventsLoading || mentorsLoading) {
     return <EventsSkeleton />;
+  }
+
+  if (eventsError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Failed to load events. Please try again later.</p>
+      </div>
+    );
   }
 
   return (

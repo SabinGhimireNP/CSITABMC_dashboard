@@ -1,10 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/common/Header";
-
-// 1. Both are named exports now! Use curly braces {} for both.
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { SideBar } from "@/components/common/SideBar";
+import Providers from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +24,9 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full bg-background">
+        <Providers>
           {children}
+        </Providers>
       </body>
     </html>
   );

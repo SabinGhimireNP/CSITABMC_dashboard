@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Notices } from "@/api/Notice";
+import React, { useState, useMemo } from "react";
+import { useNotices } from "@/hooks/useNotices";
 import { NoticeTable } from "./_components/noticeTable";
 import { NoticeTabs } from "./_components/noticeTabs";
 import { NoticeFormModal } from "./_components/noticeForm"; 
@@ -10,8 +10,9 @@ import { PlusCircle } from "lucide-react";
 import NoticesSkeleton from "./_components/NoticesSkeleton";
 
 export default function NoticeHistoryPage() {
-  const [liveNotices, setLiveNotices] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: noticesData, isLoading: noticesLoading, isError: noticesError } = useNotices();
+
+  const liveNotices = noticesData?.data || [];
   
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,24 +23,7 @@ export default function NoticeHistoryPage() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Tracks form view state and active dataset node for modifications
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
-
-  useEffect(() => {
-    const fetchNotices = async () => {
-      try {
-        const response = await Notices();
-        if (response && response.data) {
-          setLiveNotices(response.data);
-        }
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchNotices();
-  }, []);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -66,15 +50,13 @@ export default function NoticeHistoryPage() {
   };
 
   const handleDeleteNotice = (id) => {
-    setLiveNotices(prev => prev.filter(n => n.id !== id));
+    // In a real app this would call a mutation
   };
 
-  // Triggers the form panel pre-populated with selected notice data
   const handleEditNoticeTrigger = (notice) => {
     setFormMode({ isOpen: true, editData: notice });
   };
 
-  // Triggers the form pre-populated with duplicated content fields, treating it as a fresh record creation
   const handleDuplicateNoticeTrigger = (notice) => {
     setFormMode({
       isOpen: true,
@@ -87,44 +69,7 @@ export default function NoticeHistoryPage() {
     });
   };
 
-  // Handles both Create and Edit form success submissions
   const handleFormSubmitSuccess = (formData) => {
-    if (formMode.editData && formMode.editData.id) {
-      // EDIT MODE: Update existing notice mapping properties
-      setLiveNotices((prev) =>
-        prev.map((item) =>
-          item.id === formMode.editData.id
-            ? {
-                ...item,
-                title: formData.title,
-                category: formData.category,
-                status: formData.status,
-                description: formData.description,
-                image: formData.image instanceof File 
-                  ? URL.createObjectURL(formData.image) 
-                  : item.image
-              }
-            : item
-        )
-      );
-    } else {
-      // CREATE MODE / DUPLICATE SAVING: Insert a completely new record at the top of the array
-      const nextId = liveNotices.length > 0 ? Math.max(...liveNotices.map((n) => Number(n.id) || 0)) + 1 : 1;
-      const freshNotice = {
-        id: nextId,
-        title: formData.title,
-        category: formData.category,
-        createdAt: new Date().toISOString().split("T")[0],
-        status: formData.status,
-        description: formData.description,
-        image: formData.image instanceof File 
-          ? URL.createObjectURL(formData.image) 
-          : (formMode.editData?.image || null) // Persists duplicated image links if applicable
-      };
-      setLiveNotices((prev) => [freshNotice, ...prev]);
-      setCurrentPage(1); 
-    }
-
     setFormMode({ isOpen: false, editData: null });
   };
 
@@ -183,15 +128,21 @@ export default function NoticeHistoryPage() {
     return processedNotices.slice(startOffset, startOffset + rowsPerPage);
   }, [processedNotices, currentPage, rowsPerPage]);
 
-
-  if (isLoading) {
+  if (noticesLoading) {
     return <NoticesSkeleton />;
+  }
+
+  if (noticesError) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Failed to load notices. Please try again later.</p>
+      </div>
+    );
   }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       
-      {/* Notice Heading and Top Action Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight text-primary">Notices</h1>
@@ -209,7 +160,6 @@ export default function NoticeHistoryPage() {
         </div>
       </div>
 
-      {/* Filter Segment & Search parameters remain visible on page block background */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
          <NoticeTabs activeTab={activeTab} onTabChange={setActiveTab} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       </div>
@@ -232,7 +182,6 @@ export default function NoticeHistoryPage() {
         />
       </div>
 
-      {/* RENDER THE CENTERING MODAL COMPONENT WINDOW DIALOG LAYER */}
       <NoticeFormModal 
         isOpen={formMode.isOpen}
         initialData={formMode.editData}

@@ -1,39 +1,42 @@
-import axios from "axios";
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 
 const API_URL = process.env.NEXT_PUBLIC_URL;
-export const getDashboardStats = async () => {
+
+const getDashboardStats = async () => {
   try {
     const [noticesRes, eventsRes, mentorsRes, certificatesRes] =
       await Promise.allSettled([
-        axios.get(`${API_URL}/notices`),
-        axios.get(`${API_URL}/events`),
-        axios.get(`${API_URL}/mentors`),
-        axios.get(`${API_URL}/certificates`),
+        fetch(`${API_URL}/notices`),
+        fetch(`${API_URL}/events`),
+        fetch(`${API_URL}/mentors`),
+        fetch(`${API_URL}/certificates`),
       ]);
 
-      console.log(noticesRes, eventsRes, mentorsRes, certificatesRes);
+    const parseResult = async (res, defaultValue) => {
+      if (res.status === "fulfilled" && res.value.ok) {
+        return res.value.json();
+      }
+      return defaultValue;
+    };
 
-    const notices =
-      noticesRes.status === "fulfilled"
-        ? noticesRes.value.data
-        : { count: 0, results: [] };
-    const events =
-      eventsRes.status === "fulfilled"
-        ? eventsRes.value.data
-        : { count: 0, results: [] };
-    const mentors =
-      mentorsRes.status === "fulfilled" ? mentorsRes.value.data : [];
-    const certificates =
-      certificatesRes.status === "fulfilled" ? certificatesRes.value.data : [];
+    const notices = await parseResult(noticesRes, { count: 0, results: [] });
+    const events = await parseResult(eventsRes, { count: 0, results: [] });
+    const mentors = await parseResult(mentorsRes, []);
+    const certificates = await parseResult(certificatesRes, []);
 
     const publishedNotices = (notices.results || []).filter(
-      (n) => n.status === "published" || n.status === "Published",
+      (n) => n.status === "published" || n.status === "Published"
     );
     const openEvents = (events.results || []).filter(
-      (e) => e.status === "open" || e.status === "Open" || e.registration_link,
+      (e) =>
+        e.status === "open" || e.status === "Open" || e.registration_link
     );
     const completedCertificates = Array.isArray(certificates)
-      ? certificates.filter((c) => c.is_project_complete || c.isProjectComplete)
+      ? certificates.filter(
+          (c) => c.is_project_complete || c.isProjectComplete
+        )
       : [];
 
     return {
@@ -55,24 +58,22 @@ export const getDashboardStats = async () => {
   }
 };
 
-/**
- * Fetch recent notices (latest 5 published).
- */
-export const getRecentNotices = async () => {
+const getRecentNotices = async () => {
   try {
-    const response = await axios.get(`${API_URL}/notices`);
-    const data = response.data;
+    const response = await fetch(`${API_URL}/notices`);
+    if (!response.ok) return [];
+    const data = await response.json();
     const results = data.results || [];
 
     const published = results.filter(
-      (n) => n.status === "published" || n.status === "Published",
+      (n) => n.status === "published" || n.status === "Published"
     );
 
     return published
       .sort(
         (a, b) =>
           new Date(b.updated_at || b.created_at) -
-          new Date(a.updated_at || a.created_at),
+          new Date(a.updated_at || a.created_at)
       )
       .slice(0, 5)
       .map((notice) => ({
@@ -88,17 +89,18 @@ export const getRecentNotices = async () => {
   }
 };
 
-export const getRecentEvents = async () => {
+const getRecentEvents = async () => {
   try {
-    const response = await axios.get(`${API_URL}/events`);
-    const data = response.data;
+    const response = await fetch(`${API_URL}/events`);
+    if (!response.ok) return [];
+    const data = await response.json();
     const results = data.results || [];
 
     return results
       .sort(
         (a, b) =>
           new Date(b.updated_at || b.created_at) -
-          new Date(a.updated_at || a.created_at),
+          new Date(a.updated_at || a.created_at)
       )
       .slice(0, 5)
       .map((event) => ({
@@ -116,17 +118,18 @@ export const getRecentEvents = async () => {
   }
 };
 
-export const getRecentCertificates = async () => {
+const getRecentCertificates = async () => {
   try {
-    const response = await axios.get(`${API_URL}/certificates`);
-    const data = response.data;
-    const certificates = Array.isArray(data) ? data : data.results || [];
+    const response = await fetch(`${API_URL}/certificates`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    const results = Array.isArray(data) ? data : data.results || [];
 
-    return certificates
+    return results
       .sort(
         (a, b) =>
           new Date(b.issued_at || b.created_at) -
-          new Date(a.issued_at || a.created_at),
+          new Date(a.issued_at || a.created_at)
       )
       .slice(0, 5)
       .map((cert) => ({
@@ -140,4 +143,32 @@ export const getRecentCertificates = async () => {
     console.error("Error fetching recent certificates:", error);
     return [];
   }
+};
+
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: ["dashboard", "stats"],
+    queryFn: getDashboardStats,
+  });
+};
+
+export const useRecentNotices = () => {
+  return useQuery({
+    queryKey: ["dashboard", "recentNotices"],
+    queryFn: getRecentNotices,
+  });
+};
+
+export const useRecentEvents = () => {
+  return useQuery({
+    queryKey: ["dashboard", "recentEvents"],
+    queryFn: getRecentEvents,
+  });
+};
+
+export const useRecentCertificates = () => {
+  return useQuery({
+    queryKey: ["dashboard", "recentCertificates"],
+    queryFn: getRecentCertificates,
+  });
 };
