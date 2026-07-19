@@ -1,21 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const loginUser = async (credentials) => {
-  const response = await fetch(`${API_URL}/login/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(credentials),
-  });
-
-  if (!response.ok) {
-    throw new Error("Invalid email or password");
-  }
-
-  return response.json();
+  const response = await apiClient.post("/login/", credentials);
+  return response.data;
 };
 
 export const useLogin = () => {

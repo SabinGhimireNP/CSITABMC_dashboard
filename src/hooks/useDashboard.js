@@ -1,22 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const getDashboardStats = async () => {
   try {
     const [noticesRes, eventsRes, mentorsRes, certificatesRes] =
       await Promise.allSettled([
-        fetch(`${API_URL}/notices`),
-        fetch(`${API_URL}/events`),
-        fetch(`${API_URL}/mentors`),
-        fetch(`${API_URL}/certificates`),
+        apiClient.get("/notices"),
+        apiClient.get("/events"),
+        apiClient.get("/mentors"),
+        apiClient.get("/certificates"),
       ]);
 
-    const parseResult = async (res, defaultValue) => {
-      if (res.status === "fulfilled" && res.value.ok) {
-        return res.value.json();
+    const parseResult = (res, defaultValue) => {
+      if (res.status === "fulfilled") {
+        return res.value.data;
       }
       return defaultValue;
     };
@@ -60,9 +59,7 @@ const getDashboardStats = async () => {
 
 const getRecentNotices = async () => {
   try {
-    const response = await fetch(`${API_URL}/notices`);
-    if (!response.ok) return [];
-    const data = await response.json();
+    const { data } = await apiClient.get("/notices");
     const results = data.results || [];
 
     const published = results.filter(
@@ -91,9 +88,7 @@ const getRecentNotices = async () => {
 
 const getRecentEvents = async () => {
   try {
-    const response = await fetch(`${API_URL}/events`);
-    if (!response.ok) return [];
-    const data = await response.json();
+    const { data } = await apiClient.get("/events");
     const results = data.results || [];
 
     return results
@@ -120,9 +115,7 @@ const getRecentEvents = async () => {
 
 const getRecentCertificates = async () => {
   try {
-    const response = await fetch(`${API_URL}/certificates`);
-    if (!response.ok) return [];
-    const data = await response.json();
+    const { data } = await apiClient.get("/certificates");
     const results = Array.isArray(data) ? data : data.results || [];
 
     return results

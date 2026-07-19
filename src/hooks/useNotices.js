@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const fetchNotices = async () => {
-  const response = await fetch(`${API_URL}/notices`);
-  if (!response.ok) throw new Error("Failed to fetch notices");
-  const data = await response.json();
+  const { data } = await apiClient.get("/notices");
 
   const fetchedNotices = (data.results || []).map((notice) => ({
     id: notice.id,

@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const fetchEvents = async () => {
-  const response = await fetch(`${API_URL}/events`);
-  if (!response.ok) throw new Error("Failed to fetch events");
-  const data = await response.json();
+  const { data } = await apiClient.get("/events");
 
   const fetchedEvents = (data.results || []).map((event) => ({
     id: event.id,

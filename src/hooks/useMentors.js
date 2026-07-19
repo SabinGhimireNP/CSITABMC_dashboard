@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const fetchMentors = async () => {
-  const response = await fetch(`${API_URL}/mentors`);
-  if (!response.ok) throw new Error("Failed to fetch mentors");
-  const data = await response.json();
+  const { data } = await apiClient.get("/mentors");
 
   // Primary: assumes backend returns { count, next, previous, results }
   const results = data.results || data;

@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const fetchCertificates = async () => {
-  const response = await fetch(`${API_URL}/certificates`);
-  if (!response.ok) throw new Error("Failed to fetch certificates");
-  const data = await response.json();
+  const { data } = await apiClient.get("/certificates");
 
   // Primary: assumes backend returns { count, next, previous, results }
   const results = data.results || data;

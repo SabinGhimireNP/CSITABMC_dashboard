@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const subjectCodeMap = {
   CSC114: "Introduction to Information Technology",
@@ -78,9 +77,7 @@ const findSubjectName = (code) => {
 };
 
 const fetchPastPapers = async () => {
-  const response = await fetch(`${API_URL}/past-papers`);
-  if (!response.ok) throw new Error("Failed to fetch past papers");
-  const data = await response.json();
+  const { data } = await apiClient.get("/past-papers");
 
   const fetchedPastPapers = (data.results || []).map((paper) => ({
     id: paper.id,

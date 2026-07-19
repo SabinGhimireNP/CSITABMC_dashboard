@@ -1,13 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = process.env.NEXT_PUBLIC_URL;
+import apiClient from "@/lib/axios";
 
 const fetchTenures = async () => {
-  const response = await fetch(`${API_URL}/tenures`);
-  if (!response.ok) throw new Error("Failed to fetch tenures");
-  const data = await response.json();
+  const { data } = await apiClient.get("/tenures");
 
   // Primary: assumes backend returns { count, next, previous, results }
   const results = data.results || data;
