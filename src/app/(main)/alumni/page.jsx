@@ -119,7 +119,6 @@ export default function AlumniPage() {
       dataset = dataset.filter(
         (m) =>
           m.fullName?.toLowerCase().includes(q) ||
-          m.post?.toLowerCase().includes(q) ||
           m.email?.toLowerCase().includes(q) ||
           m.memberId?.toLowerCase().includes(q) ||
           (m.tags || []).some((t) => t.toLowerCase().includes(q))

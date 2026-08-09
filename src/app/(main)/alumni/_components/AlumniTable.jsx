@@ -114,8 +114,8 @@ export function AlumniTable({
               <th onClick={() => onHeaderClick("fullName")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[22%]">
                 <div className="flex items-center gap-1.5">Full Name <SortIndicator field="fullName" /></div>
               </th>
-              <th onClick={() => onHeaderClick("post")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[15%]">
-                <div className="flex items-center gap-1.5">Post <SortIndicator field="post" /></div>
+              <th onClick={() => onHeaderClick("graduationYear")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[15%]">
+                <div className="flex items-center gap-1.5">Graduation Year <SortIndicator field="graduationYear" /></div>
               </th>
               <th onClick={() => onHeaderClick("email")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[20%]">
                 <div className="flex items-center gap-1.5">Email <SortIndicator field="email" /></div>
@@ -159,7 +159,9 @@ export function AlumniTable({
                     <span className="text-[10px] text-slate-400 truncate block">{alumni.email}</span>
                   </td>
 
-                  <td className="py-2 px-4 font-medium text-slate-600 truncate">{alumni.post}</td>
+                  <td className="py-2 px-4 font-medium text-slate-600 truncate">
+                    {alumni.graduationYear || "—"}
+                  </td>
                   <td className="py-2 px-4 font-normal text-slate-500 truncate">{alumni.email}</td>
 
                   <td className="py-2 px-4 whitespace-nowrap">

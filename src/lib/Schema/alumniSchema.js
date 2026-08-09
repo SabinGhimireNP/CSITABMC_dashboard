@@ -5,9 +5,6 @@ export const alumniFormSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Full name is required." }),
-  post: z
-    .string()
-    .min(1, { message: "Please select a post." }),
   email: z
     .string()
     .trim()

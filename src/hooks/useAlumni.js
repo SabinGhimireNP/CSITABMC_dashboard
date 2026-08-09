@@ -14,17 +14,16 @@ const fetchAlumni = async () => {
     id: alumni.id,
     memberId: alumni.member?.id || alumni.id,
     fullName: alumni.member?.name || "",
-    post: alumni.member?.role || "Alumni",
     email: alumni.member?.email || "",
+    phoneNumber: alumni.member?.phone_number || "",
     facebookLink: alumni.member?.fb_link || "",
     linkedinLink: alumni.member?.linkedin_link || "",
     githubLink: alumni.member?.github_link || "",
-    tags: ["Alumni"],
-    description: alumni.bio || "",
+    slug: alumni.member?.slug || "",
     image: alumni.member?.image || null,
-    status: "active",
     graduationYear: alumni.graduation_year || null,
-    createdAt: alumni.member?.created_at || "",
+    bio: alumni.bio || "",
+    status: "active",
   }));
 
   return {

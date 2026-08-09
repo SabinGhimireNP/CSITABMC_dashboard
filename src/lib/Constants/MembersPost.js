@@ -1,4 +1,5 @@
 export const POST_OPTIONS = [
+  "Advisor",
   "President",
   "Vice President",
   "Secretary",

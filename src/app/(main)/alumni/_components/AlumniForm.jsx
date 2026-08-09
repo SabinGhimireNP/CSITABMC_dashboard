@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Loader2, X, Plus } from "lucide-react";
 
-import { POST_OPTIONS } from "@/lib/Constants/MembersPost";
 import { alumniFormSchema } from "@/lib/Schema/alumniSchema";
 import { MarkdownEditor } from "@/components/common/MarkdownEditor";
 
@@ -15,7 +14,6 @@ export function AlumniFormModal({
 }) {
   const [formData, setFormData] = useState({
     fullName: "",
-    post: "",
     email: "",
     facebookLink: "",
     linkedinLink: "",
@@ -35,7 +33,6 @@ export function AlumniFormModal({
     if (isOpen) {
       setFormData({
         fullName: initialData?.fullName || "",
-        post: initialData?.post || "",
         email: initialData?.email || "",
         facebookLink: initialData?.facebookLink || "",
         linkedinLink: initialData?.linkedinLink || "",
@@ -152,7 +149,7 @@ export function AlumniFormModal({
 
         {/* Scrollable Body */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Row 1: Full Name + Post */}
+          {/* Row 1: Full Name + Email */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="font-semibold text-slate-700">Full Name *</label>
@@ -161,16 +158,13 @@ export function AlumniFormModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Post *</label>
-              <select name="post" value={formData.post} onChange={handleInputChange} className={`${errors.post ? inputError : inputNormal} cursor-pointer`}>
-                <option value="">Choose here</option>
-                {POST_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-              {errors.post && <p className="text-rose-500 text-[11px] font-medium">{errors.post}</p>}
+              <label className="font-semibold text-slate-700">Email *</label>
+              <input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="e.g., alumni@csitabmc.edu.np" className={errors.email ? inputError : inputNormal} />
+              {errors.email && <p className="text-rose-500 text-[11px] font-medium">{errors.email}</p>}
             </div>
           </div>
 
-          {/* Row 2: Image + Email */}
+          {/* Row 2: Image + Graduation Year */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="font-semibold text-slate-700">Image *</label>
@@ -194,9 +188,8 @@ export function AlumniFormModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Email *</label>
-              <input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="e.g., alumni@csitabmc.edu.np" className={errors.email ? inputError : inputNormal} />
-              {errors.email && <p className="text-rose-500 text-[11px] font-medium">{errors.email}</p>}
+              <label className="font-semibold text-slate-700">Graduation Year</label>
+              <input name="graduationYear" type="number" value={formData.graduationYear} onChange={handleInputChange} placeholder="e.g., 2024" className={inputNormal} />
             </div>
           </div>
 
@@ -212,15 +205,11 @@ export function AlumniFormModal({
             </div>
           </div>
 
-          {/* Row 4: GitHub + Graduation Year */}
+          {/* Row 4: GitHub */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <label className="font-semibold text-slate-700">GitHub Link</label>
               <input name="githubLink" type="url" value={formData.githubLink} onChange={handleInputChange} placeholder="https://github.com/username" className={inputNormal} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Graduation Year</label>
-              <input name="graduationYear" type="number" value={formData.graduationYear} onChange={handleInputChange} placeholder="e.g., 2024" className={inputNormal} />
             </div>
           </div>
 
