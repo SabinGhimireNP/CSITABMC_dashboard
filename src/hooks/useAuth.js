@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { useAuthStore } from "@/lib/store/authStore";
 
 const loginUser = async (credentials) => {
   const response = await apiClient.post("/login/", credentials);
@@ -9,46 +10,43 @@ const loginUser = async (credentials) => {
 };
 
 export const useLogin = () => {
-  const queryClient = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
     mutationKey: ["login"],
     mutationFn: loginUser,
     onSuccess: (data) => {
-      // Store user data in localStorage and react-query cache
-      localStorage.setItem("user", JSON.stringify(data.user));
-      queryClient.setQueryData(["auth", "user"], data.user);
+      // Store user profile in the zustand auth store (persisted to localStorage)
+      setUser(data.user);
     },
   });
 };
 
 export const useLogout = () => {
+  const clearUser = useAuthStore((state) => state.clearUser);
   const queryClient = useQueryClient();
 
   const logout = () => {
-    localStorage.removeItem("user");
-    queryClient.setQueryData(["auth", "user"], null);
+    // Clear the user profile from the zustand auth store
+    clearUser();
+    // Clear any cached server data (notices, members, etc.)
     queryClient.clear();
   };
 
   return logout;
 };
 
-export const getStoredUser = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    const stored = localStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
+/**
+ * Returns the authenticated user's profile from the zustand store.
+ * The data is persisted to localStorage so it survives page refreshes.
+ */
+export const useUser = () => {
+  return useAuthStore((state) => state.user);
 };
 
-export const useUser = () => {
-  return useQuery({
-    queryKey: ["auth", "user"],
-    queryFn: () => getStoredUser(),
-    initialData: getStoredUser,
-    staleTime: Infinity,
-  });
+/**
+ * Returns whether a user is currently authenticated.
+ */
+export const useIsAuthenticated = () => {
+  return useAuthStore((state) => state.isAuthenticated);
 };

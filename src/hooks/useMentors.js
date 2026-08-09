@@ -30,6 +30,25 @@ const fetchMentors = async () => {
   // return { count: data.length, data: fetchedMentors };
 };
 
+export const createMentor = async (mentorData) => {
+  try {
+    const newMentor = {
+      updated_at: new Date().toISOString(),
+      name: mentorData.fullName,
+      email: mentorData.email,
+      expertise: mentorData.role,
+      linkedin_profile: mentorData.socialLink,
+    };
+    const response = await apiClient.post("/mentors/", newMentor,{
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating mentor:", error);
+    throw error;
+  }
+};
+
 export const useMentors = () => {
   return useQuery({
     queryKey: ["mentors"],

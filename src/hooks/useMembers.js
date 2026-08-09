@@ -12,21 +12,20 @@ const fetchTenures = async () => {
 
   const fetchedTenures = results.map((tenure) => ({
     id: tenure.id,
-    Members: tenure.members.map((member) => ({
-      id: member.id,
-      tenureName: member.tenure,
-      memberId: member.id,
-      fullName: member.name,
-      post: member.role,
-      email: member.email,
-      facebookLink: member.fb_link,
-      linkedinLink: member.linkedin_link,
-      githubLink: member.github_link,
+    Members: (tenure.memberships || []).map((membership) => ({
+      id: membership.member.id,
+      memberId: membership.member.id,
+      fullName: membership.member.name,
+      post: membership.designation,
+      email: membership.member.email,
+      facebookLink: membership.member.fb_link,
+      linkedinLink: membership.member.linkedin_link,
+      githubLink: membership.member.github_link,
       tags: ["Leadership", "Event Management"],
-      description: "Club president and founding member.",
-      image: member.image,
+      description: "Club member.",
+      image: membership.member.image,
       status: "active",
-      createdAt: member.created_at,
+      createdAt: membership.member.created_at,
     })),
     name: tenure.name,
     startDate: tenure.start_date,
@@ -38,10 +37,6 @@ const fetchTenures = async () => {
     count,
     data: fetchedTenures,
   };
-
-  // TODO: uncomment below and remove above once backend returns paginated shape for this endpoint
-  // const fetchedTenures = data.map((tenure) => ({ ... }));
-  // return { count: data.length, data: fetchedTenures };
 };
 
 export const useTenures = () => {

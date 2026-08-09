@@ -28,6 +28,7 @@ import {
   UserCheck,
   ShieldAlert,
   FileKey,
+  GraduationCap,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -90,6 +91,11 @@ const sidebarSections = [
         title: "Team Members",
         url: "/members",
         icon: Users,
+      },
+      {
+        title: "Alumni",
+        url: "/alumni",
+        icon: GraduationCap,
       },
       {
         title: "Admin Access",

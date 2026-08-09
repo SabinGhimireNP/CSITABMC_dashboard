@@ -12,7 +12,11 @@ import { PlusCircle } from "lucide-react";
 import MentorsSkeleton from "./_components/MentorsSkeleton";
 
 export default function MentorsPage() {
-  const { data: mentorsData, isLoading: mentorsLoading, isError: mentorsError } = useMentors();
+  const {
+    data: mentorsData,
+    isLoading: mentorsLoading,
+    isError: mentorsError,
+  } = useMentors();
   const { data: eventsData, isLoading: eventsLoading } = useEvents();
 
   const liveMentors = mentorsData?.data || [];
@@ -36,7 +40,10 @@ export default function MentorsPage() {
     } else {
       if (sortOrder === "none") setSortOrder("asc");
       else if (sortOrder === "asc") setSortOrder("desc");
-      else { setSortOrder("none"); setSortField(null); }
+      else {
+        setSortOrder("none");
+        setSortField(null);
+      }
     }
     setCurrentPage(1);
   };
@@ -85,7 +92,7 @@ export default function MentorsPage() {
       dataset = dataset.filter(
         (m) =>
           m.fullName?.toLowerCase().includes(query) ||
-          m.role?.toLowerCase().includes(query)
+          m.role?.toLowerCase().includes(query),
       );
     }
 
@@ -102,7 +109,9 @@ export default function MentorsPage() {
 
         valA = valA?.toString().toLowerCase() || "";
         valB = valB?.toString().toLowerCase() || "";
-        return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        return sortOrder === "asc"
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
       });
     }
 
@@ -128,18 +137,23 @@ export default function MentorsPage() {
   if (mentorsError) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-500">Failed to load mentors. Please try again later.</p>
+        <p className="text-red-500">
+          Failed to load mentors. Please try again later.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Mentors</h1>
-          <p className="text-sm text-muted-foreground font-normal">Manage mentors and their linked events.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-primary">
+            Mentors
+          </h1>
+          <p className="text-sm text-muted-foreground font-normal">
+            Manage mentors and their linked events.
+          </p>
         </div>
         <div className="shrink-0">
           <Button
@@ -190,7 +204,6 @@ export default function MentorsPage() {
         onSubmitSuccess={handleFormSubmitSuccess}
         onCancel={() => setFormMode({ isOpen: false, editData: null })}
       />
-
     </div>
   );
 }

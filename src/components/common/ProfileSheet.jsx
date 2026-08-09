@@ -11,7 +11,7 @@ const ProfileSheet = () => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  const { data: user } = useUser();
+  const user = useUser();
   const logout = useLogout();
 
   const typeLabel = user?.type || user?.username || "User";
