@@ -72,7 +72,10 @@ export const useCreateAlumni = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createAlumni,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alumni"] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["alumni"], refetchType: "active" });
+      await queryClient.refetchQueries({ queryKey: ["alumni"], type: "active" });
+    },
   });
 };
 
@@ -80,7 +83,10 @@ export const useUpdateAlumni = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateAlumni,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alumni"] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["alumni"], refetchType: "active" });
+      await queryClient.refetchQueries({ queryKey: ["alumni"], type: "active" });
+    },
   });
 };
 
@@ -88,6 +94,9 @@ export const useDeleteAlumni = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteAlumni,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alumni"] }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["alumni"], refetchType: "active" });
+      await queryClient.refetchQueries({ queryKey: ["alumni"], type: "active" });
+    },
   });
 };

@@ -10,7 +10,7 @@ import {
   Check,
   UserCircle,
 } from "lucide-react";
-import { createMentor } from "@/hooks/useMentors";
+import { useCreateMentor } from "@/hooks/useMentors";
 
 export function MentorFormModal({
   initialData = null,
@@ -30,6 +30,7 @@ export function MentorFormModal({
 
   const [errors, setErrors] = useState({});
   const [submitType, setSubmitType] = useState(null);
+  const createMentorMutation = useCreateMentor();
   const [eventDropdownOpen, setEventDropdownOpen] = useState(false);
   const eventDropdownRef = useRef(null);
   const [fileMeta, setFileMeta] = useState({ preview: null, name: "" });
@@ -135,8 +136,7 @@ export function MentorFormModal({
     }
 
     if (targetType === "publish") {
-      console.log("Published data:", result.data);
-      createMentor(result.data);
+      await createMentorMutation.mutateAsync(result.data);
     }
 
     if (onSubmitSuccess) onSubmitSuccess(result.data);

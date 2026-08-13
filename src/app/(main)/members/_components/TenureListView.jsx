@@ -4,11 +4,27 @@ import React from "react";
 import { Plus } from "lucide-react";
 import { TenureCard } from "./TenureCard";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/common/pagination";
 
 export function TenureListView({ tenures, members, onOpen, onDuplicate, onEdit, onDelete, onCreate }) {
+  const [rowsPerPage, setRowsPerPage] = React.useState(6);
+  const [currentPage, setCurrentPage] = React.useState(1);
+
   const getMemberCount = (tenureId) => {
     return members.filter((m) => m.tenureId === tenureId).length;
   };
+
+  const totalRows = tenures.length;
+  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+
+  React.useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const paginatedTenures = React.useMemo(() => {
+    const startOffset = (currentPage - 1) * rowsPerPage;
+    return tenures.slice(startOffset, startOffset + rowsPerPage);
+  }, [tenures, currentPage, rowsPerPage]);
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
@@ -41,7 +57,7 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, onEdit, 
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tenures.map((tenure) => (
+          {paginatedTenures.map((tenure) => (
             <TenureCard
               key={tenure.id}
               tenure={tenure}
@@ -52,6 +68,23 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, onEdit, 
               onDelete={onDelete}
             />
           ))}
+        </div>
+      )}
+
+      {tenures.length > 0 && (
+        <div className="border border-slate-200/90 rounded-sm bg-slate-50/30">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            rowsPerPage={rowsPerPage}
+            onPageChange={setCurrentPage}
+            onRowsPerPageChange={(value) => {
+              setRowsPerPage(value);
+              setCurrentPage(1);
+            }}
+            isEmbedded={true}
+          />
         </div>
       )}
     </div>

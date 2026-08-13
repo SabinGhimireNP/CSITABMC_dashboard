@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 
 const fetchMentors = async () => {
@@ -53,5 +53,17 @@ export const useMentors = () => {
   return useQuery({
     queryKey: ["mentors"],
     queryFn: fetchMentors,
+  });
+};
+
+export const useCreateMentor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createMentor,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["mentors"], refetchType: "active" });
+      await queryClient.refetchQueries({ queryKey: ["mentors"], type: "active" });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 };
