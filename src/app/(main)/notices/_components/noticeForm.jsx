@@ -498,6 +498,8 @@ export function NoticeFormModal({
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" /> Storing...
                 </>
+              ) : initialData ? (
+                "Update Draft"
               ) : (
                 "Save as Draft"
               )}
@@ -512,6 +514,8 @@ export function NoticeFormModal({
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" /> Deploying...
                 </>
+              ) : initialData ? (
+                "Update"
               ) : (
                 "Publish Notice"
               )}

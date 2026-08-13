@@ -62,6 +62,9 @@ export function AlumniFormModal({
 
   const handleActionClick = async (e) => {
     e.preventDefault();
+    // Prevent double submission while a request is already in flight.
+    if (submitType !== null) return;
+
     setSubmitType("active");
     setErrors({});
 
@@ -81,7 +84,9 @@ export function AlumniFormModal({
     }
 
     try {
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
+      // Await the mutation so the loading state stays visible until the
+      // backend request completes (success or failure).
+      if (onSubmitSuccess) await onSubmitSuccess(result.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -180,7 +185,7 @@ export function AlumniFormModal({
           <button type="button" disabled={submitType !== null} onClick={onCancel} className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-sm">Cancel</button>
           <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2 flex-col sm:flex-row">
             <button type="button" disabled={submitType !== null || tenuresList.length === 0} onClick={handleActionClick} className="h-9 w-full sm:w-auto px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5">
-              {submitType === "active" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</> : (initialData ? "Update Alumni" : "Add Alumni")}
+              {submitType === "active" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</> : (initialData ? "Update" : "Publish")}
             </button>
           </div>
         </div>

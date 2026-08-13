@@ -138,6 +138,45 @@
 }
 
 @layer base {
+  /* Indeterminate progress bar animation (used above the notices table
+     while filters/pagination are fetching). The indicator slides across
+     the track repeatedly to convey ongoing activity. */
+  @keyframes progress-indeterminate {
+    0% {
+      left: -35%;
+      right: 100%;
+    }
+    60% {
+      left: 100%;
+      right: -35%;
+    }
+    100% {
+      left: 100%;
+      right: -35%;
+    }
+  }
+
+  .progress-bar-track {
+    position: relative;
+    overflow: hidden;
+    height: 3px;
+    background: rgb(226 232 240 / 0.8);
+  }
+
+  .progress-bar-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 35%;
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(0.52 0.14 260),
+      transparent
+    );
+    animation: progress-indeterminate 1.2s ease-in-out infinite;
+  }
   * {
     @apply border-border outline-ring/50;
   }

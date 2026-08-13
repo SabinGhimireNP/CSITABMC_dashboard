@@ -11,26 +11,29 @@ const fetchAlumni = createThrottle(async () => {
   const results = data.results || data;
   const count = data.count ?? results.length;
 
-  const fetchedAlumni = results.map((alumni) => ({
-    id: alumni.id|| "1",
-    memberId: alumni.member?.id || alumni.id,
-    fullName: alumni.member?.name || "",
-    email: alumni.member?.email || "",
-    phoneNumber: alumni.member?.phone_number || "",
-    facebookLink: alumni.member?.fb_link || "",
-    linkedinLink: alumni.member?.linkedin_link || "",
-    githubLink: alumni.member?.github_link || "",
-    slug: alumni.member?.slug || "",
-    image: alumni.member?.image || null,
-    graduationYear: alumni.graduation_year || null,
-    tenureIds: Array.isArray(alumni.tenure_ids)
-      ? alumni.tenure_ids.map((id) => Number(id))
-      : Array.isArray(alumni.tenureIds)
-        ? alumni.tenureIds.map((id) => Number(id))
-        : [],
-    bio: alumni.bio || "",
-    status: "active",
-  }));
+  const fetchedAlumni = results
+    .map((alumni) => ({
+      id: alumni.id || "1",
+      memberId: alumni.member?.id || alumni.id,
+      fullName: alumni.member?.name || "",
+      email: alumni.member?.email || "",
+      phoneNumber: alumni.member?.phone_number || "",
+      facebookLink: alumni.member?.fb_link || "",
+      linkedinLink: alumni.member?.linkedin_link || "",
+      githubLink: alumni.member?.github_link || "",
+      slug: alumni.member?.slug || "",
+      image: alumni.member?.image || null,
+      graduationYear: alumni.graduation_year || null,
+      tenureIds: Array.isArray(alumni.tenure_ids)
+        ? alumni.tenure_ids.map((id) => Number(id))
+        : Array.isArray(alumni.tenureIds)
+          ? alumni.tenureIds.map((id) => Number(id))
+          : [],
+      bio: alumni.bio || "",
+      status: "active",
+    }))
+    // Default view is id-based (ascending).
+    .sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
 
   return {
     count,
