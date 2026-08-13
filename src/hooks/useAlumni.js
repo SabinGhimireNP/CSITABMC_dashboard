@@ -2,8 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { createThrottle } from "@/lib/throttle";
 
-const fetchAlumni = async () => {
+const fetchAlumni = createThrottle(async () => {
   const { data } = await apiClient.get("/alumni");
 
   // Primary: assumes backend returns { count, next, previous, results }
@@ -35,7 +36,7 @@ const fetchAlumni = async () => {
     count,
     data: fetchedAlumni,
   };
-};
+});
 
 export const useAlumni = () => {
   return useQuery({
@@ -44,20 +45,20 @@ export const useAlumni = () => {
   });
 };
 
-const createAlumni = async (payload) => {
+const createAlumni = createThrottle(async (payload) => {
   const { data } = await apiClient.post("/alumni/", payload);
   return data;
-};
+});
 
-const updateAlumni = async ({ id, payload }) => {
+const updateAlumni = createThrottle(async ({ id, payload }) => {
   const { data } = await apiClient.put(`/alumni/${id}/`, payload);
   return data;
-};
+});
 
-const deleteAlumni = async (id) => {
+const deleteAlumni = createThrottle(async (id) => {
   await apiClient.delete(`/alumni/${id}/`);
   return id;
-};
+});
 
 /**
  * Alumni CRUD mutations backed by the hosted Django API.

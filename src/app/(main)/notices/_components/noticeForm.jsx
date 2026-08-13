@@ -7,7 +7,6 @@ import {
   UploadCloud,
   Loader2,
   X,
-  FileText,
   Bold,
   Italic,
   List,
@@ -56,11 +55,8 @@ export function NoticeFormModal({
         image: undefined,
       });
       setFileMeta({
-        preview:
-          initialData?.image && !initialData.image.endsWith(".pdf")
-            ? initialData.image
-            : null,
-        isPdf: initialData?.image?.endsWith(".pdf") || false,
+        preview: initialData?.image || null,
+        isPdf: false,
         name: initialData?.image ? "Attached Document Asset" : "",
       });
       setErrors({});
@@ -154,25 +150,22 @@ export function NoticeFormModal({
     if (file) {
       setFormData((prev) => ({ ...prev, image: file }));
       if (errors.image) setErrors((prev) => ({ ...prev, image: undefined }));
-      const isPdf =
-        file.type === "application/pdf" || file.name.endsWith(".pdf");
-      if (isPdf) {
-        setFileMeta({ preview: null, isPdf: true, name: file.name });
-      } else {
-        const reader = new FileReader();
-        reader.onloadend = () =>
-          setFileMeta({
-            preview: reader.result,
-            isPdf: false,
-            name: file.name,
-          });
-        reader.readAsDataURL(file);
-      }
+      const reader = new FileReader();
+      reader.onloadend = () =>
+        setFileMeta({
+          preview: reader.result,
+          isPdf: false,
+          name: file.name,
+        });
+      reader.readAsDataURL(file);
     }
   };
 
   const handleActionClick = async (e, chosenStatus) => {
     e.preventDefault();
+    // Prevent double submission while a request is already in flight.
+    if (submitType !== null) return;
+
     setSubmitType(chosenStatus);
     setErrors({});
 
@@ -191,8 +184,9 @@ export function NoticeFormModal({
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
+      // Await the mutation so the loading state stays visible until the
+      // backend request completes (success or failure).
+      if (onSubmitSuccess) await onSubmitSuccess(result.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -265,9 +259,9 @@ export function NoticeFormModal({
                 }`}
               >
                 <option value="">Select Category</option>
-                <option value="Urgent Alert">Urgent Alert</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="General News">General News</option>
+                <option value="administrative">Administrative</option>
+                <option value="academic">Academic</option>
+                <option value="events">Events</option>
               </select>
               {errors.category && (
                 <p className="text-rose-500 text-[11px] font-medium mt-0.5">
@@ -290,39 +284,31 @@ export function NoticeFormModal({
                     Click to upload notice attachment
                   </p>
                   <p className="text-[10px] text-slate-400 font-normal mt-0.5">
-                    Supports PNG, JPEG, WEBP or PDF (Max 5MB)
+                    Supports PNG, JPEG, WEBP (Max 5MB)
                   </p>
                 </div>
                 <input
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   className="hidden"
                   onChange={handleFileChange}
                 />
               </label>
             ) : (
               <div className="relative border border-slate-200 rounded-xl max-w-md bg-slate-50 p-3 pr-12 flex items-center gap-3 group">
-                {fileMeta.isPdf ? (
-                  <div className="h-10 w-10 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center border border-rose-100 shrink-0">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                ) : (
-                  <div className="h-10 w-10 bg-indigo-50 rounded-lg overflow-hidden border border-indigo-100 shrink-0">
-                    <img
-                      src={fileMeta.preview}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                <div className="h-10 w-10 bg-indigo-50 rounded-lg overflow-hidden border border-indigo-100 shrink-0">
+                  <img
+                    src={fileMeta.preview}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-slate-800 truncate">
                     {fileMeta.name}
                   </p>
                   <p className="text-[10px] text-slate-400 font-normal">
-                    {fileMeta.isPdf
-                      ? "PDF Document Asset"
-                      : "Image Media Asset"}
+                    Image Media Asset
                   </p>
                 </div>
                 <button

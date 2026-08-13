@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { createThrottle } from "@/lib/throttle";
 
-const fetchEvents = async () => {
+const fetchEvents = createThrottle(async () => {
   const { data } = await apiClient.get("/events");
 
   const fetchedEvents = (data.results || []).map((event) => ({
@@ -35,7 +36,7 @@ const fetchEvents = async () => {
     count: data.count,
     data: fetchedEvents,
   };
-};
+});
 
 export const useEvents = () => {
   return useQuery({

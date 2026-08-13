@@ -3,11 +3,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { useAuthStore } from "@/lib/store/authStore";
+import { createThrottle } from "@/lib/throttle";
 
-const loginUser = async (credentials) => {
+const loginUser = createThrottle(async (credentials) => {
   const response = await apiClient.post("/login/", credentials);
   return response.data;
-};
+});
 
 export const useLogin = () => {
   const setUser = useAuthStore((state) => state.setUser);

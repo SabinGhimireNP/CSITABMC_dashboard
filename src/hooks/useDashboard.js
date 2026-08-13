@@ -2,12 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { createThrottle } from "@/lib/throttle";
 
-const getDashboardStats = async () => {
+const getDashboardStats = createThrottle(async () => {
   try {
     const [noticesRes, eventsRes, mentorsRes, certificatesRes] =
       await Promise.allSettled([
-        apiClient.get("/notices"),
+        // Cache-busting param avoids the backend's 5-minute GET cache.
+        apiClient.get("/notices", { params: { _: Date.now() } }),
         apiClient.get("/events"),
         apiClient.get("/mentors"),
         apiClient.get("/certificates"),
@@ -55,11 +57,14 @@ const getDashboardStats = async () => {
       certificatesIssuedCount: 0,
     };
   }
-};
+});
 
-const getRecentNotices = async () => {
+const getRecentNotices = createThrottle(async () => {
   try {
-    const { data } = await apiClient.get("/notices");
+    // Cache-busting param avoids the backend's 5-minute GET cache.
+    const { data } = await apiClient.get("/notices", {
+      params: { _: Date.now() },
+    });
     const results = data.results || [];
 
     const published = results.filter(
@@ -84,9 +89,9 @@ const getRecentNotices = async () => {
     console.error("Error fetching recent notices:", error);
     return [];
   }
-};
+});
 
-const getRecentEvents = async () => {
+const getRecentEvents = createThrottle(async () => {
   try {
     const { data } = await apiClient.get("/events");
     const results = data.results || [];
@@ -111,9 +116,9 @@ const getRecentEvents = async () => {
     console.error("Error fetching recent events:", error);
     return [];
   }
-};
+});
 
-const getRecentCertificates = async () => {
+const getRecentCertificates = createThrottle(async () => {
   try {
     const { data } = await apiClient.get("/certificates");
     const results = Array.isArray(data) ? data : data.results || [];
@@ -136,7 +141,7 @@ const getRecentCertificates = async () => {
     console.error("Error fetching recent certificates:", error);
     return [];
   }
-};
+});
 
 export const useDashboardStats = () => {
   return useQuery({

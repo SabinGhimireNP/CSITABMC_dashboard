@@ -4,9 +4,14 @@ const API_URL = process.env.NEXT_PUBLIC_URL;
 
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // Do NOT hardcode Content-Type here. Axios auto-detects the correct header
+  // per request:
+  //   - plain objects/JSON → "application/json"
+  //   - FormData → "multipart/form-data" (with boundary, required by the
+  //     backend's MultiPartParser for file uploads)
+  //   - URLSearchParams → "application/x-www-form-urlencoded"
+  // A hardcoded "application/json" default breaks file uploads because the
+  // backend receives the FormData body without the proper multipart encoding.
   // The Django backend authenticates via httpOnly cookies; credentials must
   // be included on cross-origin requests for the existing auth to work.
   withCredentials: true,

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useNotices } from "@/hooks/useNotices";
+import { toast } from "sonner";
+import { useNotices, useCreateNotice, useUpdateNotice } from "@/hooks/useNotices";
 import { NoticeTable } from "./noticeTable";
 import { NoticeTabs } from "./noticeTabs";
 import { NoticeFormModal } from "./noticeForm";
@@ -11,6 +12,8 @@ import NoticesSkeleton from "./NoticesSkeleton";
 
 export function NoticesPageContent() {
   const { data: noticesData, isLoading: noticesLoading, isError: noticesError } = useNotices();
+  const createNoticeMutation = useCreateNotice();
+  const updateNoticeMutation = useUpdateNotice();
   const liveNotices = noticesData?.data || [];
 
   const [activeTab, setActiveTab] = useState("all");
@@ -62,8 +65,39 @@ export function NoticesPageContent() {
     });
   };
 
-  const handleFormSubmitSuccess = () => {
-    setFormMode({ isOpen: false, editData: null });
+  const handleFormSubmitSuccess = (formData) => {
+    const payload = new FormData();
+    payload.append("title", formData.title);
+    payload.append("category", formData.category);
+    payload.append("status", formData.status);
+    payload.append("description", formData.description);
+    if (formData.image) payload.append("image", formData.image);
+
+    if (formMode.editData && formMode.editData.slug) {
+      return updateNoticeMutation.mutateAsync(
+        { slug: formMode.editData.slug, formData: payload },
+        {
+          onSuccess: () => {
+            toast.success("Notice updated successfully.");
+            setFormMode({ isOpen: false, editData: null });
+          },
+          onError: () => {
+            toast.error("Failed to update notice. Please try again.");
+          },
+        }
+      );
+    } else {
+      return createNoticeMutation.mutateAsync(payload, {
+        onSuccess: () => {
+          toast.success("Notice created successfully.");
+          setFormMode({ isOpen: false, editData: null });
+          setCurrentPage(1);
+        },
+        onError: () => {
+          toast.error("Failed to create notice. Please try again.");
+        },
+      });
+    }
   };
 
   const processedNotices = useMemo(() => {

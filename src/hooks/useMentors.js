@@ -2,8 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { createThrottle } from "@/lib/throttle";
 
-const fetchMentors = async () => {
+const fetchMentors = createThrottle(async () => {
   const { data } = await apiClient.get("/mentors");
 
   // Primary: assumes backend returns { count, next, previous, results }
@@ -28,9 +29,9 @@ const fetchMentors = async () => {
   // TODO: uncomment below and remove above once backend returns paginated shape for this endpoint
   // const fetchedMentors = data.map((mentor) => ({ ... }));
   // return { count: data.length, data: fetchedMentors };
-};
+});
 
-export const createMentor = async (mentorData) => {
+export const createMentor = createThrottle(async (mentorData) => {
   try {
     const newMentor = {
       updated_at: new Date().toISOString(),
@@ -47,7 +48,7 @@ export const createMentor = async (mentorData) => {
     console.error("Error creating mentor:", error);
     throw error;
   }
-};
+});
 
 export const useMentors = () => {
   return useQuery({

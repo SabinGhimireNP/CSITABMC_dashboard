@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { createThrottle } from "@/lib/throttle";
 
-const fetchTenures = async () => {
+const fetchTenures = createThrottle(async () => {
   const { data } = await apiClient.get("/tenures");
 
   // Primary: assumes backend returns { count, next, previous, results }
@@ -39,7 +40,7 @@ const fetchTenures = async () => {
     count,
     data: fetchedTenures,
   };
-};
+});
 
 export const useTenures = () => {
   return useQuery({
@@ -48,7 +49,7 @@ export const useTenures = () => {
   });
 };
 
-const fetchMembersList = async () => {
+const fetchMembersList = createThrottle(async () => {
   const { data } = await apiClient.get("/members");
   const results = data.results || data;
   return results.map((member) => ({
@@ -58,7 +59,7 @@ const fetchMembersList = async () => {
     image: member.image,
     slug: member.slug,
   }));
-};
+});
 
 /**
  * Fetches the flat list of all Members (used by the Alumni form's member

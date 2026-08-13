@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
+import { createThrottle } from "@/lib/throttle";
 
 const subjectCodeMap = {
   CSC114: "Introduction to Information Technology",
@@ -76,7 +77,7 @@ const findSubjectName = (code) => {
   return subjectCodeMap[normalizedCode] || "Unknown Subject";
 };
 
-const fetchPastPapers = async () => {
+const fetchPastPapers = createThrottle(async () => {
   const { data } = await apiClient.get("/past-papers");
 
   const fetchedPastPapers = (data.results || []).map((paper) => ({
@@ -96,8 +97,7 @@ const fetchPastPapers = async () => {
     count: data.count,
     data: fetchedPastPapers,
   };
-};
-
+});
 export const usePastPapers = () => {
   return useQuery({
     queryKey: ["pastPapers"],
