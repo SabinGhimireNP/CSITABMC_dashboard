@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useAlumni } from "@/hooks/useAlumni";
+import { toast } from "sonner";
+import { useAlumni, useCreateAlumni, useUpdateAlumni, useDeleteAlumni } from "@/hooks/useAlumni";
 import { AlumniTable } from "./_components/AlumniTable";
 import { AlumniTabs } from "./_components/AlumniTabs";
 import { AlumniFormModal } from "./_components/AlumniForm";
@@ -9,18 +10,13 @@ import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import AlumniSkeleton from "./_components/AlumniSkeleton";
 
-function generateAlumniId() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let uid = "";
-  for (let i = 0; i < 4; i++) uid += chars.charAt(Math.floor(Math.random() * chars.length));
-  return `ALM-${uid}`;
-}
-
 export default function AlumniPage() {
   const { data: alumniData, isLoading: alumniLoading, isError: alumniError } = useAlumni();
+  const createAlumniMutation = useCreateAlumni();
+  const updateAlumniMutation = useUpdateAlumni();
+  const deleteAlumniMutation = useDeleteAlumni();
 
-  // --- Data state ---
-  const [liveAlumni, setLiveAlumni] = useState([]);
+  const liveAlumni = useMemo(() => alumniData?.data ?? [], [alumniData]);
 
   // --- Modal state ---
   const [alumniFormMode, setAlumniFormMode] = useState({ isOpen: false, editData: null });
@@ -32,13 +28,6 @@ export default function AlumniPage() {
   const [sortOrder, setSortOrder] = useState("none");
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Sync react-query data to local state for CRUD
-  useEffect(() => {
-    if (alumniData?.data) {
-      setLiveAlumni(alumniData.data);
-    }
-  }, [alumniData]);
 
   // ────────────────────────────
   //  ALUMNI HANDLERS
@@ -57,7 +46,14 @@ export default function AlumniPage() {
   };
 
   const handleDeleteAlumni = (id) => {
-    setLiveAlumni((prev) => prev.filter((a) => a.id !== id));
+    deleteAlumniMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success("Alumni deleted successfully.");
+      },
+      onError: () => {
+        toast.error("Failed to delete alumni. Please try again.");
+      },
+    });
   };
 
   const handleEditAlumniTrigger = (alumni) => {
@@ -65,40 +61,38 @@ export default function AlumniPage() {
   };
 
   const handleAlumniFormSubmitSuccess = (formData) => {
+    const payload = {
+      member_id: formData.memberId,
+      tenure_ids: formData.tenureIds || [],
+      graduation_year: formData.graduationYear,
+      bio: formData.bio || "",
+    };
+
     if (alumniFormMode.editData && alumniFormMode.editData.id) {
-      setLiveAlumni((prev) =>
-        prev.map((item) =>
-          item.id === alumniFormMode.editData.id
-            ? {
-                ...item,
-                ...formData,
-                image:
-                  formData.image instanceof File
-                    ? URL.createObjectURL(formData.image)
-                    : item.image,
-              }
-            : item
-        )
+      updateAlumniMutation.mutate(
+        { id: alumniFormMode.editData.id, payload },
+        {
+          onSuccess: () => {
+            toast.success("Alumni updated successfully.");
+            setAlumniFormMode({ isOpen: false, editData: null });
+          },
+          onError: () => {
+            toast.error("Failed to update alumni. Please try again.");
+          },
+        }
       );
     } else {
-      const nextId =
-        liveAlumni.length > 0
-          ? Math.max(...liveAlumni.map((m) => Number(m.id) || 0)) + 1
-          : 1;
-      const newAlumni = {
-        id: nextId,
-        memberId: generateAlumniId(),
-        ...formData,
-        image:
-          formData.image instanceof File
-            ? URL.createObjectURL(formData.image)
-            : alumniFormMode.editData?.image || null,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setLiveAlumni((prev) => [newAlumni, ...prev]);
-      setCurrentPage(1);
+      createAlumniMutation.mutate(payload, {
+        onSuccess: () => {
+          toast.success("Alumni added successfully.");
+          setAlumniFormMode({ isOpen: false, editData: null });
+          setCurrentPage(1);
+        },
+        onError: () => {
+          toast.error("Failed to add alumni. Please try again.");
+        },
+      });
     }
-    setAlumniFormMode({ isOpen: false, editData: null });
   };
 
   // ────────────────────────────
@@ -204,6 +198,7 @@ export default function AlumniPage() {
       </div>
 
       <AlumniFormModal
+        key={alumniFormMode.isOpen ? `alumni-form-${alumniFormMode.editData?.id ?? "new"}` : "alumni-form-closed"}
         isOpen={alumniFormMode.isOpen}
         initialData={alumniFormMode.editData}
         onSubmitSuccess={handleAlumniFormSubmitSuccess}

@@ -1,10 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Loader2, X, Plus } from "lucide-react";
-
+import React, { useState, useEffect, useMemo } from "react";
+import { Loader2, X } from "lucide-react";
 import { alumniFormSchema } from "@/lib/Schema/alumniSchema";
+import { useMembersList, useTenures } from "@/hooks/useMembers";
 import { MarkdownEditor } from "@/components/common/MarkdownEditor";
+
+const getDefaultFormData = (initialData, tenuresList) => {
+  const selectedTenureIds = initialData?.tenureIds?.length
+    ? initialData.tenureIds
+    : tenuresList.length > 0
+      ? [tenuresList[0].id]
+      : [];
+
+  return {
+    memberId: initialData?.memberId || "",
+    tenureIds: selectedTenureIds,
+    graduationYear: initialData?.graduationYear || "",
+    bio: initialData?.bio || "",
+  };
+};
 
 export function AlumniFormModal({
   initialData = null,
@@ -12,44 +27,18 @@ export function AlumniFormModal({
   onSubmitSuccess,
   onCancel,
 }) {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    facebookLink: "",
-    linkedinLink: "",
-    githubLink: "",
-    tags: [],
-    description: "",
-    image: undefined,
-    graduationYear: "",
-  });
+  const { data: membersList = [], isLoading: membersLoading } = useMembersList();
+  const { data: tenuresData } = useTenures();
+  const tenuresList = useMemo(() => {
+    if (Array.isArray(tenuresData?.data)) return tenuresData.data;
+    if (Array.isArray(tenuresData)) return tenuresData;
+    return [];
+  }, [tenuresData]);
 
-  const [tagInput, setTagInput] = useState("");
+  const [formData, setFormData] = useState(() => getDefaultFormData(initialData, tenuresList));
+
   const [errors, setErrors] = useState({});
   const [submitType, setSubmitType] = useState(null);
-  const [fileMeta, setFileMeta] = useState({ preview: null, name: "" });
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        fullName: initialData?.fullName || "",
-        email: initialData?.email || "",
-        facebookLink: initialData?.facebookLink || "",
-        linkedinLink: initialData?.linkedinLink || "",
-        githubLink: initialData?.githubLink || "",
-        tags: initialData?.tags || [],
-        description: initialData?.description || "",
-        image: initialData?.image || undefined,
-        graduationYear: initialData?.graduationYear || "",
-      });
-      setFileMeta({
-        preview: initialData?.image || null,
-        name: initialData?.image ? "Profile Photo" : "",
-      });
-      setTagInput("");
-      setErrors({});
-    }
-  }, [initialData, isOpen]);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -65,42 +54,15 @@ export function AlumniFormModal({
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFormData((prev) => ({ ...prev, image: file }));
-    if (errors.image) setErrors((prev) => ({ ...prev, image: undefined }));
-
-    const reader = new FileReader();
-    reader.onloadend = () => setFileMeta({ preview: reader.result, name: file.name });
-    reader.readAsDataURL(file);
+  const handleTenureChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, tenureIds: value ? [Number(value)] : [] }));
+    if (errors.tenureIds) setErrors((prev) => ({ ...prev, tenureIds: undefined }));
   };
 
-  const handleRemoveImage = () => {
-    setFormData((prev) => ({ ...prev, image: undefined }));
-    setFileMeta({ preview: null, name: "" });
-  };
-
-  const handleAddTag = (e) => {
-    if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
-      e.preventDefault();
-      const newTag = tagInput.trim().replace(/,$/, "");
-      if (newTag && !formData.tags.includes(newTag)) {
-        const updatedTags = [...formData.tags, newTag];
-        setFormData((prev) => ({ ...prev, tags: updatedTags }));
-        if (errors.tags) setErrors((prev) => ({ ...prev, tags: undefined }));
-      }
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (tag) => {
-    setFormData((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
-  };
-
-  const handleActionClick = async (e, chosenStatus) => {
+  const handleActionClick = async (e) => {
     e.preventDefault();
-    setSubmitType(chosenStatus);
+    setSubmitType("active");
     setErrors({});
 
     const result = alumniFormSchema.safeParse(formData);
@@ -119,8 +81,7 @@ export function AlumniFormModal({
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (onSubmitSuccess) onSubmitSuccess({ ...result.data, status: chosenStatus });
+      if (onSubmitSuccess) onSubmitSuccess(result.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -149,94 +110,66 @@ export function AlumniFormModal({
 
         {/* Scrollable Body */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Row 1: Full Name + Email */}
+          {/* Row 1: Member + Tenure */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Full Name *</label>
-              <input name="fullName" type="text" value={formData.fullName} onChange={handleInputChange} placeholder="e.g., Aarav Sharma" className={errors.fullName ? inputError : inputNormal} />
-              {errors.fullName && <p className="text-rose-500 text-[11px] font-medium">{errors.fullName}</p>}
+              <label className="font-semibold text-slate-700">Member *</label>
+              <select
+                name="memberId"
+                value={formData.memberId}
+                onChange={handleInputChange}
+                disabled={membersLoading}
+                className={`${errors.memberId ? inputError : inputNormal} cursor-pointer`}
+              >
+                <option value="">
+                  {membersLoading ? "Loading members..." : "Choose a member"}
+                </option>
+                {(membersList || []).map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name} ({member.email})
+                  </option>
+                ))}
+              </select>
+              {errors.memberId && <p className="text-rose-500 text-[11px] font-medium">{errors.memberId}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Email *</label>
-              <input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="e.g., alumni@csitabmc.edu.np" className={errors.email ? inputError : inputNormal} />
-              {errors.email && <p className="text-rose-500 text-[11px] font-medium">{errors.email}</p>}
+              <label className="font-semibold text-slate-700">Tenure *</label>
+              <select
+                name="tenureIds"
+                value={formData.tenureIds[0] ?? ""}
+                onChange={handleTenureChange}
+                disabled={tenuresList.length === 0}
+                className={`${errors.tenureIds ? inputError : inputNormal} cursor-pointer`}
+              >
+                <option value="">
+                  {tenuresList.length === 0 ? "No tenures available" : "Choose a tenure"}
+                </option>
+                {(tenuresList || []).map((tenure) => (
+                  <option key={tenure.id} value={tenure.id}>
+                    {tenure.name}
+                  </option>
+                ))}
+              </select>
+              {errors.tenureIds && <p className="text-rose-500 text-[11px] font-medium">{errors.tenureIds}</p>}
             </div>
           </div>
 
-          {/* Row 2: Image + Graduation Year */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Image *</label>
-              {!fileMeta.preview ? (
-                <label className={`border-2 border-dashed ${errors.image ? 'border-rose-300 bg-rose-50/10' : 'border-slate-200 bg-slate-50/40'} hover:border-indigo-300 rounded-xl h-28 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-all group`}>
-                  <div className="h-7 w-7 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                    <Plus className="h-3.5 w-3.5 text-indigo-600" />
-                  </div>
-                  <p className="text-[10px] text-indigo-500 font-medium">Click to add an asset or drag and drop</p>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                </label>
-              ) : (
-                <div className="relative border border-slate-200 rounded-xl overflow-hidden h-28 bg-slate-100 group">
-                  <img src={fileMeta.preview} alt="" className="w-full h-full object-cover" />
-                  <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 p-1 bg-white/90 border border-slate-200 rounded-md text-slate-500 hover:text-rose-600 shadow-sm cursor-pointer">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              {errors.image && <p className="text-rose-500 text-[11px] font-medium">{errors.image}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Graduation Year</label>
-              <input name="graduationYear" type="number" value={formData.graduationYear} onChange={handleInputChange} placeholder="e.g., 2024" className={inputNormal} />
-            </div>
-          </div>
-
-          {/* Row 3: Social Links */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Facebook Link</label>
-              <input name="facebookLink" type="url" value={formData.facebookLink} onChange={handleInputChange} placeholder="https://facebook.com/username" className={inputNormal} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">LinkedIn Link</label>
-              <input name="linkedinLink" type="url" value={formData.linkedinLink} onChange={handleInputChange} placeholder="https://linkedin.com/in/username" className={inputNormal} />
-            </div>
-          </div>
-
-          {/* Row 4: GitHub */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">GitHub Link</label>
-              <input name="githubLink" type="url" value={formData.githubLink} onChange={handleInputChange} placeholder="https://github.com/username" className={inputNormal} />
-            </div>
-          </div>
-
-          {/* Row 5: Tags */}
+          {/* Row 2: Graduation Year */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700">Tags *</label>
-            <div className={`min-h-9 px-2 py-1.5 border rounded-lg flex flex-wrap gap-1.5 items-center focus-within:ring-1 transition-all bg-white ${errors.tags ? 'border-rose-400 focus-within:ring-rose-500' : 'border-slate-200 focus-within:ring-indigo-500'}`}>
-              {formData.tags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200/60 rounded-md px-2 py-0.5 text-[10px] font-semibold">
-                  {tag}
-                  <button type="button" onClick={() => handleRemoveTag(tag)} className="text-indigo-400 hover:text-indigo-700 cursor-pointer leading-none">×</button>
-                </span>
-              ))}
-              <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleAddTag} placeholder={formData.tags.length === 0 ? "e.g. Leadership, Event Management" : "Add tag..."} className="flex-1 min-w-25 outline-none bg-transparent text-slate-700 placeholder:text-slate-400" />
-            </div>
-            {errors.tags ? <p className="text-rose-500 text-[11px] font-medium">{errors.tags}</p> : <p className="text-[10px] text-slate-400">Press Enter or comma to add a tag</p>}
+            <label className="font-semibold text-slate-700">Graduation Year</label>
+            <input name="graduationYear" type="number" value={formData.graduationYear} onChange={handleInputChange} placeholder="e.g., 2024" className={inputNormal} />
           </div>
 
-          {/* Reusable Description Rich Text Editor Component */}
+          {/* Row 3: Bio */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700">Description *</label>
+            <label className="font-semibold text-slate-700">Bio</label>
             <MarkdownEditor
               id="alumni-modal-textarea"
-              name="description"
-              value={formData.description}
+              name="bio"
+              value={formData.bio}
               onChange={handleInputChange}
-              error={errors.description}
+              error={errors.bio}
               placeholder="Write alumni bio, achievements, or role description..."
             />
           </div>
@@ -246,10 +179,7 @@ export function AlumniFormModal({
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/30 shrink-0">
           <button type="button" disabled={submitType !== null} onClick={onCancel} className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-sm">Cancel</button>
           <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2 flex-col sm:flex-row">
-            <button type="button" disabled={submitType !== null} onClick={(e) => handleActionClick(e, "draft")} className="h-9 w-full sm:w-auto px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5">
-              {submitType === "draft" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Storing...</> : "Save as Draft"}
-            </button>
-            <button type="button" disabled={submitType !== null} onClick={(e) => handleActionClick(e, "active")} className="h-9 w-full sm:w-auto px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5">
+            <button type="button" disabled={submitType !== null || tenuresList.length === 0} onClick={handleActionClick} className="h-9 w-full sm:w-auto px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5">
               {submitType === "active" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</> : (initialData ? "Update Alumni" : "Add Alumni")}
             </button>
           </div>

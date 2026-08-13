@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 
 const fetchAlumni = async () => {
@@ -11,7 +11,7 @@ const fetchAlumni = async () => {
   const count = data.count ?? results.length;
 
   const fetchedAlumni = results.map((alumni) => ({
-    id: alumni.id,
+    id: alumni.id|| "1",
     memberId: alumni.member?.id || alumni.id,
     fullName: alumni.member?.name || "",
     email: alumni.member?.email || "",
@@ -22,6 +22,11 @@ const fetchAlumni = async () => {
     slug: alumni.member?.slug || "",
     image: alumni.member?.image || null,
     graduationYear: alumni.graduation_year || null,
+    tenureIds: Array.isArray(alumni.tenure_ids)
+      ? alumni.tenure_ids.map((id) => Number(id))
+      : Array.isArray(alumni.tenureIds)
+        ? alumni.tenureIds.map((id) => Number(id))
+        : [],
     bio: alumni.bio || "",
     status: "active",
   }));
@@ -36,5 +41,53 @@ export const useAlumni = () => {
   return useQuery({
     queryKey: ["alumni"],
     queryFn: fetchAlumni,
+  });
+};
+
+const createAlumni = async (payload) => {
+  const { data } = await apiClient.post("/alumni/", payload);
+  return data;
+};
+
+const updateAlumni = async ({ id, payload }) => {
+  const { data } = await apiClient.put(`/alumni/${id}/`, payload);
+  return data;
+};
+
+const deleteAlumni = async (id) => {
+  await apiClient.delete(`/alumni/${id}/`);
+  return id;
+};
+
+/**
+ * Alumni CRUD mutations backed by the hosted Django API.
+ *
+ * The Alumni serializer expects:
+ *   member_id      (PK of an existing Member)  — required
+ *   tenure_ids     (list of Tenure PKs)        — optional
+ *   graduation_year                            — optional
+ *   bio                                        — optional
+ */
+export const useCreateAlumni = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createAlumni,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alumni"] }),
+  });
+};
+
+export const useUpdateAlumni = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateAlumni,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alumni"] }),
+  });
+};
+
+export const useDeleteAlumni = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAlumni,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alumni"] }),
   });
 };

@@ -17,6 +17,8 @@ const fetchTenures = async () => {
       memberId: membership.member.id,
       fullName: membership.member.name,
       post: membership.designation,
+      roleType: membership.role_type,
+      order: membership.order,
       email: membership.member.email,
       facebookLink: membership.member.fb_link,
       linkedinLink: membership.member.linkedin_link,
@@ -43,5 +45,28 @@ export const useTenures = () => {
   return useQuery({
     queryKey: ["tenures"],
     queryFn: fetchTenures,
+  });
+};
+
+const fetchMembersList = async () => {
+  const { data } = await apiClient.get("/members");
+  const results = data.results || data;
+  return results.map((member) => ({
+    id: member.id,
+    name: member.name,
+    email: member.email,
+    image: member.image,
+    slug: member.slug,
+  }));
+};
+
+/**
+ * Fetches the flat list of all Members (used by the Alumni form's member
+ * selector, since the Alumni serializer expects an existing member_id).
+ */
+export const useMembersList = () => {
+  return useQuery({
+    queryKey: ["members-list"],
+    queryFn: fetchMembersList,
   });
 };
