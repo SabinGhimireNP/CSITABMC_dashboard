@@ -1,26 +1,26 @@
 /**
- * Creates a throttled version of an async function.
+ * Creates a single-flight / deduplicated version of an async function.
  *
- * The returned function will only allow one in-flight execution at a time.
- * If called while a previous call is still running, it throws an error
- * instead of firing a duplicate request. The lock is released only when
- * the underlying request completes (success or failure).
+ * If called while a previous call is still running, it reuses the in-flight
+ * promise instead of throwing an error or firing duplicate requests.
  *
- * @param {Function} fn - The async function to throttle.
- * @returns {Function} A throttled wrapper around `fn`.
+ * @param {Function} fn - The async function to deduplicate.
+ * @returns {Function} A deduplicated wrapper around `fn`.
  */
 export function createThrottle(fn) {
-  let inFlight = false;
+  let pendingPromise = null;
 
-  return async (...args) => {
-    if (inFlight) {
-      throw new Error("A request is already in progress. Please wait.");
+  return (...args) => {
+    if (pendingPromise) {
+      return pendingPromise;
     }
-    inFlight = true;
-    try {
-      return await fn(...args);
-    } finally {
-      inFlight = false;
-    }
+    pendingPromise = (async () => {
+      try {
+        return await fn(...args);
+      } finally {
+        pendingPromise = null;
+      }
+    })();
+    return pendingPromise;
   };
 }

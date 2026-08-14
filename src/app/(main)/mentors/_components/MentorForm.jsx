@@ -10,7 +10,6 @@ import {
   Check,
   UserCircle,
 } from "lucide-react";
-import { useCreateMentor } from "@/hooks/useMentors";
 
 export function MentorFormModal({
   initialData = null,
@@ -30,7 +29,6 @@ export function MentorFormModal({
 
   const [errors, setErrors] = useState({});
   const [submitType, setSubmitType] = useState(null);
-  const createMentorMutation = useCreateMentor();
   const [eventDropdownOpen, setEventDropdownOpen] = useState(false);
   const eventDropdownRef = useRef(null);
   const [fileMeta, setFileMeta] = useState({ preview: null, name: "" });
@@ -97,11 +95,11 @@ export function MentorFormModal({
 
   const toggleEvent = (eventId) => {
     setFormData((prev) => {
-      const exists = prev.events.includes(eventId);
+      const exists = prev.events.map(String).includes(String(eventId));
       return {
         ...prev,
         events: exists
-          ? prev.events.filter((id) => id !== eventId)
+          ? prev.events.filter((id) => String(id) !== String(eventId))
           : [...prev.events, eventId],
       };
     });
@@ -135,12 +133,15 @@ export function MentorFormModal({
       return;
     }
 
-    if (targetType === "publish") {
-      await createMentorMutation.mutateAsync(result.data);
+    try {
+      if (onSubmitSuccess) {
+        await onSubmitSuccess(result.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitType(null);
     }
-
-    if (onSubmitSuccess) onSubmitSuccess(result.data);
-    setSubmitType(null);
   };
 
   return (
@@ -282,7 +283,7 @@ export function MentorFormModal({
                     </p>
                   ) : (
                     eventsList.map((event) => {
-                      const checked = formData.events.includes(event.id);
+                      const checked = formData.events.map(String).includes(String(event.id));
                       return (
                         <button
                           key={event.id}

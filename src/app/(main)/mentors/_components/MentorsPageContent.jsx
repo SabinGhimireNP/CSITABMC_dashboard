@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { useMentors } from "@/hooks/useMentors";
-import { useEvents } from "@/hooks/useEvents";
+import React, { useState, useCallback, useTransition, useEffect, useRef, useMemo } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { toast } from "sonner";
+import { useMentors, useCreateMentor, useUpdateMentor, useDeleteMentor } from "@/hooks/useMentors";
+import { useEvents, useUpdateEvent } from "@/hooks/useEvents";
 import { MENTOR_ROLES } from "@/lib/Schema/mentorSchema";
 import { MentorTable } from "./MentorsTable";
 import { MentorTabs } from "./MentorTabs";
@@ -11,44 +13,140 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import MentorsSkeleton from "./MentorsSkeleton";
 
+const VALID_TABS = ["all", "published", "draft"];
+
 export function MentorsPageContent() {
-  const { data: mentorsData, isLoading: mentorsLoading, isError: mentorsError } = useMentors();
-  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
 
-  const liveMentors = mentorsData?.data || [];
-  const eventsList = eventsData?.data || [];
+  const activeTab = VALID_TABS.includes(searchParams.get("tab"))
+    ? searchParams.get("tab")
+    : "all";
+  const searchQuery = searchParams.get("search") || "";
+  const idQuery = searchParams.get("id") || "";
+  const orderingQuery = searchParams.get("ordering") || "";
+  const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
+  const rowsPerPageParam = searchParams.get("page_size") || "5";
+  const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
+    ? parseInt(rowsPerPageParam, 10)
+    : 5;
 
-  const [activeTab, setActiveTab] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("none");
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
 
-  const handleSortChange = (field) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortOrder("asc");
-    } else if (sortOrder === "none") {
-      setSortOrder("asc");
-    } else if (sortOrder === "asc") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("none");
-      setSortField(null);
-    }
-    setCurrentPage(1);
+  const createMentorMutation = useCreateMentor();
+  const updateMentorMutation = useUpdateMentor();
+  const deleteMentorMutation = useDeleteMentor();
+  const updateEventMutation = useUpdateEvent();
+
+  const {
+    data: mentorsData,
+    isLoading: mentorsLoading,
+    isError: mentorsError,
+    isFetching,
+  } = useMentors({
+    search: searchQuery,
+    status: activeTab === "all" ? "" : activeTab,
+    id: idQuery,
+    ordering: orderingQuery,
+    page: currentPage,
+    pageSize: rowsPerPage,
+  });
+
+  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+
+  const rawMentors = mentorsData?.data || [];
+  const totalRows = mentorsData?.count || 0;
+  const totalPages = mentorsData?.totalPages || 1;
+  const eventsList = eventsData?.data || [];
+
+  // Map each mentor's events dynamically based on which events list them as mentor
+  const mappedMentors = useMemo(() => {
+    return rawMentors.map((mentor) => ({
+      ...mentor,
+      events: eventsList
+        .filter((e) => (e.mentors || []).map(String).includes(String(mentor.id)))
+        .map((e) => e.id),
+    }));
+  }, [rawMentors, eventsList]);
+
+  // --- URL Query Params Helpers ---
+  const updateQuery = useCallback(
+    (updates) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === "" || value === null || value === undefined) {
+          params.delete(key);
+        } else {
+          params.set(key, String(value));
+        }
+      });
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      });
+    },
+    [searchParams, router, pathname]
+  );
+
+  // --- Search Debounce ---
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleSearchChange = (value) => {
+    setLocalSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateQuery({ search: value.trim(), page: 1 });
+    }, 400);
   };
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+  // --- Tab / pagination / page-size handlers ---
+  const handleTabChange = (tab) => {
+    updateQuery({ tab: tab === "all" ? "" : tab, page: 1 });
+  };
+
+  const handlePageChange = (pageNumber) => {
+    updateQuery({ page: pageNumber === 1 ? "" : pageNumber });
+  };
+
   const handleRowsPerPageChange = (amount) => {
-    setRowsPerPage(amount);
-    setCurrentPage(1);
+    updateQuery({ page: 1, page_size: amount === 5 ? "" : amount });
   };
 
-  const handleDeleteMentor = () => {
-    // Preserves current behavior while leaving deletion to future mutation work.
+  // --- Server-side Sorting Query Handler ---
+  const sortField = orderingQuery ? orderingQuery.replace("-", "") : null;
+  const sortOrder = orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none";
+
+  const handleSortChange = (field) => {
+    let nextOrdering = field;
+    if (orderingQuery === field) {
+      nextOrdering = `-${field}`;
+    } else if (orderingQuery === `-${field}`) {
+      nextOrdering = "";
+    }
+    updateQuery({ ordering: nextOrdering, page: 1 });
+  };
+
+  const handleDeleteMentor = async (id) => {
+    const mentor = rawMentors.find((m) => m.id === id);
+    if (!mentor || !mentor.slug) return;
+
+    await toast.promise(deleteMentorMutation.mutateAsync(mentor.slug), {
+      loading: "Deleting mentor...",
+      success: "Mentor deleted successfully.",
+      error: "Failed to delete mentor.",
+    });
   };
 
   const handleEditMentorTrigger = (mentor) => {
@@ -61,66 +159,103 @@ export function MentorsPageContent() {
       editData: {
         fullName: `${mentor.fullName} (Copy)`,
         socialLink: mentor.socialLink,
-        image: mentor.image,
+        image: undefined,
         events: mentor.events,
         role: mentor.role,
+        status: mentor.status,
       },
     });
   };
 
-  const handleFormSubmitSuccess = () => {
-    setFormMode({ isOpen: false, editData: null });
-  };
+  // Helper to sync event's mentors list on the backend when selected events change for a mentor
+  const syncEventsForMentor = async (savedMentorId, selectedEventIds) => {
+    const targetEventIds = (selectedEventIds || []).map(String);
+    const updates = [];
 
-  const processedMentors = useMemo(() => {
-    let dataset = [...liveMentors];
+    for (const event of eventsList) {
+      const currentMentors = (event.mentors || []).map(String);
+      const shouldBeLinked = targetEventIds.includes(String(event.id));
+      const currentlyLinked = currentMentors.includes(String(savedMentorId));
 
-    if (activeTab !== "all") {
-      dataset = dataset.filter((m) => m.status === activeTab);
-    }
+      let newMentorsList = [...currentMentors];
 
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      dataset = dataset.filter(
-        (m) =>
-          m.fullName?.toLowerCase().includes(query) ||
-          m.role?.toLowerCase().includes(query)
-      );
-    }
+      if (shouldBeLinked && !currentlyLinked) {
+        newMentorsList.push(String(savedMentorId));
+      } else if (!shouldBeLinked && currentlyLinked) {
+        newMentorsList = newMentorsList.filter((mId) => mId !== String(savedMentorId));
+      } else {
+        continue;
+      }
 
-    if (sortField && sortOrder !== "none") {
-      dataset.sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+      const payload = new FormData();
+      payload.append("title", event.title || "");
+      payload.append("description", event.description || "");
+      payload.append("organiser", event.organizer || "");
+      payload.append("location", event.location || "");
+      payload.append("available_seats", String(event.availableSeats || 0));
+      payload.append("registration_fee_bmc", String(event.registrationFeeBMC || 0));
+      payload.append("registration_fee_non_bmc", String(event.registrationFee || 0));
+      if (event.registrationFormUrl) {
+        payload.append("registration_link", event.registrationFormUrl);
+      }
+      payload.append("category", (event.category || "other").toLowerCase());
+      payload.append("status", (event.status || "published").toLowerCase());
 
-        if (sortField === "id") {
-          const numA = parseInt(valA?.toString().replace(/\D/g, "")) || 0;
-          const numB = parseInt(valB?.toString().replace(/\D/g, "")) || 0;
-          return sortOrder === "asc" ? numA - numB : numB - numA;
-        }
+      if (event.startDate) {
+        const timeStr = event.startTime || "00:00";
+        payload.append("date", `${event.startDate}T${timeStr}:00Z`);
+      }
 
-        valA = valA?.toString().toLowerCase() || "";
-        valB = valB?.toString().toLowerCase() || "";
-        return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      newMentorsList.forEach((mId) => {
+        payload.append("mentors", mId);
       });
+
+      updates.push(updateEventMutation.mutateAsync({ slug: event.slug, formData: payload }));
     }
 
-    return dataset;
-  }, [liveMentors, activeTab, searchQuery, sortField, sortOrder]);
-
-  const handleUpdateMentorStatus = () => {
-    // Preserves current behavior while leaving status updates to future mutation work.
+    if (updates.length > 0) {
+      try {
+        await Promise.all(updates);
+      } catch (err) {
+        console.warn("Linked events sync notice:", err?.response?.data || err);
+      }
+    }
   };
 
-  const totalRows = processedMentors.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-  const paginatedMentors = useMemo(() => {
-    const startOffset = (currentPage - 1) * rowsPerPage;
-    return processedMentors.slice(startOffset, startOffset + rowsPerPage);
-  }, [processedMentors, currentPage, rowsPerPage]);
+  const handleFormSubmitSuccess = (formData) => {
+    const payload = new FormData();
+    payload.append("name", formData.fullName);
+    payload.append("expertise", formData.role);
+    payload.append("linkedin_profile", formData.socialLink);
+
+    if (formData.image instanceof File) {
+      payload.append("photo", formData.image);
+    }
+
+    const isEdit = formMode.editData && formMode.editData.slug;
+    
+    const mutationPromise = (async () => {
+      const savedMentor = isEdit
+        ? await updateMentorMutation.mutateAsync({ slug: formMode.editData.slug, formData: payload })
+        : await createMentorMutation.mutateAsync(payload);
+      
+      const mentorId = savedMentor?.id || formMode.editData?.id;
+      if (mentorId) {
+        await syncEventsForMentor(mentorId, formData.events);
+      }
+      return savedMentor;
+    })();
+
+    return toast.promise(mutationPromise, {
+      loading: isEdit ? "Updating mentor..." : "Creating mentor...",
+      success: () => {
+        setFormMode({ isOpen: false, editData: null });
+        if (!isEdit) updateQuery({ page: 1 });
+        return isEdit ? "Mentor updated successfully." : "Mentor added successfully.";
+      },
+      error: "Failed to save mentor. Please check required fields.",
+    });
+  };
 
   if (mentorsLoading || eventsLoading) return <MentorsSkeleton />;
   if (mentorsError) {
@@ -153,32 +288,30 @@ export function MentorsPageContent() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <MentorTabs
           activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setCurrentPage(1);
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={(value) => {
-            setSearchQuery(value);
-            setCurrentPage(1);
-          }}
-          roles={MENTOR_ROLES}
+          onTabChange={handleTabChange}
+          searchQuery={localSearch}
+          onSearchChange={handleSearchChange}
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
+        {/* Indeterminate progress bar shown while filters/pagination fetch */}
+        {(isPending || isFetching) && (
+          <div className="progress-bar-track">
+            <div className="progress-bar-indicator" />
+          </div>
+        )}
         <MentorTable
-          mentors={paginatedMentors}
+          mentors={mappedMentors}
           eventsList={eventsList}
           onEditMentor={handleEditMentorTrigger}
           onDuplicateMentor={handleDuplicateMentorTrigger}
           onDeleteMentor={handleDeleteMentor}
-          onUpdateMentorStatus={handleUpdateMentorStatus}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleRowsPerPageChange}
           currentPage={currentPage}
           onPageChange={handlePageChange}
-          totalPages={totalPages}
+          totalPages={Math.max(totalPages, 1)}
           totalRows={totalRows}
           sortField={sortField}
           sortOrder={sortOrder}

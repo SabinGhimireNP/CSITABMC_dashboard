@@ -22,18 +22,35 @@ export function AlumniPageContent() {
     ? searchParams.get("tab")
     : "all";
   const searchQuery = searchParams.get("search") || "";
+  const idQuery = searchParams.get("id") || "";
+  const orderingQuery = searchParams.get("ordering") || "";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
   const rowsPerPageParam = searchParams.get("page_size") || "5";
   const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
     ? parseInt(rowsPerPageParam, 10)
     : 5;
 
-  const { data: alumniData, isLoading: alumniLoading, isError: alumniError } = useAlumni();
+  const {
+    data: alumniData,
+    isLoading: alumniLoading,
+    isError: alumniError,
+    isFetching,
+  } = useAlumni({
+    search: searchQuery,
+    id: idQuery,
+    ordering: orderingQuery,
+    page: currentPage,
+    pageSize: rowsPerPage,
+  });
+
   const createAlumniMutation = useCreateAlumni();
   const updateAlumniMutation = useUpdateAlumni();
   const deleteAlumniMutation = useDeleteAlumni();
 
   const liveAlumni = useMemo(() => alumniData?.data ?? [], [alumniData]);
+  const totalRows = alumniData?.count || 0;
+  const totalPages = alumniData?.totalPages || 1;
+
   const [alumniFormMode, setAlumniFormMode] = useState({ isOpen: false, editData: null });
 
   // ── URL query params helpers ────────────────────────────────────────────
@@ -87,20 +104,18 @@ export function AlumniPageContent() {
     updateQuery({ page: 1, page_size: amount === 5 ? "" : amount });
   };
 
-  // ── Sort handlers (client-side, default id-based) ──────────────────────
-  const [sortField, setSortField] = useState("id");
-  const [sortOrder, setSortOrder] = useState("asc");
+  // ── Server-side Sorting Query Handler ────────────────────────────────────
+  const sortField = orderingQuery ? orderingQuery.replace("-", "") : null;
+  const sortOrder = orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none";
 
   const handleSortChange = (field) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortOrder("asc");
-    } else if (sortOrder === "asc") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("none");
-      setSortField(null);
+    let nextOrdering = field;
+    if (orderingQuery === field) {
+      nextOrdering = `-${field}`;
+    } else if (orderingQuery === `-${field}`) {
+      nextOrdering = "";
     }
+    updateQuery({ ordering: nextOrdering, page: 1 });
   };
 
   const handleDeleteAlumni = (id) => {
@@ -149,53 +164,6 @@ export function AlumniPageContent() {
     }
   };
 
-  // ── Client-side filtering (backend doesn't support it for alumni) ──────
-  const filteredAlumni = useMemo(() => {
-    let dataset = [...liveAlumni];
-
-    if (activeTab === "active") {
-      dataset = dataset.filter((m) => m.status?.toLowerCase() === "active");
-    } else if (activeTab === "draft") {
-      dataset = dataset.filter((m) => m.status?.toLowerCase() === "draft");
-    }
-
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase();
-      dataset = dataset.filter(
-        (m) =>
-          m.fullName?.toLowerCase().includes(q) ||
-          m.email?.toLowerCase().includes(q) ||
-          String(m.memberId || "").toLowerCase().includes(q)
-      );
-    }
-
-    if (sortField && sortOrder !== "none") {
-      dataset.sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
-
-        if (sortField === "id") {
-          const numA = Number(valA) || 0;
-          const numB = Number(valB) || 0;
-          return sortOrder === "asc" ? numA - numB : numB - numA;
-        }
-
-        valA = valA?.toString().toLowerCase() || "";
-        valB = valB?.toString().toLowerCase() || "";
-        return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      });
-    }
-
-    return dataset;
-  }, [liveAlumni, activeTab, searchQuery, sortField, sortOrder]);
-
-  const totalRows = filteredAlumni.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-  const paginatedAlumni = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return filteredAlumni.slice(start, start + rowsPerPage);
-  }, [filteredAlumni, currentPage, rowsPerPage]);
-
   if (alumniLoading) return <AlumniSkeleton />;
   if (alumniError) {
     return (
@@ -218,15 +186,15 @@ export function AlumniPageContent() {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
         {/* Indeterminate progress bar shown while filters/pagination update */}
-        {isPending && (
+        {(isPending || isFetching) && (
           <div className="progress-bar-track">
             <div className="progress-bar-indicator" />
           </div>
         )}
         <AlumniTable
-          alumni={paginatedAlumni}
+          alumni={liveAlumni}
           onEditAlumni={handleEditAlumniTrigger}
           onDeleteAlumni={handleDeleteAlumni}
           rowsPerPage={rowsPerPage}

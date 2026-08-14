@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { useEvents } from "@/hooks/useEvents";
+import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { toast } from "sonner";
+import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useEvents";
 import { useMentors } from "@/hooks/useMentors";
 import { EventTable } from "./EventTable";
 import { EventTabs } from "./EventTabs";
@@ -10,44 +12,150 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import EventsSkeleton from "./EventsSkeleton";
 
+const VALID_TABS = ["all", "published", "draft"];
+
+const mapCategoryToBackend = (cat) => {
+  if (!cat) return "other";
+  const lower = cat.toLowerCase().trim();
+  const VALID_BACKEND_CATEGORIES = [
+    "workshop", "seminar", "conference", "webinar",
+    "hackathon", "bootcamp", "talk", "mocktest", "other"
+  ];
+  if (VALID_BACKEND_CATEGORIES.includes(lower)) return lower;
+  return "other";
+};
+
+const mapTagToBackend = (tagsInput) => {
+  const VALID_TAGS = ["web", "beginner", "intermediate", "frontend", "backend"];
+  let candidate = "";
+  if (Array.isArray(tagsInput) && tagsInput.length > 0) {
+    candidate = tagsInput[0].toLowerCase().trim();
+  } else if (typeof tagsInput === "string" && tagsInput) {
+    candidate = tagsInput.split(",")[0].toLowerCase().trim();
+  }
+  if (VALID_TAGS.includes(candidate)) return candidate;
+  return "web";
+};
+
 export function EventsPageContent() {
-  const { data: eventsData, isLoading: eventsLoading, isError: eventsError } = useEvents();
-  const { data: mentorsData, isLoading: mentorsLoading } = useMentors();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
 
-  const liveEvents = eventsData?.data || [];
-  const mentorsList = mentorsData?.data || [];
+  const activeTab = VALID_TABS.includes(searchParams.get("tab"))
+    ? searchParams.get("tab")
+    : "all";
+  const searchQuery = searchParams.get("search") || "";
+  const orderingQuery = searchParams.get("ordering") || "";
+  const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
+  const rowsPerPageParam = searchParams.get("page_size") || "5";
+  const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
+    ? parseInt(rowsPerPageParam, 10)
+    : 5;
 
-  const [activeTab, setActiveTab] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("none");
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
 
+  const createEventMutation = useCreateEvent();
+  const updateEventMutation = useUpdateEvent();
+  const deleteEventMutation = useDeleteEvent();
+
+  const {
+    data: eventsData,
+    isLoading: eventsLoading,
+    isError: eventsError,
+    isFetching,
+  } = useEvents({
+    search: searchQuery,
+    status: activeTab === "all" ? "" : activeTab,
+    ordering: orderingQuery,
+    page: currentPage,
+    pageSize: rowsPerPage,
+  });
+
+  const { data: mentorsData, isLoading: mentorsLoading } = useMentors();
+
+  const eventsList = eventsData?.data || [];
+  const totalRows = eventsData?.count || 0;
+  const totalPages = eventsData?.totalPages || 1;
+  const mentorsList = mentorsData?.data || [];
+
+  // --- URL Query Params Helpers ---
+  const updateQuery = useCallback(
+    (updates) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === "" || value === null || value === undefined) {
+          params.delete(key);
+        } else {
+          params.set(key, String(value));
+        }
+      });
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      });
+    },
+    [searchParams, router, pathname]
+  );
+
+  // --- Search Debounce ---
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleSearchChange = (value) => {
+    setLocalSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateQuery({ search: value.trim(), page: 1 });
+    }, 400);
+  };
+
+  // --- Server-side Sorting Query Handler ---
+  const sortField = orderingQuery ? orderingQuery.replace("-", "") : null;
+  const sortOrder = orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none";
+
   const handleSortChange = (field) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortOrder("asc");
-    } else if (sortOrder === "none") {
-      setSortOrder("asc");
-    } else if (sortOrder === "asc") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("none");
-      setSortField(null);
+    let nextOrdering = field;
+    if (orderingQuery === field) {
+      nextOrdering = `-${field}`;
+    } else if (orderingQuery === `-${field}`) {
+      nextOrdering = "";
     }
-    setCurrentPage(1);
+    updateQuery({ ordering: nextOrdering, page: 1 });
   };
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+  // --- Handlers ---
+  const handleTabChange = (tab) => {
+    updateQuery({ tab: tab === "all" ? "" : tab, page: 1 });
+  };
+
+  const handlePageChange = (pageNumber) => {
+    updateQuery({ page: pageNumber === 1 ? "" : pageNumber });
+  };
+
   const handleRowsPerPageChange = (amount) => {
-    setRowsPerPage(amount);
-    setCurrentPage(1);
+    updateQuery({ page: 1, page_size: amount === 5 ? "" : amount });
   };
 
-  const handleDeleteEvent = () => {
-    // Maintains current behavior while leaving deletion to future mutation work.
+  const handleDeleteEvent = async (id) => {
+    const event = eventsList.find((e) => e.id === id);
+    if (!event || !event.slug) return;
+
+    await toast.promise(deleteEventMutation.mutateAsync(event.slug), {
+      loading: "Deleting event...",
+      success: "Event deleted successfully.",
+      error: "Failed to delete event.",
+    });
   };
 
   const handleEditEventTrigger = (event) => {
@@ -72,83 +180,83 @@ export function EventsPageContent() {
         location: event.location,
         category: event.category,
         tags: event.tags,
-        image: event.image,
+        image: undefined,
         description: event.description,
         mentors: event.mentors,
       },
     });
   };
 
-  const handleFormSubmitSuccess = () => {
-    setFormMode({ isOpen: false, editData: null });
-  };
-
-  const processedEvents = useMemo(() => {
-    let dataset = [...liveEvents];
-
-    if (activeTab === "open") {
-      dataset = dataset.filter((e) => e.registrationOpen);
-    } else if (activeTab === "closed") {
-      dataset = dataset.filter((e) => !e.registrationOpen);
+  const handleFormSubmitSuccess = (formData) => {
+    const payload = new FormData();
+    payload.append("title", formData.title || "");
+    payload.append("description", formData.description || "");
+    payload.append("organiser", formData.organizer || "");
+    payload.append("location", formData.location || "");
+    payload.append("available_seats", String(Number(formData.availableSeats) || 0));
+    payload.append("registration_fee_bmc", String(Number(formData.registrationFeeBMC) || 0));
+    payload.append("registration_fee_non_bmc", String(Number(formData.registrationFee) || 0));
+    if (formData.registrationFormUrl) {
+      payload.append("registration_link", formData.registrationFormUrl);
     }
-    if (activeTab === "published") {
-      dataset = dataset.filter((e) => e.status === "published");
-    } else if (activeTab === "draft") {
-      dataset = dataset.filter((e) => e.status === "draft");
-    }
+    payload.append("category", mapCategoryToBackend(formData.category));
+    payload.append("tags", mapTagToBackend(formData.tags));
+    payload.append("status", (formData.status || "published").toLowerCase());
 
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      dataset = dataset.filter(
-        (e) =>
-          e.title?.toLowerCase().includes(query) ||
-          e.category?.toLowerCase().includes(query) ||
-          e.organizer?.toLowerCase().includes(query) ||
-          e.location?.toLowerCase().includes(query)
-      );
+    // Date Combinations
+    const startTimeStr = formData.startTime || "00:00";
+    const endTimeStr = formData.endTime || "23:59";
+
+    if (formData.startDate) {
+      const dateISO = `${formData.startDate}T${startTimeStr}:00Z`;
+      payload.append("date", dateISO);
+      payload.append("start_time", dateISO);
     }
 
-    if (sortField && sortOrder !== "none") {
-      dataset.sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+    if (formData.endDate) {
+      const endDateISO = `${formData.endDate}T${endTimeStr}:00Z`;
+      payload.append("end_time", endDateISO);
+    }
 
-        if (sortField === "id") {
-          const numA = parseInt(valA?.toString().replace(/\D/g, "")) || 0;
-          const numB = parseInt(valB?.toString().replace(/\D/g, "")) || 0;
-          return sortOrder === "asc" ? numA - numB : numB - numA;
+    // M2M Mentors mapping
+    if (Array.isArray(formData.mentors) && formData.mentors.length > 0) {
+      formData.mentors.forEach((mId) => {
+        if (mId !== null && mId !== undefined && mId !== "") {
+          payload.append("mentors", mId);
         }
-
-        if (sortField === "startDate") {
-          const timeA = valA ? new Date(valA).getTime() : 0;
-          const timeB = valB ? new Date(valB).getTime() : 0;
-          if (!isNaN(timeA) && !isNaN(timeB)) {
-            return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
-          }
-        }
-
-        valA = valA?.toString().toLowerCase() || "";
-        valB = valB?.toString().toLowerCase() || "";
-        return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
       });
     }
 
-    return dataset;
-  }, [liveEvents, activeTab, searchQuery, sortField, sortOrder]);
+    // Image Upload
+    if (formData.image instanceof File) {
+      payload.append("image", formData.image);
+    }
 
-  const handleUpdateEventStatus = () => {
-    // Preserves current placeholder behavior.
+    const isEdit = formMode.editData && formMode.editData.slug;
+    const mutationPromise = isEdit
+      ? updateEventMutation.mutateAsync({ slug: formMode.editData.slug, formData: payload })
+      : createEventMutation.mutateAsync(payload);
+
+    return toast.promise(mutationPromise, {
+      loading: isEdit ? "Updating event..." : "Creating event...",
+      success: () => {
+        setFormMode({ isOpen: false, editData: null });
+        if (!isEdit) updateQuery({ page: 1 });
+        return isEdit ? "Event updated successfully." : "Event created successfully.";
+      },
+      error: (err) => {
+        console.error("Event mutation error:", err?.response?.data || err);
+        const serverErrors = err?.response?.data;
+        if (serverErrors && typeof serverErrors === "object") {
+          const detail = Object.entries(serverErrors)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+            .join(" | ");
+          return `Failed: ${detail}`;
+        }
+        return "Failed to save event. Please check required fields.";
+      },
+    });
   };
-
-  const totalRows = processedEvents.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-  const paginatedEvents = useMemo(() => {
-    const startOffset = (currentPage - 1) * rowsPerPage;
-    return processedEvents.slice(startOffset, startOffset + rowsPerPage);
-  }, [processedEvents, currentPage, rowsPerPage]);
 
   if (eventsLoading || mentorsLoading) return <EventsSkeleton />;
   if (eventsError) {
@@ -181,30 +289,29 @@ export function EventsPageContent() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <EventTabs
           activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setCurrentPage(1);
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={(value) => {
-            setSearchQuery(value);
-            setCurrentPage(1);
-          }}
+          onTabChange={handleTabChange}
+          searchQuery={localSearch}
+          onSearchChange={handleSearchChange}
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
+        {/* Indeterminate progress bar shown while filters/pagination fetch */}
+        {(isPending || isFetching) && (
+          <div className="progress-bar-track">
+            <div className="progress-bar-indicator" />
+          </div>
+        )}
         <EventTable
-          events={paginatedEvents}
+          events={eventsList}
           onEditEvent={handleEditEventTrigger}
           onDuplicateEvent={handleDuplicateEventTrigger}
           onDeleteEvent={handleDeleteEvent}
-          onUpdateEventStatus={handleUpdateEventStatus}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleRowsPerPageChange}
           currentPage={currentPage}
           onPageChange={handlePageChange}
-          totalPages={totalPages}
+          totalPages={Math.max(totalPages, 1)}
           totalRows={totalRows}
           sortField={sortField}
           sortOrder={sortOrder}

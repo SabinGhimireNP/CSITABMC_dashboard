@@ -1,50 +1,62 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
-const fetchAlumni = createThrottle(async () => {
-  const { data } = await apiClient.get("/alumni");
+const fetchAlumni = createThrottle(async (queryParams = {}) => {
+  const { search = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
-  // Primary: assumes backend returns { count, next, previous, results }
-  const results = data.results || data;
-  const count = data.count ?? results.length;
+  const params = {
+    _: Date.now(),
+    page,
+    page_size: pageSize,
+  };
+  if (search && search.trim()) params.search = search.trim();
+  if (id) params.id = id;
+  if (ordering) params.ordering = ordering;
 
-  const fetchedAlumni = results
-    .map((alumni) => ({
-      id: alumni.id || "1",
-      memberId: alumni.member?.id || alumni.id,
-      fullName: alumni.member?.name || "",
-      email: alumni.member?.email || "",
-      phoneNumber: alumni.member?.phone_number || "",
-      facebookLink: alumni.member?.fb_link || "",
-      linkedinLink: alumni.member?.linkedin_link || "",
-      githubLink: alumni.member?.github_link || "",
-      slug: alumni.member?.slug || "",
-      image: alumni.member?.image || null,
-      graduationYear: alumni.graduation_year || null,
-      tenureIds: Array.isArray(alumni.tenure_ids)
-        ? alumni.tenure_ids.map((id) => Number(id))
-        : Array.isArray(alumni.tenureIds)
-          ? alumni.tenureIds.map((id) => Number(id))
-          : [],
-      bio: alumni.bio || "",
-      status: "active",
-    }))
-    // Default view is id-based (ascending).
-    .sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  const { data } = await apiClient.get("/alumni", { params });
+
+  const rawResults = Array.isArray(data) ? data : (data.results || []);
+  const fetchedAlumni = rawResults.map((alumni) => ({
+    id: alumni.id || "1",
+    memberId: alumni.member?.id || alumni.id,
+    fullName: alumni.member?.name || "",
+    email: alumni.member?.email || "",
+    phoneNumber: alumni.member?.phone_number || "",
+    facebookLink: alumni.member?.fb_link || "",
+    linkedinLink: alumni.member?.linkedin_link || "",
+    githubLink: alumni.member?.github_link || "",
+    slug: alumni.member?.slug || "",
+    image: alumni.member?.image || null,
+    graduationYear: alumni.graduation_year || null,
+    tenureIds: Array.isArray(alumni.tenure_ids)
+      ? alumni.tenure_ids.map((id) => Number(id))
+      : Array.isArray(alumni.tenureIds)
+        ? alumni.tenureIds.map((id) => Number(id))
+        : [],
+    bio: alumni.bio || "",
+    status: "active",
+  }));
+
+  const count = data.count ?? rawResults.length;
+  const totalPages = Math.ceil(count / pageSize) || 1;
 
   return {
     count,
+    totalPages,
     data: fetchedAlumni,
   };
 });
 
-export const useAlumni = () => {
+export const useAlumni = (queryParams = {}) => {
+  const { search = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
+
   return useQuery({
-    queryKey: ["alumni"],
-    queryFn: fetchAlumni,
+    queryKey: ["alumni", search, id, ordering, page, pageSize],
+    queryFn: () => fetchAlumni({ search, id, ordering, page, pageSize }),
+    placeholderData: keepPreviousData,
   });
 };
 

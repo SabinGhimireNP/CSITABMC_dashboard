@@ -1,70 +1,103 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
-const fetchMentors = createThrottle(async () => {
-  const { data } = await apiClient.get("/mentors");
+const fetchMentors = createThrottle(async (queryParams = {}) => {
+  const { search = "", status = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
-  // Primary: assumes backend returns { count, next, previous, results }
-  const results = data.results || data;
-  const count = data.count ?? results.length;
+  const params = {
+    _: Date.now(),
+    page,
+    page_size: pageSize,
+  };
+  if (search && search.trim()) params.search = search.trim();
+  if (status) params.status = status;
+  if (id) params.id = id;
+  if (ordering) params.ordering = ordering;
 
-  const fetchedMentors = results.map((mentor) => ({
+  const { data } = await apiClient.get("/mentors", { params });
+
+  const rawResults = Array.isArray(data) ? data : (data.results || []);
+  const fetchedMentors = rawResults.map((mentor) => ({
     id: mentor.id,
     fullName: mentor.name,
-    socialLink: mentor.linkedin_profile,
-    image: mentor.photo,
-    events: [1, 4],
-    role: mentor.expertise,
+    socialLink: mentor.linkedin_profile || "",
+    image: mentor.photo || null,
+    events: [],
+    role: mentor.expertise || "",
     status: "published",
+    slug: mentor.slug,
   }));
+
+  const count = data.count ?? rawResults.length;
+  const totalPages = Math.ceil(count / pageSize) || 1;
 
   return {
     count,
+    totalPages,
     data: fetchedMentors,
   };
-
-  // TODO: uncomment below and remove above once backend returns paginated shape for this endpoint
-  // const fetchedMentors = data.map((mentor) => ({ ... }));
-  // return { count: data.length, data: fetchedMentors };
 });
 
-export const createMentor = createThrottle(async (mentorData) => {
-  try {
-    const newMentor = {
-      updated_at: new Date().toISOString(),
-      name: mentorData.fullName,
-      email: mentorData.email,
-      expertise: mentorData.role,
-      linkedin_profile: mentorData.socialLink,
-    };
-    const response = await apiClient.post("/mentors/", newMentor,{
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error creating mentor:", error);
-    throw error;
-  }
-});
+export const useMentors = (queryParams = {}) => {
+  const { search = "", status = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
-export const useMentors = () => {
   return useQuery({
-    queryKey: ["mentors"],
-    queryFn: fetchMentors,
+    queryKey: ["mentors", search, status, id, ordering, page, pageSize],
+    queryFn: () => fetchMentors({ search, status, id, ordering, page, pageSize }),
+    placeholderData: keepPreviousData,
   });
 };
+
+const createMentor = createThrottle(async (formData) => {
+  const { data } = await apiClient.post("/mentors/", formData);
+  return data;
+});
+
+const updateMentor = createThrottle(async ({ slug, formData }) => {
+  const { data } = await apiClient.put(`/mentors/${slug}/`, formData);
+  return data;
+});
+
+const deleteMentor = createThrottle(async (slug) => {
+  await apiClient.delete(`/mentors/${slug}/`);
+  return slug;
+});
 
 export const useCreateMentor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createMentor,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["mentors"], refetchType: "active" });
-      await queryClient.refetchQueries({ queryKey: ["mentors"], type: "active" });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mentors"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+};
+
+export const useUpdateMentor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateMentor,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mentors"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+};
+
+export const useDeleteMentor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteMentor,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mentors"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
     },
   });
 };

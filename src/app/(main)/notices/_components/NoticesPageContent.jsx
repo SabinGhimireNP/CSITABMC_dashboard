@@ -23,9 +23,8 @@ export function NoticesPageContent() {
     ? searchParams.get("tab")
     : "all";
   const searchQuery = searchParams.get("search") || "";
+  const orderingQuery = searchParams.get("ordering") || "";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
-  // Guard against NaN: the fallback "5" must be used in BOTH the predicate
-  // and the value expression, otherwise parseInt(null) → NaN.
   const rowsPerPageParam = searchParams.get("page_size") || "5";
   const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
     ? parseInt(rowsPerPageParam, 10)
@@ -43,6 +42,7 @@ export function NoticesPageContent() {
   } = useNotices({
     search: searchQuery,
     status: activeTab === "all" ? "" : activeTab,
+    ordering: orderingQuery,
     page: currentPage,
     pageSize: rowsPerPage,
   });
@@ -70,8 +70,6 @@ export function NoticesPageContent() {
   );
 
   // ── Search debounce ─────────────────────────────────────────────────────
-  // Keep a local copy so the input feels instant; only push to the URL
-  // (and therefore to the backend) after the user pauses typing.
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const debounceRef = useRef(null);
 
@@ -104,22 +102,18 @@ export function NoticesPageContent() {
     updateQuery({ page: 1, page_size: amount === 5 ? "" : amount });
   };
 
-  // ── Sort handlers (kept for UI, delegated to a future backend sort param) ─
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("none");
+  // ── Server-side Sorting Query Handler ────────────────────────────────────
+  const sortField = orderingQuery ? orderingQuery.replace("-", "") : null;
+  const sortOrder = orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none";
 
   const handleSortChange = (field) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortOrder("asc");
-    } else if (sortOrder === "none") {
-      setSortOrder("asc");
-    } else if (sortOrder === "asc") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("none");
-      setSortField(null);
+    let nextOrdering = field;
+    if (orderingQuery === field) {
+      nextOrdering = `-${field}`;
+    } else if (orderingQuery === `-${field}`) {
+      nextOrdering = "";
     }
+    updateQuery({ ordering: nextOrdering, page: 1 });
   };
 
   const handleDeleteNotice = () => {
@@ -214,7 +208,7 @@ export function NoticesPageContent() {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
         {/* Indeterminate progress bar shown while filters/pagination fetch */}
         {(isPending || isFetching) && (
           <div className="progress-bar-track">

@@ -119,11 +119,11 @@ export function EventFormModal({
 
   const toggleMentor = (mentorId) => {
     setFormData((prev) => {
-      const exists = prev.mentors.includes(mentorId);
+      const exists = prev.mentors.map(String).includes(String(mentorId));
       return {
         ...prev,
         mentors: exists
-          ? prev.mentors.filter((id) => id !== mentorId)
+          ? prev.mentors.filter((id) => String(id) !== String(mentorId))
           : [...prev.mentors, mentorId],
       };
     });
@@ -158,8 +158,9 @@ export function EventFormModal({
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
+      if (onSubmitSuccess) {
+        await onSubmitSuccess(result.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -520,7 +521,7 @@ export function EventFormModal({
                     </p>
                   ) : (
                     mentorsList.map((mentor) => {
-                      const checked = formData.mentors.includes(mentor.id);
+                      const checked = formData.mentors.map(String).includes(String(mentor.id));
                       return (
                         <button
                           key={mentor.id}

@@ -5,11 +5,8 @@ import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
 const fetchNotices = createThrottle(async (queryParams = {}) => {
-  const { search = "", status = "", page = 1, pageSize = 5 } = queryParams;
+  const { search = "", status = "", category = "", date = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
-  // The backend caches GET responses for 5 minutes (cache_page). Adding a
-  // unique query param busts that cache so the list always reflects the
-  // latest data after create/update operations.
   const params = {
     _: Date.now(),
     page,
@@ -17,24 +14,23 @@ const fetchNotices = createThrottle(async (queryParams = {}) => {
   };
   if (search.trim()) params.search = search.trim();
   if (status) params.status = status;
+  if (category) params.category = category;
+  if (date) params.date = date;
+  if (id) params.id = id;
+  if (ordering) params.ordering = ordering;
 
   const { data } = await apiClient.get("/notices", { params });
 
-  const fetchedNotices = (data.results || [])
-    .map((notice) => ({
-      id: notice.id,
-      slug: notice.slug,
-      title: notice.title,
-      image: notice.image,
-      category: notice.category,
-      status: notice.status,
-      description: notice.description,
-      createdAt: notice.updated_at,
-    }))
-    // Default view is id-based (ascending). The backend orders by
-    // -created_at, so we re-sort client-side to keep the default view
-    // consistent and predictable.
-    .sort((a, b) => (a.id || 0) - (b.id || 0));
+  const fetchedNotices = (data.results || []).map((notice) => ({
+    id: notice.id,
+    slug: notice.slug,
+    title: notice.title,
+    image: notice.image,
+    category: notice.category,
+    status: notice.status,
+    description: notice.description,
+    createdAt: notice.updated_at,
+  }));
 
   const count = data.count || 0;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -47,14 +43,11 @@ const fetchNotices = createThrottle(async (queryParams = {}) => {
 });
 
 export const useNotices = (queryParams = {}) => {
-  const { search = "", status = "", page = 1, pageSize = 5 } = queryParams;
+  const { search = "", status = "", category = "", date = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
   return useQuery({
-    queryKey: ["notices", search, status, page, pageSize],
-    queryFn: () => fetchNotices({ search, status, page, pageSize }),
-    // Keep the previous page's data on screen while a new filter/page is
-    // being fetched, so the table updates in place (with the top progress
-    // bar) instead of unmounting to the skeleton loader.
+    queryKey: ["notices", search, status, category, date, id, ordering, page, pageSize],
+    queryFn: () => fetchNotices({ search, status, category, date, id, ordering, page, pageSize }),
     placeholderData: keepPreviousData,
   });
 };
