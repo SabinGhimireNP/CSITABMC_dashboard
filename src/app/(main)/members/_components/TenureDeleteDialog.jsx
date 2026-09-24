@@ -1,6 +1,22 @@
 "use client";
 
+import React, { useState } from "react";
+import { Loader2 } from "lucide-react";
+
 export function TenureDeleteDialog({ tenure, onClose, onConfirm }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
       <div
@@ -26,16 +42,18 @@ export function TenureDeleteDialog({ tenure, onClose, onConfirm }) {
           <button
             type="button"
             onClick={onClose}
-            className="h-8 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-sm"
+            disabled={isDeleting}
+            className="h-8 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-sm disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            className="h-8 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-sm"
+            onClick={handleConfirm}
+            disabled={isDeleting}
+            className="h-8 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            Delete Tenure
+            {isDeleting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting</> : "Delete Tenure"}
           </button>
         </div>
       </div>

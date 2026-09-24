@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -102,6 +102,45 @@ export const usePastPapers = () => {
   return useQuery({
     queryKey: ["pastPapers"],
     queryFn: fetchPastPapers,
+  });
+};
+
+export const useCreatePastPaper = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createThrottle(async (data) => {
+      const response = await apiClient.post("/past-papers/", data);
+      return response.data;
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pastPapers"] });
+    }
+  });
+};
+
+export const useUpdatePastPaper = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createThrottle(async ({ slug, data }) => {
+      const response = await apiClient.put(`/past-papers/${slug}/`, data);
+      return response.data;
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pastPapers"] });
+    }
+  });
+};
+
+export const useDeletePastPaper = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createThrottle(async (slug) => {
+      const response = await apiClient.delete(`/past-papers/${slug}/`);
+      return response.data;
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pastPapers"] });
+    }
   });
 };
 

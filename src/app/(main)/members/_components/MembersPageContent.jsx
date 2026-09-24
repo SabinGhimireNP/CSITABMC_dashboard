@@ -94,7 +94,7 @@ export function MembersPageContent() {
 
     toast.promise(mutationPromise, {
       id: "tenure-mutation",
-      loading: isEdit ? "Updating tenure..." : "Creating tenure...",
+      loading: isEdit ? "Updating tenure" : "Adding tenure",
       success: () => {
         setTenureFormMode({ isOpen: false, editData: null });
         return isEdit ? "Tenure updated successfully." : "Tenure created successfully.";
@@ -112,7 +112,7 @@ export function MembersPageContent() {
     if (!tenureToDelete) return;
     return toast.promise(deleteTenureMutation.mutateAsync(tenureToDelete.slug), {
       id: "delete-tenure",
-      loading: "Deleting tenure...",
+      loading: "Deleting tenure",
       success: () => {
         setTenureToDelete(null);
         return "Tenure deleted successfully.";
@@ -146,7 +146,7 @@ export function MembersPageContent() {
     const p = duplicatePromise();
     toast.promise(p, {
       id: "duplicate-tenure",
-      loading: "Duplicating tenure...",
+      loading: "Duplicating tenure",
       success: "Tenure duplicated successfully.",
       error: (err) => {
         console.error("Failed to duplicate tenure", err?.response?.data || err);
@@ -189,7 +189,7 @@ export function MembersPageContent() {
     if (member && member.membershipId) {
       return toast.promise(deleteMembershipMutation.mutateAsync(member.membershipId), {
         id: "delete-member",
-        loading: "Removing member from tenure...",
+        loading: "Removing member",
         success: "Member removed successfully.",
         error: (err) => {
           console.error("Failed to delete membership", err?.response?.data || err);
@@ -258,7 +258,7 @@ export function MembersPageContent() {
     const p = savePromise();
     toast.promise(p, {
       id: "member-mutation",
-      loading: isEdit ? "Updating member..." : "Adding member...",
+      loading: isEdit ? "Updating member" : "Adding member",
       success: () => {
         setMemberFormMode({ isOpen: false, editData: null });
         return isEdit ? "Member updated successfully." : "Member added successfully.";

@@ -252,10 +252,10 @@ export function MemberFormModal({
           <button type="button" disabled={submitType !== null} onClick={onCancel} className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-sm">Cancel</button>
           <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2 flex-col sm:flex-row">
             <button type="button" disabled={submitType !== null} onClick={(e) => handleActionClick(e, "draft")} className="h-9 w-full sm:w-auto px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5">
-              {submitType === "draft" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Storing...</> : "Save as Draft"}
+              {submitType === "draft" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Storing</> : "Save as Draft"}
             </button>
             <button type="button" disabled={submitType !== null} onClick={(e) => handleActionClick(e, "active")} className="h-9 w-full sm:w-auto px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5">
-              {submitType === "active" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</> : (initialData ? "Update Member" : "Add Member")}
+              {submitType === "active" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}</> : (initialData ? "Update Member" : "Add Member")}
             </button>
           </div>
         </div>

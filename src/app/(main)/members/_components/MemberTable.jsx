@@ -11,6 +11,7 @@ import {
   X,
   Copy,
   User,
+  Loader2,
 } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
 
@@ -74,8 +75,20 @@ export function MemberTable({
     return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
   };
 
-  const handleConfirmDelete = () => {
-    if (memberToDelete) { onDeleteMember(memberToDelete.id); setMemberToDelete(null); }
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (memberToDelete) {
+      setIsDeleting(true);
+      try {
+        await onDeleteMember(memberToDelete.id);
+        setMemberToDelete(null);
+      } catch (err) {
+        console.error("Failed to delete member:", err);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
   };
 
   // Rendered via portal so it escapes overflow:hidden on the table wrapper
@@ -232,14 +245,16 @@ export function MemberTable({
 
             <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
               <button type="button" onClick={() => setMemberToDelete(null)}
-                className="h-8 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-sm"
+                disabled={isDeleting}
+                className="h-8 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-sm disabled:opacity-50"
               >
                 Cancel
               </button>
               <button type="button" onClick={handleConfirmDelete}
-                className="h-8 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-sm"
+                disabled={isDeleting}
+                className="h-8 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                Confirm Remove
+                {isDeleting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Removing</> : "Confirm Remove"}
               </button>
             </div>
           </div>
