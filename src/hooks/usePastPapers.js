@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -77,31 +77,63 @@ const findSubjectName = (code) => {
   return subjectCodeMap[normalizedCode] || "Unknown Subject";
 };
 
-const fetchPastPapers = createThrottle(async () => {
-  const { data } = await apiClient.get("/past-papers");
+export const SUBJECTS_LIST = Object.entries(subjectCodeMap).map(([code, name]) => ({
+  id: code,
+  name,
+  label: `${name} (${code})`,
+}));
 
-  const fetchedPastPapers = (data.results || []).map((paper) => ({
-    id: paper.id,
-    subject_code: paper.subject_name,
-    subject_name: findSubjectName(paper.subject_name),
-    semester: paper.semester,
-    model_set: paper.model_set,
-    exam_year: paper.exam_year,
-    drive_link: paper.drive_link,
-    slug: paper.slug,
-    created_at: paper.created_at,
-    updated_at: paper.updated_at,
-  }));
+const fetchPastPapers = createThrottle(async (queryParams = {}) => {
+  const { search = "", ordering = "", page = 1, pageSize = 10, model_set = "" } = queryParams;
+
+  const params = {
+    _: Date.now(),
+    page,
+    page_size: pageSize,
+  };
+  if (search && search.trim()) params.search = search.trim();
+  if (ordering) params.ordering = ordering;
+  if (model_set !== "") params.model_set = model_set;
+
+  const { data } = await apiClient.get("/past-papers/", { params });
+
+  const rawResults = Array.isArray(data) ? data : (data.results || []);
+  const fetchedPastPapers = rawResults.map((paper) => {
+    const rawCode = paper.subject_name;
+    const name = findSubjectName(rawCode);
+    const displayName = `${name} (${rawCode})`;
+
+    return {
+      id: paper.id,
+      subject_code: rawCode,
+      subject_name: displayName,
+      semester: paper.semester,
+      model_set: paper.model_set,
+      exam_year: paper.exam_year,
+      drive_link: paper.drive_link,
+      slug: paper.slug,
+      created_at: paper.created_at,
+      updated_at: paper.updated_at,
+    };
+  });
+
+  const count = data.count ?? rawResults.length;
+  const totalPages = Math.ceil(count / pageSize) || 1;
 
   return {
-    count: data.count,
+    count,
+    totalPages,
     data: fetchedPastPapers,
   };
 });
-export const usePastPapers = () => {
+
+export const usePastPapers = (queryParams = {}) => {
+  const { search = "", ordering = "", page = 1, pageSize = 10, model_set = "" } = queryParams;
+
   return useQuery({
-    queryKey: ["pastPapers"],
-    queryFn: fetchPastPapers,
+    queryKey: ["pastPapers", search, ordering, page, pageSize, model_set],
+    queryFn: () => fetchPastPapers({ search, ordering, page, pageSize, model_set }),
+    placeholderData: keepPreviousData,
   });
 };
 

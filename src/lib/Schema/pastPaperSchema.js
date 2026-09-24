@@ -18,10 +18,6 @@ export const pastPaperSchema = z.object({
     .max(20, "Subject code is too long")
     .toUpperCase(),
 
-  subject_name: z
-    .string()
-    .min(1, "Subject name is required")
-    .max(120, "Subject name is too long"),
 
   semester: z
     .union([z.string(), z.number()])

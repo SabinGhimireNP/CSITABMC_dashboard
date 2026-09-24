@@ -55,7 +55,7 @@ export function MentorsPageContent() {
     pageSize: rowsPerPage,
   });
 
-  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+  const { data: eventsData, isLoading: eventsLoading } = useEvents({ pageSize: 100 });
 
   const rawMentors = mentorsData?.data || [];
   const totalRows = mentorsData?.count || 0;

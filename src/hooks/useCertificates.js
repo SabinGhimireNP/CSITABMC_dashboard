@@ -1,17 +1,27 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
-const fetchCertificates = createThrottle(async () => {
-  const { data } = await apiClient.get("/certificates");
+const fetchCertificates = createThrottle(async (queryParams = {}) => {
+  const { search = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
+
+  const params = {
+    _: Date.now(),
+    page,
+    page_size: pageSize,
+  };
+  if (search && search.trim()) params.search = search.trim();
+  if (ordering) params.ordering = ordering;
+
+  const { data } = await apiClient.get("/certificates/", { params });
 
   // Primary: assumes backend returns { count, next, previous, results }
-  const results = data.results || data;
-  const count = data.count ?? results.length;
+  const rawResults = Array.isArray(data) ? data : (data.results || []);
+  const count = data.count ?? rawResults.length;
 
-  const fetchedCertificates = results.map((certificate) => ({
+  const fetchedCertificates = rawResults.map((certificate) => ({
     id: certificate.certificate_id,
     event: certificate.event,
     fullName: certificate.full_name,
@@ -19,20 +29,22 @@ const fetchCertificates = createThrottle(async () => {
     isProjectComplete: false,
   }));
 
+  const totalPages = Math.ceil(count / pageSize) || 1;
+
   return {
     count,
+    totalPages,
     data: fetchedCertificates,
   };
-
-  // TODO: uncomment below and remove above once backend returns paginated shape for this endpoint
-  // const fetchedCertificates = data.map((certificate) => ({ ... }));
-  // return { count: data.length, data: fetchedCertificates };
 });
 
-export const useCertificates = () => {
+export const useCertificates = (queryParams = {}) => {
+  const { search = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
+
   return useQuery({
-    queryKey: ["certificates"],
-    queryFn: fetchCertificates,
+    queryKey: ["certificates", search, ordering, page, pageSize],
+    queryFn: () => fetchCertificates({ search, ordering, page, pageSize }),
+    placeholderData: keepPreviousData,
   });
 };
 

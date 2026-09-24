@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { 
   useCertificates,
   useCreateCertificate,
@@ -17,44 +18,104 @@ import CertificatesSkeleton from "./CertificatesSkeleton";
 import { toast } from "sonner";
 import { parseServerError } from "@/lib/errorUtils";
 
+const VALID_TABS = ["all", "complete", "incomplete"];
+
 export function CertificatesPageContent() {
-  const { data: certData, isLoading: certLoading, isError: certError } = useCertificates();
-  const { data: eventsData, isLoading: eventsLoading } = useEvents();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+
+  const activeTab = VALID_TABS.includes(searchParams.get("tab"))
+    ? searchParams.get("tab")
+    : "all";
+  const searchQuery = searchParams.get("search") || "";
+  const orderingQuery = searchParams.get("ordering") || "";
+  const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
+  const rowsPerPageParam = searchParams.get("page_size") || "5";
+  const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
+    ? parseInt(rowsPerPageParam, 10)
+    : 5;
+
+  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
 
   const createCertificateMutation = useCreateCertificate();
   const updateCertificateMutation = useUpdateCertificate();
   const deleteCertificateMutation = useDeleteCertificate();
 
-  const liveCertificates = certData?.data || [];
+  const { data: eventsData, isLoading: eventsLoading } = useEvents({ pageSize: 100 });
   const eventsList = eventsData?.data || [];
 
-  const [activeTab, setActiveTab] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("none");
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const {
+    data: certData,
+    isLoading: certLoading,
+    isError: certError,
+    isFetching,
+  } = useCertificates({
+    search: searchQuery,
+    ordering: orderingQuery,
+    page: currentPage,
+    pageSize: rowsPerPage,
+  });
 
-  const handleSortChange = (field) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortOrder("asc");
-    } else if (sortOrder === "none") {
-      setSortOrder("asc");
-    } else if (sortOrder === "asc") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("none");
-      setSortField(null);
-    }
-    setCurrentPage(1);
+  // Client-side filter for "complete/incomplete" since it's not a real backend field right now
+  const liveCertificates = certData?.data || [];
+  let processedCertificates = liveCertificates;
+  if (activeTab === "complete") {
+    processedCertificates = processedCertificates.filter((c) => c.isProjectComplete);
+  } else if (activeTab === "incomplete") {
+    processedCertificates = processedCertificates.filter((c) => !c.isProjectComplete);
+  }
+
+  const totalRows = certData?.count || 0;
+  const totalPages = certData?.totalPages || 1;
+
+  // ── URL query helpers ────────────────────────────────────────────────────
+  const updateQuery = useCallback(
+    (updates) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === "" || value === null || value === undefined) {
+          params.delete(key);
+        } else {
+          params.set(key, String(value));
+        }
+      });
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      });
+    },
+    [searchParams, router, pathname]
+  );
+
+  // ── Debounced search ─────────────────────────────────────────────────────
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchChange = (value) => {
+    setLocalSearch(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateQuery({ search: value, page: "" });
+    }, 350);
   };
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
-  const handleRowsPerPageChange = (amount) => {
-    setRowsPerPage(amount);
-    setCurrentPage(1);
+  // ── Sort (header click → ordering query param) ────────────────────────
+  const handleSortChange = (field) => {
+    const currentOrdering = orderingQuery;
+    let newOrdering = "";
+    if (currentOrdering === field) {
+      newOrdering = `-${field}`;
+    } else if (currentOrdering === `-${field}`) {
+      newOrdering = "";
+    } else {
+      newOrdering = field;
+    }
+    updateQuery({ ordering: newOrdering, page: "" });
   };
 
   const handleDeleteCertificate = (id) => {
@@ -108,59 +169,6 @@ export function CertificatesPageContent() {
     return mutationPromise;
   };
 
-  const processedCertificates = useMemo(() => {
-    let dataset = [...liveCertificates];
-
-    if (activeTab === "complete") {
-      dataset = dataset.filter((c) => c.isProjectComplete);
-    } else if (activeTab === "incomplete") {
-      dataset = dataset.filter((c) => !c.isProjectComplete);
-    }
-
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      dataset = dataset.filter((c) => {
-        const eventTitle = eventsList.find((e) => String(e.id) === String(c.event))?.title || "";
-        return c.fullName?.toLowerCase().includes(query) || eventTitle.toLowerCase().includes(query);
-      });
-    }
-
-    if (sortField && sortOrder !== "none") {
-      dataset.sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
-
-        if (sortField === "id") {
-          const numA = parseInt(valA?.toString().replace(/\D/g, "")) || 0;
-          const numB = parseInt(valB?.toString().replace(/\D/g, "")) || 0;
-          return sortOrder === "asc" ? numA - numB : numB - numA;
-        }
-
-        if (sortField === "event") {
-          const titleA = eventsList.find((e) => String(e.id) === String(valA))?.title || "";
-          const titleB = eventsList.find((e) => String(e.id) === String(valB))?.title || "";
-          return sortOrder === "asc" ? titleA.localeCompare(titleB) : titleB.localeCompare(titleA);
-        }
-
-        valA = valA?.toString().toLowerCase() || "";
-        valB = valB?.toString().toLowerCase() || "";
-        return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      });
-    }
-
-    return dataset;
-  }, [liveCertificates, activeTab, searchQuery, sortField, sortOrder, eventsList]);
-
-  const totalRows = processedCertificates.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-  const paginatedCertificates = useMemo(() => {
-    const startOffset = (currentPage - 1) * rowsPerPage;
-    return processedCertificates.slice(startOffset, startOffset + rowsPerPage);
-  }, [processedCertificates, currentPage, rowsPerPage]);
-
   if (certLoading || eventsLoading) return <CertificatesSkeleton />;
   if (certError) {
     return (
@@ -192,34 +200,30 @@ export function CertificatesPageContent() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <CertificateTabs
           activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setCurrentPage(1);
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={(value) => {
-            setSearchQuery(value);
-            setCurrentPage(1);
-          }}
+          onTabChange={(tab) => updateQuery({ tab: tab === "all" ? "" : tab, page: "" })}
+          searchQuery={localSearch}
+          onSearchChange={handleSearchChange}
+          isFetching={isFetching && !certLoading}
         />
       </div>
 
       <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
         <CertificateTable
-          certificates={paginatedCertificates}
+          certificates={processedCertificates}
           eventsList={eventsList}
           onEditCertificate={handleEditCertificateTrigger}
           onDuplicateCertificate={handleDuplicateCertificateTrigger}
           onDeleteCertificate={handleDeleteCertificate}
           rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleRowsPerPageChange}
+          onRowsPerPageChange={(n) => updateQuery({ page_size: n, page: "" })}
           currentPage={currentPage}
-          onPageChange={handlePageChange}
+          onPageChange={(p) => updateQuery({ page: p })}
           totalPages={totalPages}
           totalRows={totalRows}
-          sortField={sortField}
-          sortOrder={sortOrder}
+          sortField={orderingQuery.replace(/^-/, "")}
+          sortOrder={orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none"}
           onHeaderClick={handleSortChange}
+          isFetching={isFetching && !certLoading}
         />
       </div>
 

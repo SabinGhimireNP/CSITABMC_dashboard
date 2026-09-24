@@ -74,7 +74,7 @@ export function EventsPageContent() {
     pageSize: rowsPerPage,
   });
 
-  const { data: mentorsData, isLoading: mentorsLoading } = useMentors();
+  const { data: mentorsData, isLoading: mentorsLoading } = useMentors({ pageSize: 100 });
 
   const eventsList = eventsData?.data || [];
   const totalRows = eventsData?.count || 0;

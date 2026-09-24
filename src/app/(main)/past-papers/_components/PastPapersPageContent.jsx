@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { usePastPapers } from "@/hooks/usePastPapers";
+import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { usePastPapers, useCreatePastPaper, useUpdatePastPaper, useDeletePastPaper } from "@/hooks/usePastPapers";
 import { PastPaperTable } from "./pastPaperTable";
 import { PastPaperTabs } from "./pastPaperTabs";
 import { PastPaperFormModal } from "./pastPaperFormModel";
@@ -9,40 +10,111 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import PastPapersSkeleton from "./PastPapersSkeleton";
 import { toast } from "sonner";
+import { parseServerError } from "@/lib/errorUtils";
+
+const VALID_TABS = ["all", "board", "model"];
 
 export function PastPapersPageContent() {
-  const { data: papersData, isLoading: papersLoading, isError: papersError } = usePastPapers();
-  const livePapers = papersData?.data || [];
-  const [activeTab, setActiveTab] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState("none");
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+
+  const activeTab = VALID_TABS.includes(searchParams.get("tab"))
+    ? searchParams.get("tab")
+    : "all";
+  const searchQuery = searchParams.get("search") || "";
+  const orderingQuery = searchParams.get("ordering") || "";
+  const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
+  const rowsPerPageParam = searchParams.get("page_size") || "10";
+  const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
+    ? parseInt(rowsPerPageParam, 10)
+    : 10;
+
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
 
-  const handleSortChange = (field) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortOrder("asc");
-    } else if (sortOrder === "none") {
-      setSortOrder("asc");
-    } else if (sortOrder === "asc") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("none");
-      setSortField(null);
-    }
-    setCurrentPage(1);
+  const createPaperMutation = useCreatePastPaper();
+  const updatePaperMutation = useUpdatePastPaper();
+  const deletePaperMutation = useDeletePastPaper();
+
+  // Tab maps to backend model_set filter
+  const modelSetFilter = activeTab === "model" ? "true" : activeTab === "board" ? "false" : "";
+
+  const {
+    data: papersData,
+    isLoading: papersLoading,
+    isError: papersError,
+    isFetching,
+  } = usePastPapers({
+    search: searchQuery,
+    ordering: orderingQuery,
+    page: currentPage,
+    pageSize: rowsPerPage,
+    model_set: modelSetFilter,
+  });
+
+  const livePapers = papersData?.data || [];
+  const totalRows = papersData?.count || 0;
+  const totalPages = papersData?.totalPages || 1;
+
+  // ── URL query helpers ────────────────────────────────────────────────────
+  const updateQuery = useCallback(
+    (updates) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === "" || value === null || value === undefined) {
+          params.delete(key);
+        } else {
+          params.set(key, String(value));
+        }
+      });
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      });
+    },
+    [searchParams, router, pathname]
+  );
+
+  // ── Debounced search ─────────────────────────────────────────────────────
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchChange = (value) => {
+    setLocalSearch(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateQuery({ search: value, page: "" });
+    }, 350);
   };
 
-  const handleDeletePaper = () => {
-    // Preserves current behavior while leaving deletion to future mutation work.
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+  // ── Sort (header click → ordering query param) ────────────────────────
+  const handleSortChange = (field) => {
+    const currentOrdering = orderingQuery;
+    let newOrdering = "";
+    if (currentOrdering === field) {
+      newOrdering = `-${field}`;
+    } else if (currentOrdering === `-${field}`) {
+      newOrdering = "";
+    } else {
+      newOrdering = field;
+    }
+    updateQuery({ ordering: newOrdering, page: "" });
+  };
+
+  // ── Mutations ─────────────────────────────────────────────────────────
+  const handleDeletePaper = (slug) => {
+    return toast.promise(deletePaperMutation.mutateAsync(slug), {
       id: "delete-paper",
-      loading: "Deleting past paper...",
+      loading: "Deleting past paper",
       success: "Past paper deleted successfully.",
-      error: "Failed to delete past paper.",
+      error: (err) => {
+        console.error("Failed to delete past paper:", err);
+        return parseServerError(err, "Failed to delete past paper.");
+      },
     });
   };
 
@@ -52,64 +124,33 @@ export function PastPapersPageContent() {
 
   const handleFormSubmitSuccess = (formData) => {
     const isEdit = formMode.editData != null;
-    const savePromise = new Promise((resolve) => setTimeout(resolve, 800));
+    const payload = {
+      subject_name: formData.subject_code,
+      semester: formData.semester,
+      model_set: formData.model_set,
+      exam_year: formData.exam_year,
+      drive_link: formData.drive_link,
+    };
+
+    const savePromise = isEdit
+      ? updatePaperMutation.mutateAsync({ slug: formMode.editData.slug, data: payload })
+      : createPaperMutation.mutateAsync(payload);
+
     toast.promise(savePromise, {
       id: "paper-mutation",
-      loading: isEdit ? "Updating past paper..." : "Adding past paper...",
+      loading: isEdit ? "Updating past paper" : "Adding past paper",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
         return isEdit ? "Past paper updated successfully." : "Past paper added successfully.";
       },
-      error: "Failed to save past paper.",
+      error: (err) => {
+        console.error("Failed to save past paper:", err);
+        return parseServerError(err, "Failed to save past paper.");
+      },
     });
-    
+
     return savePromise;
   };
-
-  const processedPapers = useMemo(() => {
-    let dataset = [...livePapers];
-
-    if (activeTab !== "all") {
-      dataset = dataset.filter((p) => (activeTab === "model" ? p.model_set === true : p.model_set === false));
-    }
-
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      dataset = dataset.filter(
-        (p) =>
-          p.subject_name?.toLowerCase().includes(query) ||
-          p.subject_code?.toLowerCase().includes(query) ||
-          String(p.exam_year).includes(query)
-      );
-    }
-
-    if (sortField && sortOrder !== "none") {
-      dataset.sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
-
-        if (sortField === "semester" || sortField === "exam_year") {
-          return sortOrder === "asc" ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
-        }
-
-        valA = valA?.toString().toLowerCase() || "";
-        valB = valB?.toString().toLowerCase() || "";
-        return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      });
-    }
-
-    return dataset;
-  }, [livePapers, activeTab, searchQuery, sortField, sortOrder]);
-
-  const totalRows = processedPapers.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-  const paginatedPapers = useMemo(() => {
-    const startOffset = (currentPage - 1) * rowsPerPage;
-    return processedPapers.slice(startOffset, startOffset + rowsPerPage);
-  }, [processedPapers, currentPage, rowsPerPage]);
 
   if (papersLoading) return <PastPapersSkeleton />;
   if (papersError) {
@@ -142,35 +183,28 @@ export function PastPapersPageContent() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <PastPaperTabs
           activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setCurrentPage(1);
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={(q) => {
-            setSearchQuery(q);
-            setCurrentPage(1);
-          }}
+          onTabChange={(tab) => updateQuery({ tab: tab === "all" ? "" : tab, page: "" })}
+          searchQuery={localSearch}
+          onSearchChange={handleSearchChange}
+          isFetching={isFetching && !papersLoading}
         />
       </div>
 
       <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
         <PastPaperTable
-          papers={paginatedPapers}
+          papers={livePapers}
           onEditPaper={handleEditPaperTrigger}
           onDeletePaper={handleDeletePaper}
           rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(n) => {
-            setRowsPerPage(n);
-            setCurrentPage(1);
-          }}
+          onRowsPerPageChange={(n) => updateQuery({ page_size: n, page: "" })}
           currentPage={currentPage}
-          onPageChange={setCurrentPage}
+          onPageChange={(p) => updateQuery({ page: p })}
           totalPages={totalPages}
           totalRows={totalRows}
-          sortField={sortField}
-          sortOrder={sortOrder}
+          sortField={orderingQuery.replace(/^-/, "")}
+          sortOrder={orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none"}
           onHeaderClick={handleSortChange}
+          isFetching={isFetching && !papersLoading}
         />
       </div>
 

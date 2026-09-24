@@ -72,8 +72,20 @@ export function PastPaperTable({
     setActiveMenuId(paperId);
   }, [activeMenuId]);
 
-  const handleConfirmDelete = () => {
-    if (paperToDelete) { onDeletePaper(paperToDelete.id); setPaperToDelete(null); }
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (paperToDelete) {
+      setIsDeleting(true);
+      try {
+        await onDeletePaper(paperToDelete.slug);
+        setPaperToDelete(null);
+      } catch (err) {
+        console.error("Failed to delete paper:", err);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
   };
 
   const handlePreview = (paper) => {
@@ -277,7 +289,7 @@ export function PastPaperTable({
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-10">
                       <div className="flex flex-col items-center gap-3">
                         <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
-                        <p className="text-xs text-slate-400 font-medium">Loading preview...</p>
+                        <p className="text-xs text-slate-400 font-medium">Loading preview</p>
                       </div>
                     </div>
                   )}
@@ -336,14 +348,16 @@ export function PastPaperTable({
               </div>
               <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
                 <button type="button" onClick={() => setPaperToDelete(null)}
-                  className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                  disabled={isDeleting}
+                  className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button type="button" onClick={handleConfirmDelete}
-                  className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs"
+                  disabled={isDeleting}
+                  className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  Confirm Delete
+                  {isDeleting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting</> : "Confirm Delete"}
                 </button>
               </div>
             </div>
