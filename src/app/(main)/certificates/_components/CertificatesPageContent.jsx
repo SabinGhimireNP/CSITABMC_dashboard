@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useCertificates } from "@/hooks/useCertificates";
+import { 
+  useCertificates,
+  useCreateCertificate,
+  useUpdateCertificate,
+  useDeleteCertificate 
+} from "@/hooks/useCertificates";
 import { useEvents } from "@/hooks/useEvents";
 import { CertificateTable } from "./CertificateTable";
 import { CertificateTabs } from "./CertificateTabs";
@@ -10,10 +15,15 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import CertificatesSkeleton from "./CertificatesSkeleton";
 import { toast } from "sonner";
+import { parseServerError } from "@/lib/errorUtils";
 
 export function CertificatesPageContent() {
   const { data: certData, isLoading: certLoading, isError: certError } = useCertificates();
   const { data: eventsData, isLoading: eventsLoading } = useEvents();
+
+  const createCertificateMutation = useCreateCertificate();
+  const updateCertificateMutation = useUpdateCertificate();
+  const deleteCertificateMutation = useDeleteCertificate();
 
   const liveCertificates = certData?.data || [];
   const eventsList = eventsData?.data || [];
@@ -47,12 +57,12 @@ export function CertificatesPageContent() {
     setCurrentPage(1);
   };
 
-  const handleDeleteCertificate = () => {
-    // Preserves current behavior while leaving deletion to future mutation work.
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
-      loading: "Deleting certificate...",
+  const handleDeleteCertificate = (id) => {
+    toast.promise(deleteCertificateMutation.mutateAsync(id), {
+      id: "delete-certificate",
+      loading: "Deleting certificate",
       success: "Certificate deleted successfully.",
-      error: "Failed to delete certificate.",
+      error: (err) => parseServerError(err, "Failed to delete certificate."),
     });
   };
 
@@ -72,16 +82,30 @@ export function CertificatesPageContent() {
   };
 
   const handleFormSubmitSuccess = (formData) => {
-    const isEdit = formMode.editData != null;
-    const savePromise = new Promise((resolve) => setTimeout(resolve, 800));
-    return toast.promise(savePromise, {
-      loading: isEdit ? "Updating certificate..." : "Issuing certificate...",
+    const payload = {
+      full_name: formData.fullName,
+      event: formData.event,
+    };
+
+    const isEdit = formMode.editData && formMode.editData.id;
+    const mutationPromise = isEdit
+      ? updateCertificateMutation.mutateAsync({ id: formMode.editData.id, data: payload })
+      : createCertificateMutation.mutateAsync(payload);
+
+    toast.promise(mutationPromise, {
+      id: "certificate-mutation",
+      loading: isEdit ? "Updating certificate" : "Adding certificate",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
-        return isEdit ? "Certificate updated successfully." : "Certificate issued successfully.";
+        return isEdit ? "Certificate updated successfully." : "Certificate added successfully.";
       },
-      error: "Failed to save certificate.",
+      error: (err) => {
+        console.error("Certificate mutation error:", err?.response?.data || err);
+        return parseServerError(err, "Failed to save certificate.");
+      },
     });
+    
+    return mutationPromise;
   };
 
   const processedCertificates = useMemo(() => {

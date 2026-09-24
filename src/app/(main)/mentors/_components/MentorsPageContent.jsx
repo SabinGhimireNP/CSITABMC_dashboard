@@ -12,6 +12,7 @@ import { MentorFormModal } from "./MentorForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import MentorsSkeleton from "./MentorsSkeleton";
+import { parseServerError } from "@/lib/errorUtils";
 
 const VALID_TABS = ["all", "published", "draft"];
 
@@ -143,9 +144,10 @@ export function MentorsPageContent() {
     if (!mentor || !mentor.slug) return;
 
     await toast.promise(deleteMentorMutation.mutateAsync(mentor.slug), {
+      id: "delete-mentor",
       loading: "Deleting mentor...",
       success: "Mentor deleted successfully.",
-      error: "Failed to delete mentor.",
+      error: (err) => parseServerError(err, "Failed to delete mentor."),
     });
   };
 
@@ -246,15 +248,21 @@ export function MentorsPageContent() {
       return savedMentor;
     })();
 
-    return toast.promise(mutationPromise, {
-      loading: isEdit ? "Updating mentor..." : "Creating mentor...",
+    toast.promise(mutationPromise, {
+      id: "mentor-mutation",
+      loading: isEdit ? "Updating mentor..." : "Adding mentor...",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
         if (!isEdit) updateQuery({ page: 1 });
         return isEdit ? "Mentor updated successfully." : "Mentor added successfully.";
       },
-      error: "Failed to save mentor. Please check required fields.",
+      error: (err) => {
+        console.error("Mentor mutation error:", err?.response?.data || err);
+        return parseServerError(err, "Failed to save mentor. Please check required fields.");
+      },
     });
+    
+    return mutationPromise;
   };
 
   if (mentorsLoading || eventsLoading) return <MentorsSkeleton />;

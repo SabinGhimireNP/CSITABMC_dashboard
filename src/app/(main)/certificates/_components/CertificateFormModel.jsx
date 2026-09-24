@@ -70,8 +70,7 @@ export function CertificateFormModal({
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
+      if (onSubmitSuccess) await onSubmitSuccess(result.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -175,7 +174,7 @@ export function CertificateFormModal({
             className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
           >
             {submitType === "save" ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}</>
             ) : (
               initialData ? "Save Changes" : "Issue Certificate"
             )}

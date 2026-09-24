@@ -39,6 +39,7 @@ export function PastPapersPageContent() {
   const handleDeletePaper = () => {
     // Preserves current behavior while leaving deletion to future mutation work.
     toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+      id: "delete-paper",
       loading: "Deleting past paper...",
       success: "Past paper deleted successfully.",
       error: "Failed to delete past paper.",
@@ -52,7 +53,8 @@ export function PastPapersPageContent() {
   const handleFormSubmitSuccess = (formData) => {
     const isEdit = formMode.editData != null;
     const savePromise = new Promise((resolve) => setTimeout(resolve, 800));
-    return toast.promise(savePromise, {
+    toast.promise(savePromise, {
+      id: "paper-mutation",
       loading: isEdit ? "Updating past paper..." : "Adding past paper...",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
@@ -60,6 +62,8 @@ export function PastPapersPageContent() {
       },
       error: "Failed to save past paper.",
     });
+    
+    return savePromise;
   };
 
   const processedPapers = useMemo(() => {

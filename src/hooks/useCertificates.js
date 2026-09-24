@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -33,5 +33,50 @@ export const useCertificates = () => {
   return useQuery({
     queryKey: ["certificates"],
     queryFn: fetchCertificates,
+  });
+};
+
+const throttledCreateCertificate = createThrottle(async (data) => {
+  const response = await apiClient.post("/certificates/", data);
+  return response.data;
+});
+
+const throttledUpdateCertificate = createThrottle(async ({ id, data }) => {
+  const response = await apiClient.put(`/certificates/${id}/`, data);
+  return response.data;
+});
+
+const throttledDeleteCertificate = createThrottle(async (id) => {
+  await apiClient.delete(`/certificates/${id}/`);
+  return id;
+});
+
+export const useCreateCertificate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: throttledCreateCertificate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["certificates"] });
+    },
+  });
+};
+
+export const useUpdateCertificate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: throttledUpdateCertificate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["certificates"] });
+    },
+  });
+};
+
+export const useDeleteCertificate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: throttledDeleteCertificate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["certificates"] });
+    },
   });
 };

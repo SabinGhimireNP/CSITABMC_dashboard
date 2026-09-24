@@ -42,6 +42,7 @@ export function AdminsPageContent() {
 
   const handleDeleteAdmin = (id) => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+      id: "delete-admin",
       loading: "Deleting admin...",
       success: () => {
         setLiveAdmins((prev) => prev.filter((a) => a.id !== id));
@@ -89,7 +90,8 @@ export function AdminsPageContent() {
       }
     });
 
-    return toast.promise(savePromise, {
+    toast.promise(savePromise, {
+      id: "admin-mutation",
       loading: isEdit ? "Updating admin..." : "Adding admin...",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
@@ -97,6 +99,8 @@ export function AdminsPageContent() {
       },
       error: "Failed to save admin.",
     });
+    
+    return savePromise;
   };
 
   const processedAdmins = useMemo(() => {

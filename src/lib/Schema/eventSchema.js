@@ -37,8 +37,10 @@ export const eventSchema = z
 
     registrationFormUrl: z
       .string()
-      .min(1, "Registration form URL is required")
-      .url("Must be a valid URL"),
+      .optional()
+      .refine((val) => !val || val.startsWith("http"), {
+        message: "Must be a valid URL",
+      }),
 
     registrationFeeBMC: z
       .union([z.string(), z.number()])

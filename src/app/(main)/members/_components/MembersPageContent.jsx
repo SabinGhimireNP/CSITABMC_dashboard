@@ -22,6 +22,7 @@ import { MembersPageHeader } from "./MembersPageHeader";
 import { TenureDeleteDialog } from "./TenureDeleteDialog";
 import MembersSkeleton from "./MembersSkeleton";
 import { toast } from "sonner"; // Assuming sonner is used for toasts, standard in modern dashboards. Or just fallback to console.
+import { parseServerError } from "@/lib/errorUtils";
 
 const getPostOrder = (post) => {
   const lowerPost = post?.toLowerCase() || "";
@@ -91,7 +92,8 @@ export function MembersPageContent() {
           end_date: formData.endDate,
         });
 
-    return toast.promise(mutationPromise, {
+    toast.promise(mutationPromise, {
+      id: "tenure-mutation",
       loading: isEdit ? "Updating tenure..." : "Creating tenure...",
       success: () => {
         setTenureFormMode({ isOpen: false, editData: null });
@@ -99,14 +101,17 @@ export function MembersPageContent() {
       },
       error: (err) => {
         console.error("Failed to save tenure", err?.response?.data || err);
-        return "Failed to save tenure.";
+        return parseServerError(err, "Failed to save tenure.");
       }
     });
+    
+    return mutationPromise;
   };
 
   const handleDeleteTenureConfirm = async () => {
     if (!tenureToDelete) return;
     return toast.promise(deleteTenureMutation.mutateAsync(tenureToDelete.slug), {
+      id: "delete-tenure",
       loading: "Deleting tenure...",
       success: () => {
         setTenureToDelete(null);
@@ -114,7 +119,7 @@ export function MembersPageContent() {
       },
       error: (err) => {
         console.error("Failed to delete tenure", err?.response?.data || err);
-        return "Failed to delete tenure.";
+        return parseServerError(err, "Failed to delete tenure.");
       }
     });
   };
@@ -138,14 +143,18 @@ export function MembersPageContent() {
       }
     };
 
-    return toast.promise(duplicatePromise(), {
+    const p = duplicatePromise();
+    toast.promise(p, {
+      id: "duplicate-tenure",
       loading: "Duplicating tenure...",
       success: "Tenure duplicated successfully.",
       error: (err) => {
         console.error("Failed to duplicate tenure", err?.response?.data || err);
-        return "Failed to duplicate tenure.";
+        return parseServerError(err, "Failed to duplicate tenure.");
       }
     });
+    
+    return p;
   };
 
   const handleOpenTenure = (tenure) => {
@@ -179,11 +188,12 @@ export function MembersPageContent() {
     const member = liveMembers.find(m => m.id === id && m.tenureId === selectedTenure?.id);
     if (member && member.membershipId) {
       return toast.promise(deleteMembershipMutation.mutateAsync(member.membershipId), {
+        id: "delete-member",
         loading: "Removing member from tenure...",
         success: "Member removed successfully.",
         error: (err) => {
           console.error("Failed to delete membership", err?.response?.data || err);
-          return "Failed to remove member.";
+          return parseServerError(err, "Failed to remove member.");
         }
       });
     } else if (member && member.slug) {
@@ -245,7 +255,9 @@ export function MembersPageContent() {
       }
     };
 
-    return toast.promise(savePromise(), {
+    const p = savePromise();
+    toast.promise(p, {
+      id: "member-mutation",
       loading: isEdit ? "Updating member..." : "Adding member...",
       success: () => {
         setMemberFormMode({ isOpen: false, editData: null });
@@ -253,9 +265,11 @@ export function MembersPageContent() {
       },
       error: (err) => {
         console.error("Failed to save member", err?.response?.data || err);
-        return "Failed to save member.";
+        return parseServerError(err, "Failed to save member.");
       }
     });
+    
+    return p;
   };
 
   const processedMembers = useMemo(() => {

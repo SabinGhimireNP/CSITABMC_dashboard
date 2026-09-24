@@ -9,6 +9,7 @@ import { AlumniTabs } from "./AlumniTabs";
 import { AlumniFormModal } from "./AlumniForm";
 import { AlumniPageHeader } from "./AlumniPageHeader";
 import AlumniSkeleton from "./AlumniSkeleton";
+import { parseServerError } from "@/lib/errorUtils";
 
 const VALID_TABS = ["all", "active", "draft"];
 
@@ -120,9 +121,10 @@ export function AlumniPageContent() {
 
   const handleDeleteAlumni = (id) => {
     toast.promise(deleteAlumniMutation.mutateAsync(id), {
+      id: "delete-alumni",
       loading: "Deleting alumni...",
       success: "Alumni deleted successfully.",
-      error: "Failed to delete alumni. Please try again.",
+      error: (err) => parseServerError(err, "Failed to delete alumni. Please try again."),
     });
   };
 
@@ -143,7 +145,8 @@ export function AlumniPageContent() {
       ? updateAlumniMutation.mutateAsync({ id: alumniFormMode.editData.id, payload })
       : createAlumniMutation.mutateAsync(payload);
 
-    return toast.promise(mutationPromise, {
+    toast.promise(mutationPromise, {
+      id: "alumni-mutation",
       loading: isEdit ? "Updating alumni..." : "Adding alumni...",
       success: () => {
         setAlumniFormMode({ isOpen: false, editData: null });
@@ -152,9 +155,11 @@ export function AlumniPageContent() {
       },
       error: (err) => {
         console.error("Alumni mutation error:", err?.response?.data || err);
-        return "Failed to save alumni. Please try again.";
+        return parseServerError(err, "Failed to save alumni. Please try again.");
       }
     });
+    
+    return mutationPromise;
   };
 
   if (alumniLoading) return <AlumniSkeleton />;

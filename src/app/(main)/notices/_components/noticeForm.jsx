@@ -496,7 +496,7 @@ export function NoticeFormModal({
             >
               {submitType === "draft" ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Storing...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}
                 </>
               ) : initialData ? (
                 "Update Draft"
@@ -512,7 +512,7 @@ export function NoticeFormModal({
             >
               {submitType === "published" ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Deploying...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}
                 </>
               ) : initialData ? (
                 "Update"

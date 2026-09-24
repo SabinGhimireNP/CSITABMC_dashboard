@@ -54,8 +54,7 @@ export function TenureFormModal({ isOpen, initialData = null, onSubmitSuccess, o
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
+      if (onSubmitSuccess) await onSubmitSuccess(result.data);
     } catch (err) {
       console.error(err);
     } finally {

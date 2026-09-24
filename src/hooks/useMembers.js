@@ -54,10 +54,10 @@ export const useTenures = () => {
 export const useCreateTenure = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data) => {
+    mutationFn: createThrottle(async (data) => {
       const response = await apiClient.post("/tenures/", data);
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -67,10 +67,10 @@ export const useCreateTenure = () => {
 export const useUpdateTenure = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ slug, data }) => {
+    mutationFn: createThrottle(async ({ slug, data }) => {
       const response = await apiClient.put(`/tenures/${slug}/`, data);
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -80,9 +80,9 @@ export const useUpdateTenure = () => {
 export const useDeleteTenure = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (slug) => {
+    mutationFn: createThrottle(async (slug) => {
       await apiClient.delete(`/tenures/${slug}/`);
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -92,12 +92,12 @@ export const useDeleteTenure = () => {
 export const useDuplicateTenure = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ targetSlug, sourceSlug }) => {
+    mutationFn: createThrottle(async ({ targetSlug, sourceSlug }) => {
       const response = await apiClient.post(`/clone-members/${targetSlug}/`, {
         source_tenure_slug: sourceSlug
       });
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -107,12 +107,12 @@ export const useDuplicateTenure = () => {
 export const useCreateMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (formData) => {
+    mutationFn: createThrottle(async (formData) => {
       const response = await apiClient.post("/members/", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -122,12 +122,12 @@ export const useCreateMember = () => {
 export const useUpdateMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ slug, formData }) => {
+    mutationFn: createThrottle(async ({ slug, formData }) => {
       const response = await apiClient.put(`/members/${slug}/`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -137,9 +137,9 @@ export const useUpdateMember = () => {
 export const useDeleteMember = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (slug) => {
+    mutationFn: createThrottle(async (slug) => {
       await apiClient.delete(`/members/${slug}/`);
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -149,10 +149,10 @@ export const useDeleteMember = () => {
 export const useCreateMembership = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data) => {
+    mutationFn: createThrottle(async (data) => {
       const response = await apiClient.post("/memberships/", data);
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -162,10 +162,10 @@ export const useCreateMembership = () => {
 export const useUpdateMembership = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }) => {
+    mutationFn: createThrottle(async ({ id, data }) => {
       const response = await apiClient.put(`/memberships/${id}/`, data);
       return response.data;
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }
@@ -175,9 +175,9 @@ export const useUpdateMembership = () => {
 export const useDeleteMembership = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id) => {
+    mutationFn: createThrottle(async (id) => {
       await apiClient.delete(`/memberships/${id}/`);
-    },
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries(["tenures"]);
     }

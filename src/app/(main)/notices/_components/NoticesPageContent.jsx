@@ -3,13 +3,14 @@
 import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { useNotices, useCreateNotice, useUpdateNotice } from "@/hooks/useNotices";
+import { useNotices, useCreateNotice, useUpdateNotice, useDeleteNotice } from "@/hooks/useNotices";
 import { NoticeTable } from "./noticeTable";
 import { NoticeTabs } from "./noticeTabs";
 import { NoticeFormModal } from "./noticeForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import NoticesSkeleton from "./NoticesSkeleton";
+import { parseServerError } from "@/lib/errorUtils";
 
 const VALID_TABS = ["all", "published", "draft"];
 
@@ -33,6 +34,7 @@ export function NoticesPageContent() {
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
   const createNoticeMutation = useCreateNotice();
   const updateNoticeMutation = useUpdateNotice();
+  const deleteNoticeMutation = useDeleteNotice();
 
   const {
     data: noticesData,
@@ -116,8 +118,13 @@ export function NoticesPageContent() {
     updateQuery({ ordering: nextOrdering, page: 1 });
   };
 
-  const handleDeleteNotice = () => {
-    // Preserves current behavior while leaving deletion to future mutation work.
+  const handleDeleteNotice = (slug) => {
+    toast.promise(deleteNoticeMutation.mutateAsync(slug), {
+      id: "delete-notice",
+      loading: "Deleting notice",
+      success: "Notice deleted successfully.",
+      error: (err) => parseServerError(err, "Failed to delete notice."),
+    });
   };
 
   const handleEditNoticeTrigger = (notice) => {
@@ -149,8 +156,9 @@ export function NoticesPageContent() {
       ? updateNoticeMutation.mutateAsync({ slug: formMode.editData.slug, formData: payload })
       : createNoticeMutation.mutateAsync(payload);
 
-    return toast.promise(mutationPromise, {
-      loading: isEdit ? "Updating notice..." : "Creating notice...",
+    toast.promise(mutationPromise, {
+      id: "notice-mutation",
+      loading: isEdit ? "Updating notice" : "Adding notice",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
         if (!isEdit) updateQuery({ page: 1 });
@@ -158,9 +166,11 @@ export function NoticesPageContent() {
       },
       error: (err) => {
         console.error("Notice mutation error:", err?.response?.data || err);
-        return "Failed to save notice.";
+        return parseServerError(err, "Failed to save notice.");
       }
     });
+    
+    return mutationPromise;
   };
 
   if (noticesLoading) return <NoticesSkeleton />;

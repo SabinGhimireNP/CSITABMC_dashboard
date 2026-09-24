@@ -71,7 +71,7 @@ export function NoticeTable({
   };
 
   const handleConfirmDelete = () => {
-    if (noticeToDelete) { onDeleteNotice(noticeToDelete.id); setNoticeToDelete(null); }
+    if (noticeToDelete) { onDeleteNotice(noticeToDelete.slug); setNoticeToDelete(null); }
   };
 
   // Portal dropdown — escapes overflow:hidden on the table wrapper

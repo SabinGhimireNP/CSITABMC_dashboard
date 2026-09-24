@@ -88,3 +88,19 @@ export const useUpdateNotice = () => {
     },
   });
 };
+
+const throttledDeleteNotice = createThrottle(async (slug) => {
+  await apiClient.delete(`/notices/${slug}/`);
+  return slug;
+});
+
+export const useDeleteNotice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: throttledDeleteNotice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notices"] });
+    },
+  });
+};

@@ -450,7 +450,7 @@ export function EventFormModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
             <div className="space-y-1.5">
               <label className="font-semibold text-slate-700">
-                Registration Form URL *
+                Registration Form URL
               </label>
               <input
                 name="registrationFormUrl"
@@ -666,8 +666,8 @@ export function EventFormModal({
               onClick={(e) => handleActionClick(e, "published")}
               className="h-9 px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
             >
-              {submitType === "publish" ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Publishing...</>
+              {submitType === "published" ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Saving..." : "Publishing..."}</>
               ) : initialData ? (
                 "Save Changes"
               ) : (

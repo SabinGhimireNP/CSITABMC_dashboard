@@ -69,8 +69,7 @@ export function PastPaperFormModal({
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
+      if (onSubmitSuccess) await onSubmitSuccess(result.data);
     } catch (err) {
       console.error(err);
     } finally {

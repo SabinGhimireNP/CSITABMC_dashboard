@@ -123,8 +123,7 @@ export function MemberFormModal({
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (onSubmitSuccess) onSubmitSuccess({ ...result.data, status: chosenStatus });
+      if (onSubmitSuccess) await onSubmitSuccess({ ...result.data, status: chosenStatus });
     } catch (err) {
       console.error(err);
     } finally {

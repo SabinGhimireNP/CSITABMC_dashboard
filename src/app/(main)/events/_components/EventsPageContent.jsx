@@ -11,6 +11,7 @@ import { EventFormModal } from "./EventForm";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import EventsSkeleton from "./EventsSkeleton";
+import { parseServerError } from "@/lib/errorUtils";
 
 const VALID_TABS = ["all", "published", "draft"];
 
@@ -152,9 +153,10 @@ export function EventsPageContent() {
     if (!event || !event.slug) return;
 
     await toast.promise(deleteEventMutation.mutateAsync(event.slug), {
+      id: "delete-event",
       loading: "Deleting event...",
       success: "Event deleted successfully.",
-      error: "Failed to delete event.",
+      error: (err) => parseServerError(err, "Failed to delete event."),
     });
   };
 
@@ -237,7 +239,8 @@ export function EventsPageContent() {
       ? updateEventMutation.mutateAsync({ slug: formMode.editData.slug, formData: payload })
       : createEventMutation.mutateAsync(payload);
 
-    return toast.promise(mutationPromise, {
+    toast.promise(mutationPromise, {
+      id: "event-mutation",
       loading: isEdit ? "Updating event..." : "Creating event...",
       success: () => {
         setFormMode({ isOpen: false, editData: null });
@@ -246,16 +249,11 @@ export function EventsPageContent() {
       },
       error: (err) => {
         console.error("Event mutation error:", err?.response?.data || err);
-        const serverErrors = err?.response?.data;
-        if (serverErrors && typeof serverErrors === "object") {
-          const detail = Object.entries(serverErrors)
-            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-            .join(" | ");
-          return `Failed: ${detail}`;
-        }
-        return "Failed to save event. Please check required fields.";
+        return parseServerError(err, "Failed to save event. Please check required fields.");
       },
     });
+    
+    return mutationPromise;
   };
 
   if (eventsLoading || mentorsLoading) return <EventsSkeleton />;

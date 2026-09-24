@@ -399,9 +399,9 @@ export function MentorFormModal({
               onClick={(e) => handleSubmit(e, "published")}
               className="h-9 px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
             >
-              {submitType === "publish" ? (
+              {submitType === "published" ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Publishing...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Saving..." : "Publishing..."}
                 </>
               ) : initialData ? (
                 "Save Changes"
