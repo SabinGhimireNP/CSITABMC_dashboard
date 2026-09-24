@@ -9,6 +9,7 @@ import { CertificateFormModal } from "./CertificateFormModel";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import CertificatesSkeleton from "./CertificatesSkeleton";
+import { toast } from "sonner";
 
 export function CertificatesPageContent() {
   const { data: certData, isLoading: certLoading, isError: certError } = useCertificates();
@@ -48,6 +49,11 @@ export function CertificatesPageContent() {
 
   const handleDeleteCertificate = () => {
     // Preserves current behavior while leaving deletion to future mutation work.
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+      loading: "Deleting certificate...",
+      success: "Certificate deleted successfully.",
+      error: "Failed to delete certificate.",
+    });
   };
 
   const handleEditCertificateTrigger = (cert) => {
@@ -65,8 +71,17 @@ export function CertificatesPageContent() {
     });
   };
 
-  const handleFormSubmitSuccess = () => {
-    setFormMode({ isOpen: false, editData: null });
+  const handleFormSubmitSuccess = (formData) => {
+    const isEdit = formMode.editData != null;
+    const savePromise = new Promise((resolve) => setTimeout(resolve, 800));
+    return toast.promise(savePromise, {
+      loading: isEdit ? "Updating certificate..." : "Issuing certificate...",
+      success: () => {
+        setFormMode({ isOpen: false, editData: null });
+        return isEdit ? "Certificate updated successfully." : "Certificate issued successfully.";
+      },
+      error: "Failed to save certificate.",
+    });
   };
 
   const processedCertificates = useMemo(() => {

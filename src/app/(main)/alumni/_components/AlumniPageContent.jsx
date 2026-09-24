@@ -119,9 +119,10 @@ export function AlumniPageContent() {
   };
 
   const handleDeleteAlumni = (id) => {
-    deleteAlumniMutation.mutate(id, {
-      onSuccess: () => toast.success("Alumni deleted successfully."),
-      onError: () => toast.error("Failed to delete alumni. Please try again."),
+    toast.promise(deleteAlumniMutation.mutateAsync(id), {
+      loading: "Deleting alumni...",
+      success: "Alumni deleted successfully.",
+      error: "Failed to delete alumni. Please try again.",
     });
   };
 
@@ -137,31 +138,23 @@ export function AlumniPageContent() {
       bio: formData.bio || "",
     };
 
-    if (alumniFormMode.editData && alumniFormMode.editData.id) {
-      return updateAlumniMutation.mutateAsync(
-        { id: alumniFormMode.editData.id, payload },
-        {
-          onSuccess: () => {
-            toast.success("Alumni updated successfully.");
-            setAlumniFormMode({ isOpen: false, editData: null });
-          },
-          onError: () => {
-            toast.error("Failed to update alumni. Please try again.");
-          },
-        }
-      );
-    } else {
-      return createAlumniMutation.mutateAsync(payload, {
-        onSuccess: () => {
-          toast.success("Alumni added successfully.");
-          setAlumniFormMode({ isOpen: false, editData: null });
-          updateQuery({ page: 1 });
-        },
-        onError: () => {
-          toast.error("Failed to add alumni. Please try again.");
-        },
-      });
-    }
+    const isEdit = alumniFormMode.editData && alumniFormMode.editData.id;
+    const mutationPromise = isEdit
+      ? updateAlumniMutation.mutateAsync({ id: alumniFormMode.editData.id, payload })
+      : createAlumniMutation.mutateAsync(payload);
+
+    return toast.promise(mutationPromise, {
+      loading: isEdit ? "Updating alumni..." : "Adding alumni...",
+      success: () => {
+        setAlumniFormMode({ isOpen: false, editData: null });
+        if (!isEdit) updateQuery({ page: 1 });
+        return isEdit ? "Alumni updated successfully." : "Alumni added successfully.";
+      },
+      error: (err) => {
+        console.error("Alumni mutation error:", err?.response?.data || err);
+        return "Failed to save alumni. Please try again.";
+      }
+    });
   };
 
   if (alumniLoading) return <AlumniSkeleton />;

@@ -144,31 +144,23 @@ export function NoticesPageContent() {
     payload.append("description", formData.description);
     if (formData.image) payload.append("image", formData.image);
 
-    if (formMode.editData && formMode.editData.slug) {
-      return updateNoticeMutation.mutateAsync(
-        { slug: formMode.editData.slug, formData: payload },
-        {
-          onSuccess: () => {
-            toast.success("Notice updated successfully.");
-            setFormMode({ isOpen: false, editData: null });
-          },
-          onError: () => {
-            toast.error("Failed to update notice. Please try again.");
-          },
-        }
-      );
-    } else {
-      return createNoticeMutation.mutateAsync(payload, {
-        onSuccess: () => {
-          toast.success("Notice created successfully.");
-          setFormMode({ isOpen: false, editData: null });
-          updateQuery({ page: 1 });
-        },
-        onError: () => {
-          toast.error("Failed to create notice. Please try again.");
-        },
-      });
-    }
+    const isEdit = formMode.editData && formMode.editData.slug;
+    const mutationPromise = isEdit
+      ? updateNoticeMutation.mutateAsync({ slug: formMode.editData.slug, formData: payload })
+      : createNoticeMutation.mutateAsync(payload);
+
+    return toast.promise(mutationPromise, {
+      loading: isEdit ? "Updating notice..." : "Creating notice...",
+      success: () => {
+        setFormMode({ isOpen: false, editData: null });
+        if (!isEdit) updateQuery({ page: 1 });
+        return isEdit ? "Notice updated successfully." : "Notice created successfully.";
+      },
+      error: (err) => {
+        console.error("Notice mutation error:", err?.response?.data || err);
+        return "Failed to save notice.";
+      }
+    });
   };
 
   if (noticesLoading) return <NoticesSkeleton />;

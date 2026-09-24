@@ -6,6 +6,7 @@ import { AdminTable } from "./AdminTable";
 import { AdminTabs } from "./AdminTabs";
 import { AdminFormModal } from "./AdminFormModal";
 import { AdminsPageHeader } from "./AdminsPageHeader";
+import { toast } from "sonner";
 
 export function AdminsPageContent() {
   const [liveAdmins, setLiveAdmins] = useState(initialAdmins);
@@ -40,7 +41,14 @@ export function AdminsPageContent() {
   };
 
   const handleDeleteAdmin = (id) => {
-    setLiveAdmins((prev) => prev.filter((a) => a.id !== id));
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+      loading: "Deleting admin...",
+      success: () => {
+        setLiveAdmins((prev) => prev.filter((a) => a.id !== id));
+        return "Admin deleted successfully.";
+      },
+      error: "Failed to delete admin.",
+    });
   };
 
   const handleEditAdminTrigger = (admin) => {
@@ -48,36 +56,47 @@ export function AdminsPageContent() {
   };
 
   const handleFormSubmitSuccess = (formData) => {
-    if (formMode.editData && formMode.editData.id) {
-      setLiveAdmins((prev) =>
-        prev.map((item) =>
-          item.id === formMode.editData.id
-            ? {
-                ...item,
-                fullName: formData.fullName,
-                email: formData.email,
-                role: formData.role,
-                status: formData.status,
-                ...(formData.password ? { password: formData.password } : {}),
-              }
-            : item
-        )
-      );
-    } else {
-      const nextId = liveAdmins.length > 0 ? Math.max(...liveAdmins.map((a) => Number(a.id) || 0)) + 1 : 1;
-      const freshAdmin = {
-        id: nextId,
-        fullName: formData.fullName,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        status: formData.status,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setLiveAdmins((prev) => [freshAdmin, ...prev]);
-      setCurrentPage(1);
-    }
-    setFormMode({ isOpen: false, editData: null });
+    const isEdit = formMode.editData && formMode.editData.id;
+    const savePromise = new Promise((resolve) => setTimeout(resolve, 800)).then(() => {
+      if (isEdit) {
+        setLiveAdmins((prev) =>
+          prev.map((item) =>
+            item.id === formMode.editData.id
+              ? {
+                  ...item,
+                  fullName: formData.fullName,
+                  email: formData.email,
+                  role: formData.role,
+                  status: formData.status,
+                  ...(formData.password ? { password: formData.password } : {}),
+                }
+              : item
+          )
+        );
+      } else {
+        const nextId = liveAdmins.length > 0 ? Math.max(...liveAdmins.map((a) => Number(a.id) || 0)) + 1 : 1;
+        const freshAdmin = {
+          id: nextId,
+          fullName: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          status: formData.status,
+          createdAt: new Date().toISOString().split("T")[0],
+        };
+        setLiveAdmins((prev) => [freshAdmin, ...prev]);
+        setCurrentPage(1);
+      }
+    });
+
+    return toast.promise(savePromise, {
+      loading: isEdit ? "Updating admin..." : "Adding admin...",
+      success: () => {
+        setFormMode({ isOpen: false, editData: null });
+        return isEdit ? "Admin updated successfully." : "Admin added successfully.";
+      },
+      error: "Failed to save admin.",
+    });
   };
 
   const processedAdmins = useMemo(() => {

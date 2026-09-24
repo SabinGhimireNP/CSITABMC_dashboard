@@ -1,7 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useTenures } from "@/hooks/useMembers";
+import React, { useState, useMemo } from "react";
+import {
+  useTenures,
+  useCreateTenure,
+  useUpdateTenure,
+  useDeleteTenure,
+  useDuplicateTenure,
+  useCreateMember,
+  useUpdateMember,
+  useCreateMembership,
+  useUpdateMembership,
+  useDeleteMembership,
+} from "@/hooks/useMembers";
 import { MemberTable } from "./MemberTable";
 import { MemberTabs } from "./MemberTabs";
 import { MemberFormModal } from "./MemberForm";
@@ -10,21 +21,35 @@ import { TenureFormModal } from "./TenureFormModal";
 import { MembersPageHeader } from "./MembersPageHeader";
 import { TenureDeleteDialog } from "./TenureDeleteDialog";
 import MembersSkeleton from "./MembersSkeleton";
+import { toast } from "sonner"; // Assuming sonner is used for toasts, standard in modern dashboards. Or just fallback to console.
 
-function generateMemberId() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let uid = "";
-  for (let i = 0; i < 4; i++) uid += chars.charAt(Math.floor(Math.random() * chars.length));
-  return `MEM-${uid}`;
-}
+const getPostOrder = (post) => {
+  const lowerPost = post?.toLowerCase() || "";
+  if (lowerPost.includes("president") && !lowerPost.includes("vice")) return 1;
+  if (lowerPost.includes("vice president")) return 2;
+  if (lowerPost.includes("secretary") && !lowerPost.includes("joint")) return 3;
+  if (lowerPost.includes("joint secretary")) return 4;
+  if (lowerPost.includes("treasurer")) return 5;
+  return 99;
+};
 
 export function MembersPageContent() {
   const { data: tenuresData, isLoading: tenuresLoading, isError: tenuresError } = useTenures();
 
+  const createTenureMutation = useCreateTenure();
+  const updateTenureMutation = useUpdateTenure();
+  const deleteTenureMutation = useDeleteTenure();
+  const duplicateTenureMutation = useDuplicateTenure();
+
+  const createMemberMutation = useCreateMember();
+  const updateMemberMutation = useUpdateMember();
+  const createMembershipMutation = useCreateMembership();
+  const updateMembershipMutation = useUpdateMembership();
+  const deleteMembershipMutation = useDeleteMembership();
+
   const [currentView, setCurrentView] = useState("tenures");
   const [selectedTenure, setSelectedTenure] = useState(null);
-  const [liveTenures, setLiveTenures] = useState([]);
-  const [liveMembers, setLiveMembers] = useState([]);
+  
   const [tenureFormMode, setTenureFormMode] = useState({ isOpen: false, editData: null });
   const [memberFormMode, setMemberFormMode] = useState({ isOpen: false, editData: null });
   const [activeTab, setActiveTab] = useState("all");
@@ -35,72 +60,92 @@ export function MembersPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [tenureToDelete, setTenureToDelete] = useState(null);
 
-  useEffect(() => {
-    if (tenuresData?.data) {
-      const tenures = tenuresData.data;
-      setLiveTenures(tenures);
-      const allMembers = tenures.flatMap((tenure) =>
-        (tenure.Members || []).map((member) => ({
-          ...member,
-          tenureId: tenure.id,
-        }))
-      );
-      setLiveMembers(allMembers);
-    }
-  }, [tenuresData]);
+  const liveTenures = tenuresData?.data || [];
+  const liveMembers = useMemo(() => {
+    return liveTenures.flatMap((tenure) =>
+      (tenure.Members || []).map((member) => ({
+        ...member,
+        tenureId: tenure.id,
+        tenureSlug: tenure.slug,
+      }))
+    );
+  }, [liveTenures]);
 
   const handleCreateTenure = () => setTenureFormMode({ isOpen: true, editData: null });
   const handleEditTenure = (tenure) => setTenureFormMode({ isOpen: true, editData: tenure });
 
-  const handleTenureFormSubmit = (formData) => {
-    if (tenureFormMode.editData) {
-      setLiveTenures((prev) =>
-        prev.map((t) =>
-          t.id === tenureFormMode.editData.id
-            ? { ...t, ...formData }
-            : t
-        )
-      );
-    } else {
-      const nextId = liveTenures.length > 0 ? Math.max(...liveTenures.map((t) => t.id)) + 1 : 1;
-      const newTenure = { id: nextId, ...formData, Members: [] };
-      setLiveTenures((prev) => [...prev, newTenure]);
-    }
-    setTenureFormMode({ isOpen: false, editData: null });
+  const handleTenureFormSubmit = async (formData) => {
+    const isEdit = !!tenureFormMode.editData;
+    const mutationPromise = isEdit
+      ? updateTenureMutation.mutateAsync({
+          slug: tenureFormMode.editData.slug,
+          data: {
+            name: formData.name,
+            start_date: formData.startDate,
+            end_date: formData.endDate,
+          }
+        })
+      : createTenureMutation.mutateAsync({
+          name: formData.name,
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+        });
+
+    return toast.promise(mutationPromise, {
+      loading: isEdit ? "Updating tenure..." : "Creating tenure...",
+      success: () => {
+        setTenureFormMode({ isOpen: false, editData: null });
+        return isEdit ? "Tenure updated successfully." : "Tenure created successfully.";
+      },
+      error: (err) => {
+        console.error("Failed to save tenure", err?.response?.data || err);
+        return "Failed to save tenure.";
+      }
+    });
   };
 
-  const handleDeleteTenureConfirm = () => {
+  const handleDeleteTenureConfirm = async () => {
     if (!tenureToDelete) return;
-    setLiveTenures((prev) => prev.filter((t) => t.id !== tenureToDelete.id));
-    setLiveMembers((prev) => prev.filter((m) => m.tenureId !== tenureToDelete.id));
-    setTenureToDelete(null);
+    return toast.promise(deleteTenureMutation.mutateAsync(tenureToDelete.slug), {
+      loading: "Deleting tenure...",
+      success: () => {
+        setTenureToDelete(null);
+        return "Tenure deleted successfully.";
+      },
+      error: (err) => {
+        console.error("Failed to delete tenure", err?.response?.data || err);
+        return "Failed to delete tenure.";
+      }
+    });
   };
 
-  const handleDuplicateTenure = (sourceTenure) => {
-    const nextTenureId = liveTenures.length > 0 ? Math.max(...liveTenures.map((t) => t.id)) + 1 : 1;
+  const handleDuplicateTenure = async (sourceTenure) => {
     const sourceYearStart = new Date(sourceTenure.startDate).getFullYear();
-    const newTenure = {
-      id: nextTenureId,
-      name: `${sourceYearStart + 1}-${sourceYearStart + 2}`,
-      startDate: `${sourceYearStart + 1}-01-01`,
-      endDate: `${sourceYearStart + 1}-12-31`,
+    const newName = `${sourceYearStart + 1}-${sourceYearStart + 2}`;
+
+    const duplicatePromise = async () => {
+      const newTenure = await createTenureMutation.mutateAsync({
+        name: newName,
+        start_date: `${sourceYearStart + 1}-01-01`,
+        end_date: `${sourceYearStart + 1}-12-31`,
+      });
+
+      if (newTenure.slug) {
+        await duplicateTenureMutation.mutateAsync({
+          targetSlug: newTenure.slug,
+          sourceSlug: sourceTenure.slug,
+        });
+      }
     };
 
-    const sourceMembers = liveMembers.filter((m) => m.tenureId === sourceTenure.id);
-    const maxMemberId = liveMembers.length > 0 ? Math.max(...liveMembers.map((m) => m.id)) : 0;
-    const clonedMembers = sourceMembers.map((m, index) => ({
-      ...m,
-      id: maxMemberId + index + 1,
-      tenureId: nextTenureId,
-      memberId: generateMemberId(),
-      createdAt: new Date().toISOString().split("T")[0],
-    }));
-
-    setLiveTenures((prev) => [...prev, newTenure]);
-    setLiveMembers((prev) => [...prev, ...clonedMembers]);
-    setSelectedTenure(newTenure);
-    setCurrentView("members");
-    setCurrentPage(1);
+    return toast.promise(duplicatePromise(), {
+      loading: "Duplicating tenure...",
+      success: "Tenure duplicated successfully.",
+      error: (err) => {
+        console.error("Failed to duplicate tenure", err?.response?.data || err);
+        return "Failed to duplicate tenure.";
+      }
+    });
   };
 
   const handleOpenTenure = (tenure) => {
@@ -129,49 +174,88 @@ export function MembersPageContent() {
     setCurrentPage(1);
   };
 
-  const handleDeleteMember = (id) => {
-    setLiveMembers((prev) => prev.filter((m) => m.id !== id));
+  const handleDeleteMember = async (id) => {
+    // Find the membershipId corresponding to this member's ID in the current view
+    const member = liveMembers.find(m => m.id === id && m.tenureId === selectedTenure?.id);
+    if (member && member.membershipId) {
+      return toast.promise(deleteMembershipMutation.mutateAsync(member.membershipId), {
+        loading: "Removing member from tenure...",
+        success: "Member removed successfully.",
+        error: (err) => {
+          console.error("Failed to delete membership", err?.response?.data || err);
+          return "Failed to remove member.";
+        }
+      });
+    } else if (member && member.slug) {
+      console.warn("No membership ID found, trying to delete member directly? Typically we just delete membership.");
+    }
   };
 
   const handleEditMemberTrigger = (member) => {
     setMemberFormMode({ isOpen: true, editData: member });
   };
 
-  const handleMemberFormSubmitSuccess = (formData) => {
-    if (memberFormMode.editData && memberFormMode.editData.id) {
-      setLiveMembers((prev) =>
-        prev.map((item) =>
-          item.id === memberFormMode.editData.id
-            ? {
-                ...item,
-                ...formData,
-                image:
-                  formData.image instanceof File
-                    ? URL.createObjectURL(formData.image)
-                    : item.image,
-              }
-            : item
-        )
-      );
-    } else {
-      const nextId =
-        liveMembers.length > 0
-          ? Math.max(...liveMembers.map((m) => Number(m.id) || 0)) + 1
-          : 1;
-      const newMember = {
-        id: nextId,
-        memberId: generateMemberId(),
-        ...formData,
-        image:
-          formData.image instanceof File
-            ? URL.createObjectURL(formData.image)
-            : memberFormMode.editData?.image || null,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setLiveMembers((prev) => [newMember, ...prev]);
-      setCurrentPage(1);
+  const handleMemberFormSubmitSuccess = async (formData) => {
+    const memberPayload = new FormData();
+    memberPayload.append("name", formData.fullName);
+    memberPayload.append("email", formData.email);
+    if (formData.facebookLink) memberPayload.append("fb_link", formData.facebookLink);
+    if (formData.linkedinLink) memberPayload.append("linkedin_link", formData.linkedinLink);
+    if (formData.githubLink) memberPayload.append("github_link", formData.githubLink);
+    if (formData.image instanceof File) {
+      memberPayload.append("image", formData.image);
     }
-    setMemberFormMode({ isOpen: false, editData: null });
+
+    const isEdit = memberFormMode.editData && memberFormMode.editData.slug;
+
+    const savePromise = async () => {
+      let memberResponse;
+      if (isEdit) {
+        // Update existing member
+        memberResponse = await updateMemberMutation.mutateAsync({
+          slug: memberFormMode.editData.slug,
+          formData: memberPayload,
+        });
+
+        // Update membership if designation/post changed
+        if (memberFormMode.editData.membershipId) {
+          await updateMembershipMutation.mutateAsync({
+            id: memberFormMode.editData.membershipId,
+            data: {
+              member_id: memberFormMode.editData.memberId || memberResponse?.id || memberFormMode.editData.id,
+              tenure: selectedTenure?.slug || memberFormMode.editData.tenureSlug,
+              designation: formData.post,
+              order: getPostOrder(formData.post),
+              role_type: "EXECUTIVE",
+            }
+          });
+        }
+      } else {
+        // Create new member
+        memberResponse = await createMemberMutation.mutateAsync(memberPayload);
+
+        // Create new membership
+        await createMembershipMutation.mutateAsync({
+          member_id: memberResponse.id,
+          tenure: selectedTenure?.slug,
+          designation: formData.post,
+          order: getPostOrder(formData.post),
+          role_type: "EXECUTIVE",
+        });
+      }
+    };
+
+    return toast.promise(savePromise(), {
+      loading: isEdit ? "Updating member..." : "Adding member...",
+      success: () => {
+        setMemberFormMode({ isOpen: false, editData: null });
+        return isEdit ? "Member updated successfully." : "Member added successfully.";
+      },
+      error: (err) => {
+        console.error("Failed to save member", err?.response?.data || err);
+        return "Failed to save member.";
+      }
+    });
   };
 
   const processedMembers = useMemo(() => {
@@ -213,7 +297,7 @@ export function MembersPageContent() {
   const totalRows = processedMembers.length;
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
-  useEffect(() => {
+  React.useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 

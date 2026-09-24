@@ -8,6 +8,7 @@ import { PastPaperFormModal } from "./pastPaperFormModel";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import PastPapersSkeleton from "./PastPapersSkeleton";
+import { toast } from "sonner";
 
 export function PastPapersPageContent() {
   const { data: papersData, isLoading: papersLoading, isError: papersError } = usePastPapers();
@@ -37,14 +38,28 @@ export function PastPapersPageContent() {
 
   const handleDeletePaper = () => {
     // Preserves current behavior while leaving deletion to future mutation work.
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 800)), {
+      loading: "Deleting past paper...",
+      success: "Past paper deleted successfully.",
+      error: "Failed to delete past paper.",
+    });
   };
 
   const handleEditPaperTrigger = (paper) => {
     setFormMode({ isOpen: true, editData: paper });
   };
 
-  const handleFormSubmitSuccess = () => {
-    setFormMode({ isOpen: false, editData: null });
+  const handleFormSubmitSuccess = (formData) => {
+    const isEdit = formMode.editData != null;
+    const savePromise = new Promise((resolve) => setTimeout(resolve, 800));
+    return toast.promise(savePromise, {
+      loading: isEdit ? "Updating past paper..." : "Adding past paper...",
+      success: () => {
+        setFormMode({ isOpen: false, editData: null });
+        return isEdit ? "Past paper updated successfully." : "Past paper added successfully.";
+      },
+      error: "Failed to save past paper.",
+    });
   };
 
   const processedPapers = useMemo(() => {
