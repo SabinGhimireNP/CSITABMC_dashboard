@@ -26,7 +26,7 @@ const fetchCertificates = createThrottle(async (queryParams = {}) => {
     event: certificate.event,
     fullName: certificate.full_name,
     createdAt: certificate.issued_at,
-    isProjectComplete: false,
+    isProjectComplete: certificate.is_project_completed ?? false,
   }));
 
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -92,3 +92,19 @@ export const useDeleteCertificate = () => {
     },
   });
 };
+
+export const useBulkUpdateCertificateStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, is_project_completed }) => {
+      const { data } = await apiClient.patch("/certificates/", {
+        ids,
+        is_project_completed,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["certificates"] });
+    },
+  });
+};

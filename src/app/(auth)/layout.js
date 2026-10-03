@@ -1,7 +1,7 @@
-export const metadata = {
-  title: "Login",
-};
+"use client";
+
+import { GuestGuard } from "@/components/common/GuestGuard";
 
 export default function AuthLayout({ children }) {
-  return children;
+  return <GuestGuard>{children}</GuestGuard>;
 }

@@ -28,6 +28,8 @@ export function CertificateTable({
   rowsPerPage,
   onPageChange,
   onRowsPerPageChange,
+  selectedIds = [],
+  onSelectionChange,
 }) {
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -142,6 +144,20 @@ export function CertificateTable({
         <table className="w-full text-left border-collapse min-w-150 table-fixed">
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
+              <th className="py-3 px-4 w-[5%]">
+                <input
+                  type="checkbox"
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                  checked={certificates.length > 0 && selectedIds.length === certificates.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      onSelectionChange(certificates.map((c) => c.id));
+                    } else {
+                      onSelectionChange([]);
+                    }
+                  }}
+                />
+              </th>
               <th
                 onClick={() => onHeaderClick("id")}
                 className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[50%]"
@@ -193,8 +209,22 @@ export function CertificateTable({
               certificates.map((cert) => (
                 <tr
                   key={cert.id}
-                  className="hover:bg-slate-50/40 transition-colors group h-14 bg-white"
+                  className={`hover:bg-slate-50/40 transition-colors group h-14 ${selectedIds.includes(cert.id) ? "bg-slate-50/80" : "bg-white"}`}
                 >
+                  <td className="py-2 px-4">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                      checked={selectedIds.includes(cert.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          onSelectionChange([...selectedIds, cert.id]);
+                        } else {
+                          onSelectionChange(selectedIds.filter((id) => id !== cert.id));
+                        }
+                      }}
+                    />
+                  </td>
                   <td className="py-2 px-4 font-semibold text-slate-900 tabular-nums truncate">
                     <div className="flex items-center gap-2">
                       <span className="truncate">{cert.id}</span>

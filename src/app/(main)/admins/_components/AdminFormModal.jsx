@@ -9,15 +9,15 @@ export function AdminFormModal({
   isOpen,
   onSubmitSuccess,
   onCancel,
+  isPending,
 }) {
-  const isEditMode = !!(initialData && initialData.id);
+  const isEditMode = Boolean(initialData && (initialData.id != null || initialData.email || initialData.username));
 
   const [formData, setFormData] = useState({
-    fullName: "",
+    username: "",
     email: "",
     password: "",
     role: "",
-    status: "active",
   });
 
   const [errors, setErrors] = useState({});
@@ -27,11 +27,10 @@ export function AdminFormModal({
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        fullName: initialData?.fullName || "",
+        username: initialData?.username || "",
         email: initialData?.email || "",
         password: "", // Never pre-fill password
         role: initialData?.role || "",
-        status: initialData?.status || "active",
       });
       setErrors({});
       setShowPassword(false);
@@ -57,7 +56,7 @@ export function AdminFormModal({
     setSubmitType("save");
     setErrors({});
 
-    // Use stricter schema on create (password required), lenient on edit
+    // Use stricter schema on create, lenient on edit
     const schema = isEditMode ? adminSchema : adminCreateSchema;
     const result = schema.safeParse(formData);
 
@@ -92,7 +91,7 @@ export function AdminFormModal({
         {/* Header */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="font-semibold text-lg text-primary">
-            {isEditMode ? "Edit Admin" : "Add Sub-Admin"}
+            {isEditMode ? "Edit Admin" : "Add Admin"}
           </div>
           <button type="button" onClick={onCancel}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
@@ -105,18 +104,18 @@ export function AdminFormModal({
           {/* Full Name & Role */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Full Name *</label>
+              <label className="font-semibold text-slate-700">Username *</label>
               <input
-                name="fullName"
+                name="username"
                 type="text"
-                value={formData.fullName}
+                value={formData.username}
                 onChange={handleInputChange}
-                placeholder="e.g., Nisha Tamang"
+                placeholder="e.g., nisha.tamang"
                 className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.fullName ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
+                  errors.username ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
                 }`}
               />
-              {errors.fullName && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.fullName}</p>}
+              {errors.username && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.username}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -130,8 +129,8 @@ export function AdminFormModal({
                 }`}
               >
                 <option value="">Select Role</option>
-                {ADMIN_ROLES.map((role) => (
-                  <option key={role} value={role}>{role}</option>
+                {ADMIN_ROLES.map((roleObj) => (
+                  <option key={roleObj.value} value={roleObj.value}>{roleObj.label}</option>
                 ))}
               </select>
               {errors.role && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.role}</p>}
@@ -181,28 +180,7 @@ export function AdminFormModal({
             {errors.password && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.password}</p>}
           </div>
 
-          {/* Status */}
-          <div className="space-y-1.5 w-full">
-            <label className="font-semibold text-slate-700">Status *</label>
-            <div className="flex items-center gap-3">
-              {["active", "inactive"].map((s) => (
-                <label key={s} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={s}
-                    checked={formData.status === s}
-                    onChange={handleInputChange}
-                    className="h-3.5 w-3.5 border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                  />
-                  <span className={`font-semibold capitalize ${s === "active" ? "text-emerald-700" : "text-slate-500"}`}>
-                    {s}
-                  </span>
-                </label>
-              ))}
-            </div>
-            {errors.status && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.status}</p>}
-          </div>
+          {/* Removed Status Field */}
         </div>
 
         {/* Footer */}
@@ -217,12 +195,12 @@ export function AdminFormModal({
           </button>
           <button
             type="button"
-            disabled={submitType !== null}
+            disabled={submitType !== null || isPending}
             onClick={handleSubmit}
             className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
           >
-            {submitType === "save" ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+            {(submitType === "save" || isPending) ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {isEditMode ? "Saving" : "Adding"}</>
             ) : (
               isEditMode ? "Save Changes" : "Add Admin"
             )}

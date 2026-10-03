@@ -77,20 +77,24 @@ export function MembersPageContent() {
 
   const handleTenureFormSubmit = async (formData) => {
     const isEdit = !!tenureFormMode.editData;
+    
+    const payload = new FormData();
+    payload.append("name", formData.name);
+    payload.append("start_date", formData.startDate);
+    payload.append("end_date", formData.endDate);
+    
+    if (formData.signature instanceof File) {
+      payload.append("signature", formData.signature);
+    } else if (formData.signature === null) {
+      payload.append("signature", ""); // Clear signature if removed
+    }
+
     const mutationPromise = isEdit
       ? updateTenureMutation.mutateAsync({
           slug: tenureFormMode.editData.slug,
-          data: {
-            name: formData.name,
-            start_date: formData.startDate,
-            end_date: formData.endDate,
-          }
+          data: payload
         })
-      : createTenureMutation.mutateAsync({
-          name: formData.name,
-          start_date: formData.startDate,
-          end_date: formData.endDate,
-        });
+      : createTenureMutation.mutateAsync(payload);
 
     toast.promise(mutationPromise, {
       id: "tenure-mutation",

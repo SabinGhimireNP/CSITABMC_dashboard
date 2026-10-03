@@ -6,14 +6,15 @@ import {
   useCertificates,
   useCreateCertificate,
   useUpdateCertificate,
-  useDeleteCertificate 
+  useDeleteCertificate,
+  useBulkUpdateCertificateStatus
 } from "@/hooks/useCertificates";
 import { useEvents } from "@/hooks/useEvents";
 import { CertificateTable } from "./CertificateTable";
 import { CertificateTabs } from "./CertificateTabs";
 import { CertificateFormModal } from "./CertificateFormModel";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
 import CertificatesSkeleton from "./CertificatesSkeleton";
 import { toast } from "sonner";
 import { parseServerError } from "@/lib/errorUtils";
@@ -38,10 +39,12 @@ export function CertificatesPageContent() {
     : 5;
 
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const createCertificateMutation = useCreateCertificate();
   const updateCertificateMutation = useUpdateCertificate();
   const deleteCertificateMutation = useDeleteCertificate();
+  const bulkUpdateStatusMutation = useBulkUpdateCertificateStatus();
 
   const { data: eventsData, isLoading: eventsLoading } = useEvents({ pageSize: 100 });
   const eventsList = eventsData?.data || [];
@@ -169,6 +172,26 @@ export function CertificatesPageContent() {
     return mutationPromise;
   };
 
+  const handleBulkStatusUpdate = (isComplete) => {
+    if (selectedIds.length === 0) return;
+
+    toast.promise(
+      bulkUpdateStatusMutation.mutateAsync({
+        ids: selectedIds,
+        is_project_completed: isComplete,
+      }),
+      {
+        id: "bulk-update-status",
+        loading: "Updating certificate status",
+        success: () => {
+          setSelectedIds([]);
+          return `Project status updated for ${selectedIds.length} certificates.`;
+        },
+        error: (err) => parseServerError(err, "Failed to update project status."),
+      }
+    );
+  };
+
   if (certLoading || eventsLoading) return <CertificatesSkeleton />;
   if (certError) {
     return (
@@ -198,13 +221,55 @@ export function CertificatesPageContent() {
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <CertificateTabs
-          activeTab={activeTab}
-          onTabChange={(tab) => updateQuery({ tab: tab === "all" ? "" : tab, page: "" })}
-          searchQuery={localSearch}
-          onSearchChange={handleSearchChange}
-          isFetching={isFetching && !certLoading}
-        />
+        {selectedIds.length > 0 ? (
+          <div className="flex items-center gap-4 bg-indigo-50/50 border border-indigo-100 rounded-lg px-4 py-2 w-full animate-in fade-in slide-in-from-top-2">
+            <span className="text-sm font-medium text-indigo-700">
+              {selectedIds.length} selected
+            </span>
+            <div className="h-4 w-px bg-indigo-200" />
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-2">Project Status:</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleBulkStatusUpdate(true)}
+                disabled={bulkUpdateStatusMutation.isPending}
+                className="h-8 text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 text-xs gap-1.5"
+              >
+                {bulkUpdateStatusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                True
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleBulkStatusUpdate(false)}
+                disabled={bulkUpdateStatusMutation.isPending}
+                className="h-8 text-amber-700 border-amber-200 hover:bg-amber-50 hover:text-amber-800 text-xs gap-1.5"
+              >
+                {bulkUpdateStatusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                False
+              </Button>
+            </div>
+            <div className="ml-auto">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds([])}
+                className="h-8 text-slate-500 hover:text-slate-700 text-xs"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <CertificateTabs
+            activeTab={activeTab}
+            onTabChange={(tab) => updateQuery({ tab: tab === "all" ? "" : tab, page: "" })}
+            searchQuery={localSearch}
+            onSearchChange={handleSearchChange}
+            isFetching={isFetching && !certLoading}
+          />
+        )}
       </div>
 
       <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
@@ -224,6 +289,8 @@ export function CertificatesPageContent() {
           sortOrder={orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none"}
           onHeaderClick={handleSortChange}
           isFetching={isFetching && !certLoading}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
         />
       </div>
 

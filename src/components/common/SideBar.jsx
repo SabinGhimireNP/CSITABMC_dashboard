@@ -4,6 +4,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/lib/store/authStore";
 
 import {
   Sidebar,
@@ -101,6 +102,7 @@ const sidebarSections = [
         title: "Admin Access",
         url: "/admins",
         icon: ShieldAlert,
+        adminOnly: true,
       },
     ],
   },
@@ -108,6 +110,7 @@ const sidebarSections = [
 
 export function SideBar() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
 
   return (
     <Sidebar className="border-r border-border bg-sidebar h-screen">
@@ -127,7 +130,7 @@ export function SideBar() {
             </SidebarGroupLabel>
 
             <SidebarMenu className="space-y-1">
-              {section.items.map((item) => {
+              {section.items.filter(item => !item.adminOnly || user?.user_role === "admin").map((item) => {
                 const isActive =
                   pathname === item.url || pathname.startsWith(item.url + "/");
                 const Icon = item.icon;

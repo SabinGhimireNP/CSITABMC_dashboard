@@ -17,7 +17,7 @@ export function AdminsPageHeader({ onAddAdmin }) {
           className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
         >
           <PlusCircle className="h-4 w-4" />
-          Add Sub-Admin
+          Add Admin
         </Button>
       </div>
     </div>

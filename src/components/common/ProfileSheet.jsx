@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Edit, LogOut, User } from "lucide-react";
 import { useUser, useLogout } from "@/hooks/useAuth";
-import { toast } from "sonner";
 
 const ProfileSheet = () => {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -26,11 +23,9 @@ const ProfileSheet = () => {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setOpen(false);
-    logout();
-    toast.success("Logged out successfully");
-    router.push("/login");
+    await logout(); // calls backend, clears store, redirects to /login
   };
 
   return (

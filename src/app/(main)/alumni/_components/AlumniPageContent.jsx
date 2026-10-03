@@ -122,7 +122,7 @@ export function AlumniPageContent() {
   const handleDeleteAlumni = (id) => {
     toast.promise(deleteAlumniMutation.mutateAsync(id), {
       id: "delete-alumni",
-      loading: "Deleting alumni...",
+      loading: "Deleting alumni",
       success: "Alumni deleted successfully.",
       error: (err) => parseServerError(err, "Failed to delete alumni. Please try again."),
     });
@@ -147,7 +147,7 @@ export function AlumniPageContent() {
 
     toast.promise(mutationPromise, {
       id: "alumni-mutation",
-      loading: isEdit ? "Updating alumni..." : "Adding alumni...",
+      loading: isEdit ? "Updating alumni" : "Adding alumni",
       success: () => {
         setAlumniFormMode({ isOpen: false, editData: null });
         if (!isEdit) updateQuery({ page: 1 });

@@ -51,6 +51,7 @@ export const tenureFormSchema = z.object({
   endDate: z
     .string()
     .min(1, { message: "End date is required." }),
+  signature: z.any().optional(),
 }).refine((data) => {
   if (data.startDate && data.endDate) {
     return new Date(data.endDate) >= new Date(data.startDate);

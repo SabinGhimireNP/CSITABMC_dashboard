@@ -4,22 +4,11 @@ import { persist } from "zustand/middleware";
 /**
  * Auth Store
  *
- * Stores the authenticated user's profile data using zustand with
- * the persist middleware so it survives page refreshes (localStorage).
+ * Stores the authenticated user's profile data + token expiry metadata using
+ * zustand with the persist middleware so it survives page refreshes (localStorage).
  *
- * Usage:
- *   import { useAuthStore } from "@/lib/store/authStore";
- *
- *   // Select the whole user object
- *   const user = useAuthStore((state) => state.user);
- *
- *   // Select a single field (recommended for performance)
- *   const email = useAuthStore((state) => state.user?.email);
- *
- *   // Actions
- *   const setUser = useAuthStore((state) => state.setUser);
- *   const clearUser = useAuthStore((state) => state.clearUser);
- *   const updateUser = useAuthStore((state) => state.updateUser);
+ * Token expiry is stored as a Unix timestamp (ms). When it is within the
+ * REFRESH_BUFFER_MS window the app proactively refreshes in the background.
  */
 export const useAuthStore = create()(
   persist(
@@ -28,12 +17,22 @@ export const useAuthStore = create()(
       user: null,
       /** Convenience flag derived from the presence of `user`. */
       isAuthenticated: false,
+      /**
+       * Unix timestamp (ms) when the current access token expires.
+       * Null when not authenticated.
+       */
+      accessTokenExpiry: null,
 
       /** Store the user profile after a successful login. */
-      setUser: (user) => set({ user, isAuthenticated: true }),
+      setUser: (user, accessTokenExpiry = null) =>
+        set({ user, isAuthenticated: true, accessTokenExpiry }),
 
       /** Remove the user profile (logout). */
-      clearUser: () => set({ user: null, isAuthenticated: false }),
+      clearUser: () =>
+        set({ user: null, isAuthenticated: false, accessTokenExpiry: null }),
+
+      /** Update the access token expiry after a silent refresh. */
+      setAccessTokenExpiry: (expiry) => set({ accessTokenExpiry: expiry }),
 
       /** Partially update the user profile (e.g. after editing account). */
       updateUser: (partial) =>

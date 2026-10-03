@@ -16,7 +16,7 @@ const fetchAlumni = createThrottle(async (queryParams = {}) => {
   if (id) params.id = id;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/alumni", { params });
+  const { data } = await apiClient.get("/alumni/", { params });
 
   const rawResults = Array.isArray(data) ? data : (data.results || []);
   const fetchedAlumni = rawResults.map((alumni) => ({

@@ -6,8 +6,8 @@ import { Search } from "lucide-react";
 export function AdminTabs({ activeTab, onTabChange, searchQuery, onSearchChange }) {
   const tabs = [
     { id: "all", label: "All Admins" },
-    { id: "active", label: "Active" },
-    { id: "inactive", label: "Inactive" },
+    { id: "admin", label: "Admin" },
+    { id: "cms_user", label: "CMS User" },
   ];
 
   return (
@@ -27,10 +27,10 @@ export function AdminTabs({ activeTab, onTabChange, searchQuery, onSearchChange 
               }`}
             >
               {tab.label}
-              {tab.id === "active" && (
-                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-emerald-500"}`} />
+              {tab.id === "admin" && (
+                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-violet-500"}`} />
               )}
-              {tab.id === "inactive" && (
+              {tab.id === "cms_user" && (
                 <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-slate-400"}`} />
               )}
             </button>

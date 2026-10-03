@@ -5,10 +5,13 @@ import { z } from "zod";
 // Only sub-admin roles are listed here.
 // Super Admin is the owner account — not assignable via the form.
 // Only these roles can be assigned to sub-admins.
-export const ADMIN_ROLES = ["Admin", "Manager"];
+export const ADMIN_ROLES = [
+  { label: "Admin", value: "admin" },
+  { label: "CMS User", value: "cms_user" }
+];
 
 export const adminSchema = z.object({
-  fullName: z.string().min(1, "Full name is required").max(120, "Name is too long"),
+  username: z.string().min(1, "Username is required").max(120, "Name is too long"),
 
   email: z
     .string()
@@ -24,10 +27,6 @@ export const adminSchema = z.object({
     }),
 
   role: z.string().min(1, "Role is required"),
-
-  status: z.enum(["active", "inactive"]).default("active"),
-
-  createdAt: z.string().optional(),
 });
 
 // Stricter variant used only on Create — password required

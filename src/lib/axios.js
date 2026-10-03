@@ -27,15 +27,14 @@ const apiClient = axios.create({
 // refresh requests at once.
 
 let isRefreshing = false;
-let pendingQueue = [];
+let failedQueue = [];
 
 const REFRESH_URL = "/users/refresh-token/";
 
 // Clear the persisted auth state so the app redirects to login.
-function clearAuth() {
+export function clearAuth() {
   if (typeof window !== "undefined") {
     try {
-      // Remove the persisted zustand auth store from localStorage.
       localStorage.removeItem("auth-storage");
     } catch (e) {
       /* ignore */
@@ -46,10 +45,29 @@ function clearAuth() {
 
 // Resolve (or reject) all queued requests once the refresh completes.
 function flushQueue(error) {
-  pendingQueue.forEach(({ resolve, reject }) =>
+  failedQueue.forEach(({ resolve, reject }) =>
     error ? reject(error) : resolve()
   );
-  pendingQueue = [];
+  failedQueue = [];
+}
+
+/**
+ * Attempt a silent token refresh. Returns true on success, false on failure.
+ * Updates the accessTokenExpiry in the store on success.
+ */
+export async function silentRefresh() {
+  try {
+    await apiClient.post(REFRESH_URL);
+    // Update the expiry in the store. The backend's ACCESS_TOKEN_LIFETIME is
+    // read from settings — we approximate it here as 15 minutes (900s) which is
+    // the typical simplejwt default. Adjust if your backend uses a different value.
+    const { useAuthStore } = await import("@/lib/store/authStore");
+    const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes from now
+    useAuthStore.getState().setAccessTokenExpiry(expiry);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 apiClient.interceptors.response.use(
@@ -57,11 +75,15 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Only attempt a refresh for 401 responses that haven't already retried.
+    // Only attempt a refresh for 401 responses that:
+    // 1. Haven't already retried (prevents infinite loop)
+    // 2. Are not the refresh endpoint itself
+    // 3. Are not the login endpoint (we handle login errors differently)
     if (
       error.response?.status !== 401 ||
       originalRequest?._retry ||
-      originalRequest?.url?.includes(REFRESH_URL)
+      originalRequest?.url?.includes(REFRESH_URL) ||
+      originalRequest?.url?.includes("/login/")
     ) {
       return Promise.reject(error);
     }
@@ -69,21 +91,25 @@ apiClient.interceptors.response.use(
     if (isRefreshing) {
       // Another request is already refreshing — wait for it, then retry.
       return new Promise((resolve, reject) => {
-        pendingQueue.push({ resolve, reject });
+        failedQueue.push({ resolve, reject });
       })
         .then(() => apiClient(originalRequest))
-        .catch((err) => Promise.reject(err));
+        .catch(() => Promise.reject(error));
     }
 
     isRefreshing = true;
     originalRequest._retry = true;
 
     try {
-      // The backend reads the httpOnly refresh_token cookie and sets a new
-      // access_token cookie. withCredentials handles the cookie round-trip.
-      await apiClient.post(REFRESH_URL);
-      flushQueue(null);
-      return apiClient(originalRequest);
+      const refreshed = await silentRefresh();
+      if (refreshed) {
+        flushQueue(null);
+        return apiClient(originalRequest);
+      } else {
+        flushQueue(new Error("Refresh failed"));
+        clearAuth();
+        return Promise.reject(error);
+      }
     } catch (refreshError) {
       flushQueue(refreshError);
       clearAuth();

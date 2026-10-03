@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, MoreHorizontal, Pencil, Trash2, AlertTriangle, X } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, User, Loader2 } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { useAuthStore } from "@/lib/store/authStore";
+import { toast } from "sonner";
 
 export function AdminTable({
   admins = [],
@@ -18,7 +20,9 @@ export function AdminTable({
   rowsPerPage,
   onPageChange,
   onRowsPerPageChange,
+  isDeleting,
 }) {
+  const { user } = useAuthStore();
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [adminToDelete, setAdminToDelete] = useState(null);
@@ -42,32 +46,43 @@ export function AdminTable({
     if (btn) {
       const rect = btn.getBoundingClientRect();
       setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.right + window.scrollX - 128,
+        top: rect.bottom + 4,
+        left: rect.right - 128,
       });
     }
     setActiveMenuId(adminId);
   }, [activeMenuId]);
 
   const handleConfirmDelete = () => {
-    if (adminToDelete) { onDeleteAdmin(adminToDelete.id); setAdminToDelete(null); }
+    if (adminToDelete) {
+      if (user && adminToDelete.id?.toString() === user.id?.toString()) {
+        toast.warning("You cannot delete your own account.");
+        setAdminToDelete(null);
+        return;
+      }
+      onDeleteAdmin(adminToDelete.id);
+      setAdminToDelete(null);
+    }
   };
 
   const getRoleStyle = (role) => {
     switch (role) {
-      case "Super Admin":
-        return "bg-violet-50 text-violet-700 border-violet-200/60";
-      case "Admin":
+      case "admin":
         return "bg-indigo-50 text-indigo-700 border-indigo-200/60";
-      default:
+      case "cms_user":
         return "bg-slate-50 text-slate-600 border-slate-200";
+      default:
+        return "bg-slate-50 text-slate-500 border-slate-200";
     }
   };
 
-  const getStatusStyle = (status) =>
-    status === "active"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-      : "bg-slate-100 text-slate-500 border-slate-200";
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case "admin": return "Admin";
+      case "cms_user": return "CMS User";
+      default: return role || "—";
+    }
+  };
 
   const SortIndicator = ({ field }) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
@@ -80,8 +95,8 @@ export function AdminTable({
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
-        style={{ position: "absolute", top: menuPosition.top, left: menuPosition.left }}
-        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-9999 animate-in fade-in slide-in-from-top-1 duration-100"
+        style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left }}
+        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-[99999] animate-in fade-in slide-in-from-top-1 duration-100"
       >
         <button type="button"
           onClick={() => { if (onEditAdmin) onEditAdmin(admin); setActiveMenuId(null); }}
@@ -105,11 +120,11 @@ export function AdminTable({
         <table className="w-full text-left border-collapse min-w-200 table-fixed">
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
-              <th onClick={() => onHeaderClick("id")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[8%]">
-                <div className="flex items-center gap-1.5">ID <SortIndicator field="id" /></div>
+              <th className="py-3 px-4 w-[8%]">
+                <div className="flex items-center gap-1.5">SN</div>
               </th>
-              <th onClick={() => onHeaderClick("fullName")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[22%]">
-                <div className="flex items-center gap-1.5">Full Name <SortIndicator field="fullName" /></div>
+              <th onClick={() => onHeaderClick("username")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[22%]">
+                <div className="flex items-center gap-1.5">Username <SortIndicator field="username" /></div>
               </th>
               <th onClick={() => onHeaderClick("email")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[25%]">
                 <div className="flex items-center gap-1.5">Email <SortIndicator field="email" /></div>
@@ -117,13 +132,10 @@ export function AdminTable({
               <th onClick={() => onHeaderClick("role")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[14%]">
                 <div className="flex items-center gap-1.5">Role <SortIndicator field="role" /></div>
               </th>
-              <th onClick={() => onHeaderClick("status")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Status <SortIndicator field="status" /></div>
+              <th onClick={() => onHeaderClick("date_joined")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[13%]">
+                <div className="flex items-center gap-1.5">Date Joined <SortIndicator field="date_joined" /></div>
               </th>
-              <th onClick={() => onHeaderClick("createdAt")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[13%]">
-                <div className="flex items-center gap-1.5">Created At <SortIndicator field="createdAt" /></div>
-              </th>
-              <th className="py-3 px-4 text-right pr-6 w-[6%]">Actions</th>
+              <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
             </tr>
           </thead>
 
@@ -135,51 +147,51 @@ export function AdminTable({
                 </td>
               </tr>
             ) : (
-              admins.map((admin) => (
-                <tr key={admin.id} className="hover:bg-slate-50/40 transition-colors group h-14 bg-white">
-                  <td className="py-2 px-4 font-semibold text-slate-900 tabular-nums truncate">{admin.id}</td>
+              admins.map((admin, index) => {
+                const sn = (currentPage - 1) * rowsPerPage + index + 1;
+                const adminKey = admin.id ?? `admin-${index}`;
+                return (
+                <tr key={adminKey} className="hover:bg-slate-50/40 transition-colors group h-14 bg-white">
+                  <td className="py-2 px-4 font-semibold text-slate-900 tabular-nums truncate text-[10px]">
+                    {sn}
+                  </td>
 
-                  <td className="py-2 px-4 truncate">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                        {admin.fullName}
-                      </span>
-                    </div>
+                  <td className="py-2 px-4 max-w-xs truncate">
+                    <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors block truncate">
+                      {admin.username}
+                    </span>
                   </td>
 
                   <td className="py-2 px-4 text-slate-500 font-normal truncate">{admin.email}</td>
 
                   <td className="py-2 px-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getRoleStyle(admin.role)}`}>
-                      {admin.role}
+                      {getRoleLabel(admin.role)}
                     </span>
                   </td>
 
-                  <td className="py-2 px-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusStyle(admin.status)}`}>
-                      {(admin.status || "active").toUpperCase()}
-                    </span>
+                  <td className="py-2 px-4 font-normal text-slate-500 tabular-nums truncate">
+                    {admin.date_joined ? new Date(admin.date_joined).toLocaleDateString() : "—"}
                   </td>
-
-                  <td className="py-2 px-4 font-normal text-slate-500 tabular-nums truncate">{admin.createdAt || "—"}</td>
 
                   <td className="py-2 px-4 text-right pr-6">
                     <button
-                      ref={(el) => (buttonRefs.current[admin.id] = el)}
+                      ref={(el) => (buttonRefs.current[adminKey] = el)}
                       type="button"
-                      onClick={(e) => handleMenuToggle(e, admin.id)}
+                      onClick={(e) => handleMenuToggle(e, adminKey)}
                       className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                        activeMenuId === admin.id
+                        activeMenuId === adminKey
                           ? "bg-slate-100 text-slate-800"
                           : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                       }`}
                     >
                       <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                     </button>
-                    {activeMenuId === admin.id && <DropdownMenu admin={admin} />}
+                    {activeMenuId === adminKey && <DropdownMenu admin={admin} />}
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -216,7 +228,7 @@ export function AdminTable({
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Remove admin access?</h3>
                 <p className="text-xs text-slate-500 leading-relaxed font-normal">
                   Are you sure you want to remove{" "}
-                  <span className="font-semibold text-slate-800">"{adminToDelete.fullName}"</span> from the platform? This cannot be undone.
+                  <span className="font-semibold text-slate-800">"{adminToDelete.username}"</span> from the platform? This cannot be undone.
                 </p>
               </div>
             </div>
@@ -226,10 +238,10 @@ export function AdminTable({
               >
                 Cancel
               </button>
-              <button type="button" onClick={handleConfirmDelete}
-                className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs"
+              <button type="button" onClick={handleConfirmDelete} disabled={isDeleting}
+                className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
               >
-                Confirm Delete
+                {isDeleting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting...</> : "Confirm Delete"}
               </button>
             </div>
           </div>

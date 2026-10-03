@@ -36,6 +36,7 @@ const fetchTenures = createThrottle(async () => {
     startDate: tenure.start_date,
     endDate: tenure.end_date,
     slug: tenure.slug,
+    signature: tenure.signature,
   }));
 
   return {
