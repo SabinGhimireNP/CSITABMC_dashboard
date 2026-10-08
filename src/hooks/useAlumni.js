@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -18,7 +18,11 @@ const fetchAlumni = createThrottle(async (queryParams = {}) => {
 
   const { data } = await apiClient.get("/alumni/", { params });
 
-  const rawResults = Array.isArray(data) ? data : (data.results || []);
+  const rawResults = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.results)
+      ? data.results
+      : [];
   const fetchedAlumni = rawResults.map((alumni) => ({
     id: alumni.id || "1",
     memberId: alumni.member?.id || alumni.id,
@@ -40,7 +44,7 @@ const fetchAlumni = createThrottle(async (queryParams = {}) => {
     status: "active",
   }));
 
-  const count = data.count ?? rawResults.length;
+  const count = data?.count ?? rawResults.length;
   const totalPages = Math.ceil(count / pageSize) || 1;
 
   return {
@@ -56,7 +60,6 @@ export const useAlumni = (queryParams = {}) => {
   return useQuery({
     queryKey: ["alumni", search, id, ordering, page, pageSize],
     queryFn: () => fetchAlumni({ search, id, ordering, page, pageSize }),
-    placeholderData: keepPreviousData,
   });
 };
 

@@ -5,11 +5,15 @@ import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
 const fetchTenures = createThrottle(async () => {
-  const { data } = await apiClient.get("/tenures/");
+  const { data } = await apiClient.get("/tenures/", { params: { _: Date.now() } });
 
   // Primary: assumes backend returns { count, next, previous, results }
-  const results = data.results || data;
-  const count = data.count ?? results.length;
+  const results = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.results)
+      ? data.results
+      : [];
+  const count = data?.count ?? results.length;
 
   const fetchedTenures = results.map((tenure) => ({
     id: tenure.id,
@@ -60,7 +64,7 @@ export const useCreateTenure = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -73,7 +77,7 @@ export const useUpdateTenure = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -85,7 +89,7 @@ export const useDeleteTenure = () => {
       await apiClient.delete(`/tenures/${slug}/`);
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -100,7 +104,7 @@ export const useDuplicateTenure = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -115,7 +119,7 @@ export const useCreateMember = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -130,7 +134,7 @@ export const useUpdateMember = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -142,7 +146,7 @@ export const useDeleteMember = () => {
       await apiClient.delete(`/members/${slug}/`);
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -155,7 +159,7 @@ export const useCreateMembership = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -168,7 +172,7 @@ export const useUpdateMembership = () => {
       return response.data;
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
@@ -180,13 +184,13 @@ export const useDeleteMembership = () => {
       await apiClient.delete(`/memberships/${id}/`);
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["tenures"]);
+      queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
 };
 
 const fetchMembersList = createThrottle(async () => {
-  const { data } = await apiClient.get("/members/");
+  const { data } = await apiClient.get("/members/", { params: { _: Date.now() } });
   const results = data.results || data;
   return results.map((member) => ({
     id: member.id,

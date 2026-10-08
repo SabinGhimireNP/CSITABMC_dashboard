@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -44,7 +44,6 @@ export const useCertificates = (queryParams = {}) => {
   return useQuery({
     queryKey: ["certificates", search, ordering, page, pageSize],
     queryFn: () => fetchCertificates({ search, ordering, page, pageSize }),
-    placeholderData: keepPreviousData,
   });
 };
 

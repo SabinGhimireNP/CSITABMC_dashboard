@@ -7,15 +7,19 @@ import { AdminsPageContent } from "./_components/AdminsPageContent";
 
 export default function AdminAccessPage() {
   const { user } = useAuthStore();
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
   const router = useRouter();
 
   useEffect(() => {
+    // Wait for rehydration: `user` is null on first render after a refresh.
+    // Redirecting on null would bounce an admin from /admins → /dashboard.
+    if (!hasHydrated) return;
     if (user && user.user_role !== "admin") {
       router.replace("/dashboard");
     }
-  }, [user, router]);
+  }, [user, hasHydrated, router]);
 
-  if (!user || user.user_role !== "admin") {
+  if (!hasHydrated || !user || user.user_role !== "admin") {
     return null; // Or a loading spinner
   }
 

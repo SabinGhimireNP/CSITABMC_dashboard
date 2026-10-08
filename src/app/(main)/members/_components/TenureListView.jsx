@@ -6,7 +6,7 @@ import { TenureCard } from "./TenureCard";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/common/pagination";
 
-export function TenureListView({ tenures, members, onOpen, onDuplicate, onEdit, onDelete, onCreate }) {
+export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplicating, onEdit, onDelete, onCreate }) {
   const [rowsPerPage, setRowsPerPage] = React.useState(6);
   const [currentPage, setCurrentPage] = React.useState(1);
 
@@ -64,6 +64,7 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, onEdit, 
               memberCount={getMemberCount(tenure.id)}
               onOpen={onOpen}
               onDuplicate={onDuplicate}
+              isDuplicating={isDuplicating}
               onEdit={onEdit}
               onDelete={onDelete}
             />

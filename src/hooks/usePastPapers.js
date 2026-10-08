@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -133,7 +133,6 @@ export const usePastPapers = (queryParams = {}) => {
   return useQuery({
     queryKey: ["pastPapers", search, ordering, page, pageSize, model_set],
     queryFn: () => fetchPastPapers({ search, ordering, page, pageSize, model_set }),
-    placeholderData: keepPreviousData,
   });
 };
 

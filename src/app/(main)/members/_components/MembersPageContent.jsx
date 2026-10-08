@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { Loader2 } from "lucide-react";
 import {
   useTenures,
   useCreateTenure,
@@ -60,6 +61,7 @@ export function MembersPageContent() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
   const [tenureToDelete, setTenureToDelete] = useState(null);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   const liveTenures = tenuresData?.data || [];
   const liveMembers = useMemo(() => {
@@ -129,21 +131,30 @@ export function MembersPageContent() {
   };
 
   const handleDuplicateTenure = async (sourceTenure) => {
+    if (isDuplicating) return;
+
     const sourceYearStart = new Date(sourceTenure.startDate).getFullYear();
     const newName = `${sourceYearStart + 1}-${sourceYearStart + 2}`;
 
     const duplicatePromise = async () => {
-      const newTenure = await createTenureMutation.mutateAsync({
-        name: newName,
-        start_date: `${sourceYearStart + 1}-01-01`,
-        end_date: `${sourceYearStart + 1}-12-31`,
-      });
+      setIsDuplicating(true);
+      try {
+        const newTenure = await createTenureMutation.mutateAsync({
+          name: newName,
+          start_date: `${sourceYearStart + 1}-01-01`,
+          end_date: `${sourceYearStart + 1}-12-31`,
+        });
 
-      if (newTenure.slug) {
+        if (!newTenure?.slug) {
+          throw new Error("The new tenure was created without a slug.");
+        }
+
         await duplicateTenureMutation.mutateAsync({
           targetSlug: newTenure.slug,
           sourceSlug: sourceTenure.slug,
         });
+      } finally {
+        setIsDuplicating(false);
       }
     };
 
@@ -341,6 +352,7 @@ export function MembersPageContent() {
           members={liveMembers}
           onOpen={handleOpenTenure}
           onDuplicate={handleDuplicateTenure}
+          isDuplicating={isDuplicating}
           onEdit={handleEditTenure}
           onDelete={(tenure) => setTenureToDelete(tenure)}
           onCreate={handleCreateTenure}

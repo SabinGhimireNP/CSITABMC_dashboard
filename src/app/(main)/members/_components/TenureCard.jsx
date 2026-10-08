@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Users, Calendar, Copy, Pencil, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Users, Calendar, Copy, Pencil, Trash2, Eye, Loader2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
-export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, onEdit, onDelete }) {
+export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, isDuplicating, onEdit, onDelete }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -58,10 +58,16 @@ export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, onEdit, o
           <Eye className="h-3.5 w-3.5 text-slate-400" /> Open
         </button>
         <button type="button"
-          onClick={() => { setMenuOpen(false); if (onDuplicate) onDuplicate(tenure); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer"
+          disabled={isDuplicating}
+          onClick={() => { if (!isDuplicating) { setMenuOpen(false); if (onDuplicate) onDuplicate(tenure); } }}
+          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Copy className="h-3.5 w-3.5 text-slate-400" /> Duplicate
+          {isDuplicating ? (
+            <Loader2 className="h-3.5 w-3.5 text-slate-400 animate-spin" />
+          ) : (
+            <Copy className="h-3.5 w-3.5 text-slate-400" />
+          )}
+          {isDuplicating ? "Duplicating" : "Duplicate"}
         </button>
         <button type="button"
           onClick={() => { setMenuOpen(false); if (onEdit) onEdit(tenure); }}

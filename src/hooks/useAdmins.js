@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -46,7 +46,6 @@ export const useAdmins = (queryParams = {}) => {
   return useQuery({
     queryKey: ["admins", queryParams],
     queryFn: () => fetchAdmins(queryParams),
-    placeholderData: keepPreviousData,
   });
 };
 

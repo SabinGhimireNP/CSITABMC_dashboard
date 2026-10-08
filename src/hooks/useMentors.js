@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -47,7 +47,6 @@ export const useMentors = (queryParams = {}) => {
   return useQuery({
     queryKey: ["mentors", search, status, id, ordering, page, pageSize],
     queryFn: () => fetchMentors({ search, status, id, ordering, page, pageSize }),
-    placeholderData: keepPreviousData,
   });
 };
 

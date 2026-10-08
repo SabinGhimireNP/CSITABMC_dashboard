@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -40,9 +40,13 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
   if (id) params.id = id;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/events", { params });
+  const { data } = await apiClient.get("/events/", { params });
 
-  const rawResults = Array.isArray(data) ? data : (data.results || []);
+  const rawResults = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.results)
+      ? data.results
+      : [];
   const fetchedEvents = rawResults.map((event) => {
     const startDt = parseDateTime(event.date || event.start_time);
     const endDt = parseDateTime(event.end_time || event.date);
@@ -77,7 +81,7 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
     };
   });
 
-  const count = data.count ?? rawResults.length;
+  const count = data?.count ?? rawResults.length;
   const totalPages = Math.ceil(count / pageSize) || 1;
 
   return {
@@ -93,7 +97,6 @@ export const useEvents = (queryParams = {}) => {
   return useQuery({
     queryKey: ["events", search, status, category, date, id, ordering, page, pageSize],
     queryFn: () => fetchEvents({ search, status, category, date, id, ordering, page, pageSize }),
-    placeholderData: keepPreviousData,
   });
 };
 

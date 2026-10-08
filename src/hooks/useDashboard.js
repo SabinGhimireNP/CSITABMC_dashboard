@@ -10,9 +10,9 @@ const getDashboardStats = createThrottle(async () => {
       await Promise.allSettled([
         // Cache-busting param avoids the backend's 5-minute GET cache.
         apiClient.get("/notices", { params: { _: Date.now() } }),
-        apiClient.get("/events"),
-        apiClient.get("/mentors"),
-        apiClient.get("/certificates"),
+        apiClient.get("/events/", { params: { _: Date.now() } }),
+        apiClient.get("/mentors", { params: { _: Date.now() } }),
+        apiClient.get("/certificates", { params: { _: Date.now() } }),
       ]);
 
     const parseResult = (res, defaultValue) => {
@@ -30,7 +30,12 @@ const getDashboardStats = createThrottle(async () => {
     const publishedNotices = (notices.results || []).filter(
       (n) => n.status === "published" || n.status === "Published"
     );
-    const openEvents = (events.results || []).filter(
+    const eventResults = Array.isArray(events)
+      ? events
+      : Array.isArray(events?.results)
+        ? events.results
+        : [];
+    const openEvents = eventResults.filter(
       (e) =>
         e.status === "open" || e.status === "Open" || e.registration_link
     );
@@ -93,8 +98,14 @@ const getRecentNotices = createThrottle(async () => {
 
 const getRecentEvents = createThrottle(async () => {
   try {
-    const { data } = await apiClient.get("/events");
-    const results = data.results || [];
+    const { data } = await apiClient.get("/events/", {
+      params: { _: Date.now() },
+    });
+    const results = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.results)
+        ? data.results
+        : [];
 
     return results
       .sort(
@@ -120,7 +131,9 @@ const getRecentEvents = createThrottle(async () => {
 
 const getRecentCertificates = createThrottle(async () => {
   try {
-    const { data } = await apiClient.get("/certificates");
+    const { data } = await apiClient.get("/certificates", {
+      params: { _: Date.now() },
+    });
     const results = Array.isArray(data) ? data : data.results || [];
 
     return results

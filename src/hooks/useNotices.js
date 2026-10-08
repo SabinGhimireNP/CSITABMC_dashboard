@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
@@ -48,7 +48,6 @@ export const useNotices = (queryParams = {}) => {
   return useQuery({
     queryKey: ["notices", search, status, category, date, id, ordering, page, pageSize],
     queryFn: () => fetchNotices({ search, status, category, date, id, ordering, page, pageSize }),
-    placeholderData: keepPreviousData,
   });
 };
 
