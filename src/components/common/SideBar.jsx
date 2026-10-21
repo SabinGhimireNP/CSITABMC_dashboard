@@ -68,6 +68,7 @@ const sidebarSections = [
         url: "/mentors",
         icon: UserCheck,
       },
+
       {
         title: "Certificates",
         url: "/certificates",
@@ -89,9 +90,14 @@ const sidebarSections = [
     label: "Management",
     items: [
       {
+        title: "Tenures",
+        url: "/tenure",
+        icon: Users,
+      },
+      {
         title: "Team Members",
         url: "/members",
-        icon: Users,
+        icon: UserCheck,
       },
       {
         title: "Alumni",

@@ -74,11 +74,13 @@ export function AlumniPageContent() {
 
   // ── Search debounce ─────────────────────────────────────────────────────
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
   const debounceRef = useRef(null);
 
-  useEffect(() => {
+  if (prevSearchQuery !== searchQuery) {
+    setPrevSearchQuery(searchQuery);
     setLocalSearch(searchQuery);
-  }, [searchQuery]);
+  }
 
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

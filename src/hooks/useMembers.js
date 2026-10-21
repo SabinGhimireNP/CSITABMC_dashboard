@@ -30,10 +30,11 @@ const fetchTenures = createThrottle(async () => {
       facebookLink: membership.member.fb_link,
       linkedinLink: membership.member.linkedin_link,
       githubLink: membership.member.github_link,
-      tags: ["Leadership", "Event Management"],
-      description: "Club member.",
+      tags: membership.member.skills || [],
+      skills: membership.member.skills || [],
+      description: membership.member.description || "",
       image: membership.member.image,
-      status: "active",
+      status: membership.status || membership.member.status || "published",
       createdAt: membership.member.created_at,
     })),
     name: tenure.name,
@@ -119,6 +120,8 @@ export const useCreateMember = () => {
       return response.data;
     }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members-list"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
@@ -134,6 +137,8 @@ export const useUpdateMember = () => {
       return response.data;
     }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members-list"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
@@ -146,6 +151,8 @@ export const useDeleteMember = () => {
       await apiClient.delete(`/members/${slug}/`);
     }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members-list"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["tenures"] });
     }
   });
@@ -160,6 +167,7 @@ export const useCreateMembership = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenures"] });
+      queryClient.invalidateQueries({ queryKey: ["members-list"] });
     }
   });
 };
@@ -173,6 +181,7 @@ export const useUpdateMembership = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenures"] });
+      queryClient.invalidateQueries({ queryKey: ["members-list"] });
     }
   });
 };
@@ -185,25 +194,40 @@ export const useDeleteMembership = () => {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenures"] });
+      queryClient.invalidateQueries({ queryKey: ["members-list"] });
     }
   });
 };
 
 const fetchMembersList = createThrottle(async () => {
   const { data } = await apiClient.get("/members/", { params: { _: Date.now() } });
-  const results = data.results || data;
+  const results = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.results)
+      ? data.results
+      : [];
   return results.map((member) => ({
     id: member.id,
     name: member.name,
     email: member.email,
     image: member.image,
     slug: member.slug,
+    facebookLink: member.fb_link || "",
+    linkedinLink: member.linkedin_link || "",
+    githubLink: member.github_link || "",
+    fb_link: member.fb_link || "",
+    linkedin_link: member.linkedin_link || "",
+    github_link: member.github_link || "",
+    description: member.description || "",
+    skills: Array.isArray(member.skills) ? member.skills : [],
+    status: member.status || "published",
+    createdAt: member.created_at || "",
   }));
 });
 
 /**
- * Fetches the flat list of all Members (used by the Alumni form's member
- * selector, since the Alumni serializer expects an existing member_id).
+ * Fetches the flat list of all Members (used by master /members page,
+ * tenure assignment selector, and alumni selector).
  */
 export const useMembersList = () => {
   return useQuery({
@@ -211,3 +235,5 @@ export const useMembersList = () => {
     queryFn: fetchMembersList,
   });
 };
+
+export const useMembers = useMembersList;

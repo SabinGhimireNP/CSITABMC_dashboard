@@ -41,10 +41,10 @@ export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, isDuplica
   }, [menuOpen]);
 
   const handleOpenTenure = () => {
-    router.push(`/members/${tenure.id}`);
+    router.push(`/tenure/${tenure.id}`);
   };
 
-  const DropdownMenu = () =>
+  const renderDropdownMenu = () =>
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -129,7 +129,7 @@ export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, isDuplica
         </button>
       </div>
 
-      {menuOpen && <DropdownMenu />}
+      {menuOpen && renderDropdownMenu()}
     </div>
   );
 }

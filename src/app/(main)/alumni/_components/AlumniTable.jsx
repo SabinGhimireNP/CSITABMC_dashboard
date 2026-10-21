@@ -66,7 +66,7 @@ export function AlumniTable({
     }
   };
 
-  const SortIndicator = ({ field }) => {
+  const renderSortIndicator = (field) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
     if (sortOrder === "asc")  return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
     if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
@@ -78,7 +78,7 @@ export function AlumniTable({
   };
 
   // Rendered via portal so it escapes overflow:hidden on the table wrapper
-  const DropdownMenu = ({ alumni }) =>
+  const renderDropdownMenu = (alumni) =>
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -108,17 +108,17 @@ export function AlumniTable({
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
               <th onClick={() => onHeaderClick("memberId")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Alumni ID <SortIndicator field="memberId" /></div>
+                <div className="flex items-center gap-1.5">Alumni ID {renderSortIndicator("memberId")}</div>
               </th>
               <th className="py-3 px-4 w-[8%]">Photo</th>
               <th onClick={() => onHeaderClick("fullName")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[22%]">
-                <div className="flex items-center gap-1.5">Full Name <SortIndicator field="fullName" /></div>
+                <div className="flex items-center gap-1.5">Full Name {renderSortIndicator("fullName")}</div>
               </th>
               <th onClick={() => onHeaderClick("graduationYear")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[15%]">
-                <div className="flex items-center gap-1.5">Graduation Year <SortIndicator field="graduationYear" /></div>
+                <div className="flex items-center gap-1.5">Graduation Year {renderSortIndicator("graduationYear")}</div>
               </th>
               <th onClick={() => onHeaderClick("email")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[20%]">
-                <div className="flex items-center gap-1.5">Email <SortIndicator field="email" /></div>
+                <div className="flex items-center gap-1.5">Email {renderSortIndicator("email")}</div>
               </th>
               <th className="py-3 px-4 w-[10%]">Status</th>
               <th className="py-3 px-4 text-right pr-6 w-[10%]">Actions</th>
@@ -184,7 +184,7 @@ export function AlumniTable({
                       <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                     </button>
 
-                    {activeMenuId === alumni.id && <DropdownMenu alumni={alumni} />}
+                    {activeMenuId === alumni.id && renderDropdownMenu(alumni)}
                   </td>
                 </tr>
               ))
@@ -226,7 +226,7 @@ export function AlumniTable({
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Remove alumni?</h3>
                 <p className="text-xs text-slate-500 leading-relaxed font-normal">
                   Are you sure you want to remove{" "}
-                  <span className="font-semibold text-slate-800">"{alumniToDelete.fullName}"</span>? This action cannot be undone.
+                  <span className="font-semibold text-slate-800">&quot;{alumniToDelete.fullName}&quot;</span>? This action cannot be undone.
                 </p>
               </div>
             </div>

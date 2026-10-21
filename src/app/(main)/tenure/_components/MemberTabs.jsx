@@ -6,8 +6,8 @@ import { Search } from "lucide-react";
 export function MemberTabs({ activeTab, onTabChange, searchQuery, onSearchChange }) {
   const tabs = [
     { id: "all", label: "All Members" },
-    { id: "active", label: "Active" },
-    { id: "draft", label: "Drafts" },
+    { id: "executive", label: "Executive Board" },
+    { id: "advisor", label: "Advisors" },
   ];
 
   return (
@@ -28,11 +28,11 @@ export function MemberTabs({ activeTab, onTabChange, searchQuery, onSearchChange
               }`}
             >
               {tab.label}
-              {tab.id === "active" && (
+              {tab.id === "executive" && (
                 <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-emerald-500"}`} />
               )}
-              {tab.id === "draft" && (
-                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-amber-500"}`} />
+              {tab.id === "advisor" && (
+                <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-indigo-600 animate-pulse" : "bg-blue-500"}`} />
               )}
             </button>
           );
@@ -46,7 +46,7 @@ export function MemberTabs({ activeTab, onTabChange, searchQuery, onSearchChange
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search members..."
+          placeholder="Search members by name, post..."
           className="w-full h-9 pl-9 pr-4 bg-white border border-slate-200 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
         />
       </div>

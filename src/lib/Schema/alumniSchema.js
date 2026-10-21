@@ -13,15 +13,12 @@ export const alumniFormSchema = z.object({
 
   tenureIds: z
     .array(z.union([z.number(), z.string()]))
-    .min(1, { message: "Please select a tenure." })
-    .transform((vals) => vals.map((val) => Number(val))),
+    .optional()
+    .transform((vals) => (vals ? vals.map((val) => Number(val)) : [])),
 
   // Graduation year — optional for alumni
   graduationYear: z
     .union([z.number(), z.string()])
     .optional()
     .transform((val) => (val ? Number(val) : null)),
-
-  // Bio — optional for alumni
-  bio: z.string().optional(),
 });

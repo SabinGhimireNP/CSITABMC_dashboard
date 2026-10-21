@@ -4,35 +4,19 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, Upload } from "lucide-react";
 import { tenureFormSchema } from "@/lib/Schema/memberSchema";
 
-export function TenureFormModal({ isOpen, initialData = null, onSubmitSuccess, onCancel }) {
-  const [formData, setFormData] = useState({ name: "", startDate: "", endDate: "", signature: undefined });
+function TenureFormModalContent({ initialData, onSubmitSuccess, onCancel }) {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || "",
+    startDate: initialData?.startDate || "",
+    endDate: initialData?.endDate || "",
+    signature: initialData?.signature || undefined,
+  });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [fileMeta, setFileMeta] = useState({ preview: null, name: "" });
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        name: initialData?.name || "",
-        startDate: initialData?.startDate || "",
-        endDate: initialData?.endDate || "",
-        signature: initialData?.signature || undefined,
-      });
-      setFileMeta({
-        preview: initialData?.signature || null,
-        name: initialData?.signature ? "Signature Image" : "",
-      });
-      setErrors({});
-    }
-  }, [initialData, isOpen]);
-
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "unset";
-    return () => { document.body.style.overflow = "unset"; };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  const [fileMeta, setFileMeta] = useState({
+    preview: initialData?.signature || null,
+    name: initialData?.signature ? "Signature Image" : "",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -251,5 +235,29 @@ export function TenureFormModal({ isOpen, initialData = null, onSubmitSuccess, o
         </form>
       </div>
     </div>
+  );
+}
+
+export function TenureFormModal({ isOpen, initialData = null, onSubmitSuccess, onCancel }) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <TenureFormModalContent
+      key={initialData?.id ? String(initialData.id) : "new-tenure"}
+      initialData={initialData}
+      onSubmitSuccess={onSubmitSuccess}
+      onCancel={onCancel}
+    />
   );
 }

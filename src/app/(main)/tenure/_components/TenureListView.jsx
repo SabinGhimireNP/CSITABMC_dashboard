@@ -16,15 +16,12 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplic
 
   const totalRows = tenures.length;
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-
-  React.useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedTenures = React.useMemo(() => {
-    const startOffset = (currentPage - 1) * rowsPerPage;
+    const startOffset = (safeCurrentPage - 1) * rowsPerPage;
     return tenures.slice(startOffset, startOffset + rowsPerPage);
-  }, [tenures, currentPage, rowsPerPage]);
+  }, [tenures, safeCurrentPage, rowsPerPage]);
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
