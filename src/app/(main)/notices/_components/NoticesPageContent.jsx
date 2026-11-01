@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import NoticesSkeleton from "./NoticesSkeleton";
 import { parseServerError } from "@/lib/errorUtils";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "published", "draft"];
 
@@ -72,24 +73,11 @@ export function NoticesPageContent() {
   );
 
   // ── Search debounce ─────────────────────────────────────────────────────
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    setLocalSearch(searchQuery);
-  }, [searchQuery]);
-
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
-
-  const handleSearchChange = (value) => {
-    setLocalSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateQuery({ search: value.trim(), page: 1 });
-    }, 400);
-  };
+  const { value: localSearch, handleSearchChange } = useDebouncedSearch({
+    initialValue: searchQuery,
+    delay: 400,
+    onSearch: (value) => updateQuery({ search: value.trim(), page: 1 }),
+  });
 
   // ── Tab / pagination / page-size handlers ───────────────────────────────
   const handleTabChange = (tab) => {
@@ -122,7 +110,13 @@ export function NoticesPageContent() {
     toast.promise(deleteNoticeMutation.mutateAsync(slug), {
       id: "delete-notice",
       loading: "Deleting notice",
-      success: "Notice deleted successfully.",
+      success: () => {
+        // Step back a page when the last row on a later page was removed.
+        if (notices.length === 1 && currentPage > 1) {
+          updateQuery({ page: currentPage - 1 === 1 ? "" : currentPage - 1 });
+        }
+        return "Notice deleted successfully.";
+      },
       error: (err) => parseServerError(err, "Failed to delete notice."),
     });
   };

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useEvents";
 import { useMentors } from "@/hooks/useMentors";
+import { useTenures } from "@/hooks/useMembers";
 import { EventTable } from "./EventTable";
 import { EventTabs } from "./EventTabs";
 import { EventFormModal } from "./EventForm";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import EventsSkeleton from "./EventsSkeleton";
 import { parseServerError } from "@/lib/errorUtils";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "published", "draft"];
 
@@ -75,11 +77,13 @@ export function EventsPageContent() {
   });
 
   const { data: mentorsData, isLoading: mentorsLoading } = useMentors({ pageSize: 100 });
+  const { data: tenuresData } = useTenures();
 
   const eventsList = eventsData?.data || [];
   const totalRows = eventsData?.count || 0;
   const totalPages = eventsData?.totalPages || 1;
   const mentorsList = mentorsData?.data || [];
+  const tenuresList = tenuresData?.data || [];
 
   // --- URL Query Params Helpers ---
   const updateQuery = useCallback(
@@ -100,26 +104,11 @@ export function EventsPageContent() {
   );
 
   // --- Search Debounce ---
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    setLocalSearch(searchQuery);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  const handleSearchChange = (value) => {
-    setLocalSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateQuery({ search: value.trim(), page: 1 });
-    }, 400);
-  };
+  const { value: localSearch, handleSearchChange } = useDebouncedSearch({
+    initialValue: searchQuery,
+    delay: 400,
+    onSearch: (value) => updateQuery({ search: value.trim(), page: 1 }),
+  });
 
   // --- Server-side Sorting Query Handler ---
   const sortField = orderingQuery ? orderingQuery.replace("-", "") : null;
@@ -155,7 +144,13 @@ export function EventsPageContent() {
     await toast.promise(deleteEventMutation.mutateAsync(event.slug), {
       id: "delete-event",
       loading: "Deleting event...",
-      success: "Event deleted successfully.",
+      success: () => {
+        // Step back a page when the last row on a later page was removed.
+        if (eventsList.length === 1 && currentPage > 1) {
+          updateQuery({ page: currentPage - 1 === 1 ? "" : currentPage - 1 });
+        }
+        return "Event deleted successfully.";
+      },
       error: (err) => parseServerError(err, "Failed to delete event."),
     });
   };
@@ -184,7 +179,8 @@ export function EventsPageContent() {
         tags: event.tags,
         image: undefined,
         description: event.description,
-        mentors: event.mentors,
+        mentor_assignments: event.mentor_assignments,
+        tenure: event.tenure,
       },
     });
   };
@@ -205,6 +201,10 @@ export function EventsPageContent() {
     payload.append("tags", mapTagToBackend(formData.tags));
     payload.append("status", (formData.status || "published").toLowerCase());
 
+    if (formData.tenure) {
+      payload.append("tenure", formData.tenure);
+    }
+
     // Date Combinations
     const startTimeStr = formData.startTime || "00:00";
     const endTimeStr = formData.endTime || "23:59";
@@ -220,14 +220,19 @@ export function EventsPageContent() {
       payload.append("end_time", endDateISO);
     }
 
-    // M2M Mentors mapping
-    if (Array.isArray(formData.mentors) && formData.mentors.length > 0) {
-      formData.mentors.forEach((mId) => {
-        if (mId !== null && mId !== undefined && mId !== "") {
-          payload.append("mentors", mId);
-        }
-      });
-    }
+    // Event-specific mentor assignments are the single source of truth. An
+    // empty list clears them; the backend validates and saves them atomically.
+    payload.append(
+      "assignments",
+      JSON.stringify(
+        (formData.assignments || []).map((a) => ({
+          mentor_id: a.mentor_id,
+          role: a.role,
+          custom_role: a.role === "custom" ? a.custom_role?.trim() || "" : "",
+          responsibility: a.responsibility?.trim() || "",
+        }))
+      )
+    );
 
     // Image Upload
     if (formData.image instanceof File) {
@@ -321,6 +326,7 @@ export function EventsPageContent() {
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
         mentorsList={mentorsList}
+        tenuresList={tenuresList}
         onSubmitSuccess={handleFormSubmitSuccess}
         onCancel={() => setFormMode({ isOpen: false, editData: null })}
       />

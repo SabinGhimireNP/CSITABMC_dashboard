@@ -4,19 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
-const fetchAlumni = createThrottle(async (queryParams = {}) => {
-  const { search = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
-
-  const params = {
-    _: Date.now(),
-    page,
-    page_size: pageSize,
-  };
-  if (search && search.trim()) params.search = search.trim();
-  if (id) params.id = id;
-  if (ordering) params.ordering = ordering;
-
-  const { data } = await apiClient.get("/alumni/", { params });
+// Alumni are paginated in the browser, so the full list is fetched once.
+const fetchAlumni = createThrottle(async () => {
+  const { data } = await apiClient.get("/alumni/", { params: { all: true, _: Date.now() } });
 
   const rawResults = Array.isArray(data)
     ? data
@@ -44,22 +34,13 @@ const fetchAlumni = createThrottle(async (queryParams = {}) => {
     status: "active",
   }));
 
-  const count = data?.count ?? rawResults.length;
-  const totalPages = Math.ceil(count / pageSize) || 1;
-
-  return {
-    count,
-    totalPages,
-    data: fetchedAlumni,
-  };
+  return { data: fetchedAlumni };
 });
 
-export const useAlumni = (queryParams = {}) => {
-  const { search = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
-
+export const useAlumni = () => {
   return useQuery({
-    queryKey: ["alumni", search, id, ordering, page, pageSize],
-    queryFn: () => fetchAlumni({ search, id, ordering, page, pageSize }),
+    queryKey: ["alumni"],
+    queryFn: () => fetchAlumni(),
   });
 };
 

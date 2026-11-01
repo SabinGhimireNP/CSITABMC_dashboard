@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useAdmins, useCreateAdmin, useUpdateAdmin, useDeleteAdmin } from "@/hooks/useAdmins";
 import { AdminTable } from "./AdminTable";
 import { AdminTabs } from "./AdminTabs";
@@ -19,19 +19,14 @@ export function AdminsPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
 
-  const { data: queryData, isLoading, isError, error } = useAdmins({
-    page: currentPage,
-    pageSize: rowsPerPage,
-    search: searchQuery,
-  });
+  // One request for the full list; paging, search and sorting never refetch.
+  const { data: queryData, isLoading, isError, error } = useAdmins();
 
   const createMutation = useCreateAdmin();
   const updateMutation = useUpdateAdmin();
   const deleteMutation = useDeleteAdmin();
 
-  // If the backend supported server-side sort/filter, we'd just use queryData.data directly.
-  // We'll use queryData.allData if it exists, or fallback to data, and do client sorting/filtering on top.
-  const liveAdmins = queryData?.allData || queryData?.data || [];
+  const liveAdmins = useMemo(() => queryData?.data || [], [queryData]);
 
   const handleSortChange = (field) => {
     if (sortField !== field) {
@@ -104,6 +99,13 @@ export function AdminsPageContent() {
       dataset = dataset.filter((a) => a.role === activeTab);
     }
 
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      dataset = dataset.filter((a) =>
+        [a.username, a.email, a.role].some((v) => v?.toLowerCase().includes(query))
+      );
+    }
+
     if (sortField && sortOrder !== "none") {
       dataset.sort((a, b) => {
         let valA = a[sortField];
@@ -130,24 +132,18 @@ export function AdminsPageContent() {
     }
 
     return dataset;
-  }, [liveAdmins, activeTab, sortField, sortOrder]);
+  }, [liveAdmins, activeTab, searchQuery, sortField, sortOrder]);
 
-  // Because the query returns the paginated data directly if we use it, 
-  // but since we do client-side processing, we recalculate it.
-  const totalRows = queryData?.count || processedAdmins.length;
+  const totalRows = processedAdmins.length;
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
+  // Clamp to the last page when filters or deletes shrink the list.
+  const effectivePage = Math.min(currentPage, totalPages);
 
   const paginatedAdmins = useMemo(() => {
-    // If backend did pagination, we'd just use queryData.data directly.
-    // Assuming backend returns all, we slice. If backend returns paginated, we don't slice.
-    // For now we slice from the processed array.
-    const startOffset = (currentPage - 1) * rowsPerPage;
+    const startOffset = (effectivePage - 1) * rowsPerPage;
     return processedAdmins.slice(startOffset, startOffset + rowsPerPage);
-  }, [processedAdmins, currentPage, rowsPerPage]);
+  }, [processedAdmins, effectivePage, rowsPerPage]);
 
   if (isLoading) return <AdminsSkeleton />;
 
@@ -189,7 +185,7 @@ export function AdminsPageContent() {
             onDeleteAdmin={handleDeleteAdmin}
             rowsPerPage={rowsPerPage}
             onRowsPerPageChange={handleRowsPerPageChange}
-            currentPage={currentPage}
+            currentPage={effectivePage}
             onPageChange={handlePageChange}
             totalPages={totalPages}
             totalRows={totalRows}

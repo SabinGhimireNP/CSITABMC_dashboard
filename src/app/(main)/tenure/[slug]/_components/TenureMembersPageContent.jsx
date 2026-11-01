@@ -81,10 +81,10 @@ export function TenureMembersPageContent() {
       const q = searchQuery.toLowerCase();
       dataset = dataset.filter(
         (m) =>
-          m.fullName?.toLowerCase().includes(q) ||
-          m.post?.toLowerCase().includes(q) ||
-          m.email?.toLowerCase().includes(q) ||
-          m.memberId?.toLowerCase().includes(q)
+          // memberId is numeric, so compare everything as strings.
+          [m.fullName, m.post, m.email, m.memberId].some((v) =>
+            String(v ?? "").toLowerCase().includes(q)
+          )
       );
     }
 
@@ -107,10 +107,12 @@ export function TenureMembersPageContent() {
   const totalRows = processedMembers.length;
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
+  // Clamp to the last page when filters or deletes shrink the list.
+  const effectivePage = Math.min(currentPage, totalPages);
   const paginatedMembers = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
+    const start = (effectivePage - 1) * rowsPerPage;
     return processedMembers.slice(start, start + rowsPerPage);
-  }, [processedMembers, currentPage, rowsPerPage]);
+  }, [processedMembers, effectivePage, rowsPerPage]);
 
   if (tenuresLoading) {
     return (
@@ -157,7 +159,7 @@ export function TenureMembersPageContent() {
             setRowsPerPage(v);
             setCurrentPage(1);
           }}
-          currentPage={currentPage}
+          currentPage={effectivePage}
           onPageChange={setCurrentPage}
           totalPages={totalPages}
           totalRows={totalRows}

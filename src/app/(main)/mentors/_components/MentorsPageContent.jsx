@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState, useCallback, useTransition, useEffect, useRef, useMemo } from "react";
+import React, { useState, useCallback, useTransition } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useMentors, useCreateMentor, useUpdateMentor, useDeleteMentor } from "@/hooks/useMentors";
-import { useEvents, useUpdateEvent } from "@/hooks/useEvents";
-import { MENTOR_ROLES } from "@/lib/Schema/mentorSchema";
 import { MentorTable } from "./MentorsTable";
 import { MentorTabs } from "./MentorTabs";
 import { MentorFormModal } from "./MentorForm";
@@ -13,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import MentorsSkeleton from "./MentorsSkeleton";
 import { parseServerError } from "@/lib/errorUtils";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "published", "draft"];
 
@@ -39,7 +38,6 @@ export function MentorsPageContent() {
   const createMentorMutation = useCreateMentor();
   const updateMentorMutation = useUpdateMentor();
   const deleteMentorMutation = useDeleteMentor();
-  const updateEventMutation = useUpdateEvent();
 
   const {
     data: mentorsData,
@@ -55,22 +53,9 @@ export function MentorsPageContent() {
     pageSize: rowsPerPage,
   });
 
-  const { data: eventsData, isLoading: eventsLoading } = useEvents({ pageSize: 100 });
-
-  const rawMentors = mentorsData?.data || [];
+  const mentorsList = mentorsData?.data || [];
   const totalRows = mentorsData?.count || 0;
   const totalPages = mentorsData?.totalPages || 1;
-  const eventsList = eventsData?.data || [];
-
-  // Map each mentor's events dynamically based on which events list them as mentor
-  const mappedMentors = useMemo(() => {
-    return rawMentors.map((mentor) => ({
-      ...mentor,
-      events: eventsList
-        .filter((e) => (e.mentors || []).map(String).includes(String(mentor.id)))
-        .map((e) => e.id),
-    }));
-  }, [rawMentors, eventsList]);
 
   // --- URL Query Params Helpers ---
   const updateQuery = useCallback(
@@ -91,26 +76,11 @@ export function MentorsPageContent() {
   );
 
   // --- Search Debounce ---
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    setLocalSearch(searchQuery);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  const handleSearchChange = (value) => {
-    setLocalSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateQuery({ search: value.trim(), page: 1 });
-    }, 400);
-  };
+  const { value: localSearch, handleSearchChange } = useDebouncedSearch({
+    initialValue: searchQuery,
+    delay: 400,
+    onSearch: (value) => updateQuery({ search: value.trim(), page: 1 }),
+  });
 
   // --- Tab / pagination / page-size handlers ---
   const handleTabChange = (tab) => {
@@ -140,13 +110,19 @@ export function MentorsPageContent() {
   };
 
   const handleDeleteMentor = async (id) => {
-    const mentor = rawMentors.find((m) => m.id === id);
-    if (!mentor || !mentor.slug) return;
+    const mentor = mentorsList.find((m) => m.id === id);
+    if (!mentor) return;
 
-    await toast.promise(deleteMentorMutation.mutateAsync(mentor.slug), {
+    await toast.promise(deleteMentorMutation.mutateAsync(mentor.id), {
       id: "delete-mentor",
       loading: "Deleting mentor...",
-      success: "Mentor deleted successfully.",
+      success: () => {
+        // Step back a page when the last row on a later page was removed.
+        if (mentorsList.length === 1 && currentPage > 1) {
+          updateQuery({ page: currentPage - 1 === 1 ? "" : currentPage - 1 });
+        }
+        return "Mentor deleted successfully.";
+      },
       error: (err) => parseServerError(err, "Failed to delete mentor."),
     });
   };
@@ -162,66 +138,10 @@ export function MentorsPageContent() {
         fullName: `${mentor.fullName} (Copy)`,
         socialLink: mentor.socialLink,
         image: undefined,
-        events: mentor.events,
         role: mentor.role,
         status: mentor.status,
       },
     });
-  };
-
-  // Helper to sync event's mentors list on the backend when selected events change for a mentor
-  const syncEventsForMentor = async (savedMentorId, selectedEventIds) => {
-    const targetEventIds = (selectedEventIds || []).map(String);
-    const updates = [];
-
-    for (const event of eventsList) {
-      const currentMentors = (event.mentors || []).map(String);
-      const shouldBeLinked = targetEventIds.includes(String(event.id));
-      const currentlyLinked = currentMentors.includes(String(savedMentorId));
-
-      let newMentorsList = [...currentMentors];
-
-      if (shouldBeLinked && !currentlyLinked) {
-        newMentorsList.push(String(savedMentorId));
-      } else if (!shouldBeLinked && currentlyLinked) {
-        newMentorsList = newMentorsList.filter((mId) => mId !== String(savedMentorId));
-      } else {
-        continue;
-      }
-
-      const payload = new FormData();
-      payload.append("title", event.title || "");
-      payload.append("description", event.description || "");
-      payload.append("organiser", event.organizer || "");
-      payload.append("location", event.location || "");
-      payload.append("available_seats", String(event.availableSeats || 0));
-      payload.append("registration_fee_bmc", String(event.registrationFeeBMC || 0));
-      payload.append("registration_fee_non_bmc", String(event.registrationFee || 0));
-      if (event.registrationFormUrl) {
-        payload.append("registration_link", event.registrationFormUrl);
-      }
-      payload.append("category", (event.category || "other").toLowerCase());
-      payload.append("status", (event.status || "published").toLowerCase());
-
-      if (event.startDate) {
-        const timeStr = event.startTime || "00:00";
-        payload.append("date", `${event.startDate}T${timeStr}:00Z`);
-      }
-
-      newMentorsList.forEach((mId) => {
-        payload.append("mentors", mId);
-      });
-
-      updates.push(updateEventMutation.mutateAsync({ slug: event.slug, formData: payload }));
-    }
-
-    if (updates.length > 0) {
-      try {
-        await Promise.all(updates);
-      } catch (err) {
-        console.warn("Linked events sync notice:", err?.response?.data || err);
-      }
-    }
   };
 
   const handleFormSubmitSuccess = (formData) => {
@@ -234,19 +154,11 @@ export function MentorsPageContent() {
       payload.append("photo", formData.image);
     }
 
-    const isEdit = formMode.editData && formMode.editData.slug;
-    
-    const mutationPromise = (async () => {
-      const savedMentor = isEdit
-        ? await updateMentorMutation.mutateAsync({ slug: formMode.editData.slug, formData: payload })
-        : await createMentorMutation.mutateAsync(payload);
-      
-      const mentorId = savedMentor?.id || formMode.editData?.id;
-      if (mentorId) {
-        await syncEventsForMentor(mentorId, formData.events);
-      }
-      return savedMentor;
-    })();
+    // Saving a mentor never touches event assignments; those are edited from the Event form.
+    const isEdit = Boolean(formMode.editData?.id);
+    const mutationPromise = isEdit
+      ? updateMentorMutation.mutateAsync({ id: formMode.editData.id, formData: payload })
+      : createMentorMutation.mutateAsync(payload);
 
     toast.promise(mutationPromise, {
       id: "mentor-mutation",
@@ -265,7 +177,7 @@ export function MentorsPageContent() {
     return mutationPromise;
   };
 
-  if (mentorsLoading || eventsLoading) return <MentorsSkeleton />;
+  if (mentorsLoading) return <MentorsSkeleton />;
   if (mentorsError) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -310,8 +222,7 @@ export function MentorsPageContent() {
           </div>
         )}
         <MentorTable
-          mentors={mappedMentors}
-          eventsList={eventsList}
+          mentors={mentorsList}
           onEditMentor={handleEditMentorTrigger}
           onDuplicateMentor={handleDuplicateMentorTrigger}
           onDeleteMentor={handleDeleteMentor}
@@ -330,7 +241,6 @@ export function MentorsPageContent() {
       <MentorFormModal
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
-        eventsList={eventsList}
         onSubmitSuccess={handleFormSubmitSuccess}
         onCancel={() => setFormMode({ isOpen: false, editData: null })}
       />

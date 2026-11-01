@@ -18,6 +18,7 @@ import { PlusCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
 import CertificatesSkeleton from "./CertificatesSkeleton";
 import { toast } from "sonner";
 import { parseServerError } from "@/lib/errorUtils";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "complete", "incomplete"];
 
@@ -92,20 +93,11 @@ export function CertificatesPageContent() {
   );
 
   // ── Debounced search ─────────────────────────────────────────────────────
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    setLocalSearch(searchQuery);
-  }, [searchQuery]);
-
-  const handleSearchChange = (value) => {
-    setLocalSearch(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateQuery({ search: value, page: "" });
-    }, 350);
-  };
+  const { value: localSearch, handleSearchChange } = useDebouncedSearch({
+    initialValue: searchQuery,
+    delay: 350,
+    onSearch: (value) => updateQuery({ search: value, page: "" }),
+  });
 
   // ── Sort (header click → ordering query param) ────────────────────────
   const handleSortChange = (field) => {

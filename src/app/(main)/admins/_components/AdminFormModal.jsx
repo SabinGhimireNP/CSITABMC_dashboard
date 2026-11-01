@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { adminSchema, adminCreateSchema, ADMIN_ROLES } from "@/lib/Schema/adminSchema";
 import { Loader2, X, Eye, EyeOff } from "lucide-react";
+import { useAuthStore } from "@/lib/store/authStore";
+import { isSuperadminUser } from "@/lib/roles";
 
 export function AdminFormModal({
   initialData = null,
@@ -12,6 +14,14 @@ export function AdminFormModal({
   isPending,
 }) {
   const isEditMode = Boolean(initialData && (initialData.id != null || initialData.email || initialData.username));
+  const currentUser = useAuthStore((state) => state.user);
+  // Only Superadmins may assign the Admin role; an account's current role is always kept selectable.
+  const assignableRoles = ADMIN_ROLES.filter(
+    (r) => isSuperadminUser(currentUser) || r.value === "cms_user" || r.value === initialData?.role
+  );
+  if (initialData?.role && !assignableRoles.some((r) => r.value === initialData.role)) {
+    assignableRoles.push({ label: initialData.role === "superadmin" ? "Superadmin" : initialData.role, value: initialData.role });
+  }
 
   const [formData, setFormData] = useState({
     username: "",
@@ -129,7 +139,7 @@ export function AdminFormModal({
                 }`}
               >
                 <option value="">Select Role</option>
-                {ADMIN_ROLES.map((roleObj) => (
+                {assignableRoles.map((roleObj) => (
                   <option key={roleObj.value} value={roleObj.value}>{roleObj.label}</option>
                 ))}
               </select>

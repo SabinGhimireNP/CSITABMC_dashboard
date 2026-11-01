@@ -175,8 +175,12 @@ export const useCreateMembership = () => {
 export const useUpdateMembership = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createThrottle(async ({ id, data }) => {
-      const response = await apiClient.put(`/memberships/${id}/`, data);
+    mutationFn: createThrottle(async ({ id, membershipId, data }) => {
+      const targetId = id || membershipId;
+      if (!targetId) {
+        throw new Error("Membership ID is required for update.");
+      }
+      const response = await apiClient.put(`/memberships/${targetId}/`, data);
       return response.data;
     }),
     onSuccess: () => {
@@ -199,14 +203,27 @@ export const useDeleteMembership = () => {
   });
 };
 
-const fetchMembersList = createThrottle(async () => {
-  const { data } = await apiClient.get("/members/", { params: { _: Date.now() } });
-  const results = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.results)
-      ? data.results
-      : [];
-  return results.map((member) => ({
+const fetchMembersList = createThrottle(async (queryParams = {}) => {
+  const { search = "", status = "", ordering = "", page = 1, pageSize = 10, all = false } = queryParams;
+
+  const params = {
+    _: Date.now(),
+  };
+  if (all) {
+    params.all = "true";
+  } else {
+    params.page = page;
+    params.page_size = pageSize;
+  }
+  if (search && search.trim()) params.search = search.trim();
+  if (status) params.status = status;
+  if (ordering) params.ordering = ordering;
+
+  const { data } = await apiClient.get("/members/", { params });
+  const isPaginated = !Array.isArray(data) && Array.isArray(data?.results);
+  const results = isPaginated ? data.results : Array.isArray(data) ? data : [];
+
+  const fetchedMembers = results.map((member) => ({
     id: member.id,
     name: member.name,
     email: member.email,
@@ -223,17 +240,39 @@ const fetchMembersList = createThrottle(async () => {
     status: member.status || "published",
     createdAt: member.created_at || "",
   }));
+
+  const count = isPaginated ? (data.count || 0) : fetchedMembers.length;
+  const totalPages = Math.ceil(count / pageSize) || 1;
+
+  return {
+    count,
+    totalPages,
+    data: fetchedMembers,
+  };
 });
 
 /**
- * Fetches the flat list of all Members (used by master /members page,
- * tenure assignment selector, and alumni selector).
+ * Server-side paginated hook for Organization Members.
+ * Returns { count, totalPages, data: [...] }
  */
-export const useMembersList = () => {
+export const useMembers = (queryParams = {}) => {
+  const { search = "", status = "", ordering = "", page = 1, pageSize = 10, all = false } = queryParams;
+
   return useQuery({
-    queryKey: ["members-list"],
-    queryFn: fetchMembersList,
+    queryKey: ["members", search, status, ordering, page, pageSize, all],
+    queryFn: () => fetchMembersList({ search, status, ordering, page, pageSize, all }),
   });
 };
 
-export const useMembers = useMembersList;
+/**
+ * Fetches the flat list of all Members (used by selectors and legacy consumers).
+ */
+export const useMembersList = (queryParams = {}) => {
+  const params = { all: true, ...queryParams };
+  const query = useMembers(params);
+  const memberList = Array.isArray(query.data) ? query.data : (query.data?.data || []);
+  return {
+    ...query,
+    data: memberList,
+  };
+};

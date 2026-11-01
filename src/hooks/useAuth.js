@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import apiClient, { clearAuth, silentRefresh } from "@/lib/axios";
+import apiClient, { ACCESS_TOKEN_TTL_MS, clearAuth, refreshSession } from "@/lib/axios";
 import { useAuthStore } from "@/lib/store/authStore";
 import { createThrottle } from "@/lib/throttle";
 
@@ -22,10 +22,10 @@ export const useLogin = () => {
     mutationKey: ["login"],
     mutationFn: loginUser,
     onSuccess: (data) => {
-      // Store user profile and approximate access token expiry (15 min).
-      // The backend sets httpOnly cookies — we track expiry client-side so
-      // we can proactively refresh without waiting for a 401.
-      const accessTokenExpiry = Date.now() + 15 * 60 * 1000;
+      // Store user profile and approximate access token expiry (1 hour, the
+      // backend's ACCESS_TOKEN_LIFETIME). The backend sets httpOnly cookies —
+      // we track expiry client-side so we can refresh before a 401.
+      const accessTokenExpiry = Date.now() + ACCESS_TOKEN_TTL_MS;
       setUser(data.user, accessTokenExpiry);
     },
   });
@@ -70,7 +70,8 @@ export const useIsAuthenticated = () => {
 /**
  * Background token refresh hook.
  *
- * Mount this ONCE at the top of the authenticated layout. It:
+ * Mounted ONCE, by AuthGuard. It shares the interceptor's single-flight
+ * refresh, so the timer and concurrent 401s never refresh twice. It:
  * 1. On mount: immediately checks if the token is close to expiry and refreshes.
  * 2. Sets a timer to refresh again 2 minutes before the next expiry.
  * 3. If refresh fails the user is silently cleared and redirected to login.
@@ -99,7 +100,7 @@ export const useTokenRefresh = () => {
 
       if (msUntilRefresh <= 0) {
         // Token is already within the buffer window (or expired) — refresh now.
-        const ok = await silentRefresh();
+        const ok = await refreshSession();
         if (!ok) {
           clearAuth();
         } else {
@@ -108,7 +109,7 @@ export const useTokenRefresh = () => {
       } else {
         setIsInitializing(false);
         timerRef.current = setTimeout(() => {
-          silentRefresh().then((ok) => {
+          refreshSession().then((ok) => {
             if (!ok) clearAuth();
           });
         }, msUntilRefresh);

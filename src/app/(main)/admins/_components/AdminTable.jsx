@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { ArrowUpDown, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, User, Loader2 } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
 import { useAuthStore } from "@/lib/store/authStore";
+import { canDeleteAccount, canEditAccount } from "@/lib/roles";
 import { toast } from "sonner";
 
 export function AdminTable({
@@ -65,8 +66,13 @@ export function AdminTable({
     }
   };
 
+  // Admins see Superadmin and other Admin rows read-only; the backend enforces the same rules.
+  const canManageAdmin = (targetAdmin) => canEditAccount(user, targetAdmin);
+
   const getRoleStyle = (role) => {
     switch (role) {
+      case "superadmin":
+        return "bg-purple-50 text-purple-700 border-purple-200/60";
       case "admin":
         return "bg-indigo-50 text-indigo-700 border-indigo-200/60";
       case "cms_user":
@@ -78,6 +84,7 @@ export function AdminTable({
 
   const getRoleLabel = (role) => {
     switch (role) {
+      case "superadmin": return "Superadmin";
       case "admin": return "Admin";
       case "cms_user": return "CMS User";
       default: return role || "—";
@@ -104,12 +111,14 @@ export function AdminTable({
         >
           <Pencil className="h-3.5 w-3.5 text-slate-400" /> Edit
         </button>
-        <button type="button"
-          onClick={() => { setAdminToDelete(admin); setActiveMenuId(null); }}
-          className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete
-        </button>
+        {canDeleteAccount(user, admin) && (
+          <button type="button"
+            onClick={() => { setAdminToDelete(admin); setActiveMenuId(null); }}
+            className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete
+          </button>
+        )}
       </div>,
       document.body
     );
@@ -175,19 +184,25 @@ export function AdminTable({
                   </td>
 
                   <td className="py-2 px-4 text-right pr-6">
-                    <button
-                      ref={(el) => (buttonRefs.current[adminKey] = el)}
-                      type="button"
-                      onClick={(e) => handleMenuToggle(e, adminKey)}
-                      className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                        activeMenuId === adminKey
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
-                    </button>
-                    {activeMenuId === adminKey && <DropdownMenu admin={admin} />}
+                    {canManageAdmin(admin) ? (
+                      <>
+                        <button
+                          ref={(el) => (buttonRefs.current[adminKey] = el)}
+                          type="button"
+                          onClick={(e) => handleMenuToggle(e, adminKey)}
+                          className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                            activeMenuId === adminKey
+                              ? "bg-slate-100 text-slate-800"
+                              : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
+                        </button>
+                        {activeMenuId === adminKey && <DropdownMenu admin={admin} />}
+                      </>
+                    ) : (
+                      <span className="text-slate-300 font-semibold px-2 text-xs select-none cursor-not-allowed" title="Protected account">—</span>
+                    )}
                   </td>
                 </tr>
                 );

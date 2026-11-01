@@ -5,6 +5,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
+import { isAdminRole } from "@/lib/roles";
 
 import {
   Sidebar,
@@ -30,6 +31,7 @@ import {
   ShieldAlert,
   FileKey,
   GraduationCap,
+  BookOpen,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -48,6 +50,11 @@ const sidebarSections = [
   {
     label: "Communications",
     items: [
+      {
+        title: "Blogs",
+        url: "/blogs",
+        icon: BookOpen,
+      },
       {
         title: "Notices",
         url: "/notices",
@@ -136,7 +143,7 @@ export function SideBar() {
             </SidebarGroupLabel>
 
             <SidebarMenu className="space-y-1">
-              {section.items.filter(item => !item.adminOnly || user?.user_role === "admin").map((item) => {
+              {section.items.filter(item => !item.adminOnly || isAdminRole(user)).map((item) => {
                 const isActive =
                   pathname === item.url || pathname.startsWith(item.url + "/");
                 const Icon = item.icon;

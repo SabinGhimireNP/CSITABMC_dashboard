@@ -4,10 +4,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowUpDown, ExternalLink, Eye, MoreHorizontal,
-  Pencil, Trash2, AlertTriangle, X, FileText, Loader2
+  Pencil, Trash2, X, FileText, Loader2
 } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
 import { SEMESTER_LABELS } from "@/lib/Schema/pastPaperSchema";
+import { PastPaperDeleteDialog } from "./PastPaperDeleteDialog";
 
 function getDriveEmbedUrl(driveLink) {
   const match = driveLink?.match(/\/file\/d\/([^/]+)/);
@@ -93,14 +94,14 @@ export function PastPaperTable({
     setPreviewLoading(true);
   };
 
-  const SortIndicator = ({ field }) => {
+  const renderSortIndicator = (field) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
     if (sortOrder === "asc") return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
     if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
     return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
   };
 
-  const DropdownMenu = ({ paper }) =>
+  const renderDropdownMenu = (paper) =>
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -146,13 +147,13 @@ export function PastPaperTable({
                 <div className="flex items-center gap-1.5">S.N.</div>
               </th>
               <th onClick={() => onHeaderClick("subject_name")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[32%]">
-                <div className="flex items-center gap-1.5">Subject <SortIndicator field="subject_name" /></div>
+                <div className="flex items-center gap-1.5">Subject {renderSortIndicator("subject_name")}</div>
               </th>
               <th onClick={() => onHeaderClick("semester")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[18%]">
-                <div className="flex items-center gap-1.5">Semester <SortIndicator field="semester" /></div>
+                <div className="flex items-center gap-1.5">Semester {renderSortIndicator("semester")}</div>
               </th>
               <th onClick={() => onHeaderClick("exam_year")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Year <SortIndicator field="exam_year" /></div>
+                <div className="flex items-center gap-1.5">Year {renderSortIndicator("exam_year")}</div>
               </th>
               <th className="py-3 px-4 w-[12%]">Type</th>
               <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
@@ -182,14 +183,21 @@ export function PastPaperTable({
                       {serialNumber}
                     </td>
 
-                    <td className="py-2 px-4 max-w-xs truncate">
+                    <td className="py-2 px-4 max-w-xs">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
                           <FileText className="h-3.5 w-3.5 text-rose-500" />
                         </div>
-                        <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                          {paper.subject_name}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                            {paper.subject_name}
+                          </span>
+                          {paper.is_old_course && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0 select-none">
+                              Old Course
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -222,7 +230,7 @@ export function PastPaperTable({
                       >
                         <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                       </button>
-                      {activeMenuId === paper.id && <DropdownMenu paper={paper} />}
+                      {activeMenuId === paper.id && renderDropdownMenu(paper)}
                     </td>
                   </tr>
                 );
@@ -258,9 +266,17 @@ export function PastPaperTable({
                       <FileText className="h-4 w-4 text-rose-500" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{previewPaper.subject_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{previewPaper.subject_name}</p>
+                        {previewPaper.is_old_course && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                            Old Course
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-slate-400 font-normal">
                         {previewPaper.subject_code} · {getSemesterLabel(previewPaper.semester)} · {previewPaper.exam_year} · {previewPaper.model_set ? "Model Set" : "Board Exam"}
+                        {previewPaper.is_old_course ? " · Old Syllabus" : ""}
                       </p>
                     </div>
                   </div>
@@ -304,7 +320,7 @@ export function PastPaperTable({
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full gap-4">
                       <FileText className="h-10 w-10 text-slate-300" />
-                      <p className="text-sm text-slate-500 font-medium">This link can't be embedded.</p>
+                      <p className="text-sm text-slate-500 font-medium">This link can&apos;t be embedded.</p>
                       <a
                         href={previewPaper.drive_link}
                         target="_blank"
@@ -322,47 +338,12 @@ export function PastPaperTable({
           );
         })()}
   
-        {/* Delete Confirmation */}
-        {paperToDelete && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-            <div
-              className="bg-white rounded-xl border border-slate-200 max-w-md w-full shadow-xl p-5 animate-in zoom-in-95 duration-150 relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button type="button" onClick={() => setPaperToDelete(null)}
-                className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <div className="flex gap-3.5">
-                <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 border border-rose-100">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div className="space-y-1.5 flex-1">
-                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">Delete past paper?</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                    Are you sure you want to delete{" "}
-                    <span className="font-semibold text-slate-800">"{paperToDelete.subject_name} ({paperToDelete.exam_year})"</span>? This cannot be undone.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
-                <button type="button" onClick={() => setPaperToDelete(null)}
-                  disabled={isDeleting}
-                  className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button type="button" onClick={handleConfirmDelete}
-                  disabled={isDeleting}
-                  className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {isDeleting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting</> : "Confirm Delete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <PastPaperDeleteDialog
+          paper={paperToDelete}
+          isDeleting={isDeleting}
+          onClose={() => setPaperToDelete(null)}
+          onConfirm={handleConfirmDelete}
+        />
       </div>
     );
   }

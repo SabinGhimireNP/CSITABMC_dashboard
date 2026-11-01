@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
+import { getAssignmentRoleLabel } from "@/lib/Constants/MentorEventRoles";
 
 const fetchMentors = createThrottle(async (queryParams = {}) => {
   const { search = "", status = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
@@ -17,19 +18,32 @@ const fetchMentors = createThrottle(async (queryParams = {}) => {
   if (id) params.id = id;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/mentors", { params });
+  const { data } = await apiClient.get("/mentors/", { params });
 
   const rawResults = Array.isArray(data) ? data : (data.results || []);
-  const fetchedMentors = rawResults.map((mentor) => ({
-    id: mentor.id,
-    fullName: mentor.name,
-    socialLink: mentor.linkedin_profile || "",
-    image: mentor.photo || null,
-    events: [],
-    role: mentor.expertise || "",
-    status: "published",
-    slug: mentor.slug,
-  }));
+  const fetchedMentors = rawResults.map((mentor) => {
+    const eventAssignments = Array.isArray(mentor.event_assignments)
+      ? mentor.event_assignments.map((a) => ({
+          eventId: a.event_id,
+          eventTitle: a.event_title || "",
+          role: a.role,
+          customRole: a.custom_role || "",
+          roleLabel: getAssignmentRoleLabel(a),
+          responsibility: a.responsibility || "",
+        }))
+      : [];
+    return {
+      id: mentor.id,
+      fullName: mentor.name,
+      email: mentor.email || "",
+      socialLink: mentor.linkedin_profile || "",
+      image: mentor.photo || null,
+      events: eventAssignments.map((a) => a.eventId),
+      eventAssignments,
+      role: mentor.expertise || "",
+      status: "published",
+    };
+  });
 
   const count = data.count ?? rawResults.length;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -55,14 +69,15 @@ const createMentor = createThrottle(async (formData) => {
   return data;
 });
 
-const updateMentor = createThrottle(async ({ slug, formData }) => {
-  const { data } = await apiClient.put(`/mentors/${slug}/`, formData);
+// Mentors are addressed by primary key only.
+const updateMentor = createThrottle(async ({ id, formData }) => {
+  const { data } = await apiClient.put(`/mentors/${id}/`, formData);
   return data;
 });
 
-const deleteMentor = createThrottle(async (slug) => {
-  await apiClient.delete(`/mentors/${slug}/`);
-  return slug;
+const deleteMentor = createThrottle(async (id) => {
+  await apiClient.delete(`/mentors/${id}/`);
+  return id;
 });
 
 export const useCreateMentor = () => {

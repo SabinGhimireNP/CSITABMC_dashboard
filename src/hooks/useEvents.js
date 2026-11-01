@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
+import { getAssignmentRoleLabel } from "@/lib/Constants/MentorEventRoles";
 
 const EVENT_CATEGORIES = ["Workshop", "Webinar", "Hackathon", "Bootcamp", "Networking", "Conference"];
 
@@ -54,6 +55,16 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
     const mentorsList = Array.isArray(event.mentors)
       ? event.mentors.map((m) => (typeof m === "object" ? m.id : m))
       : [];
+    const mentorAssignments = Array.isArray(event.mentor_assignments)
+      ? event.mentor_assignments.map((a) => ({
+          mentor_id: a.mentor_id,
+          mentor_name: a.mentor_name || "",
+          role: a.role,
+          role_label: getAssignmentRoleLabel(a),
+          custom_role: a.custom_role || "",
+          responsibility: a.responsibility || "",
+        }))
+      : [];
 
     return {
       id: event.id,
@@ -74,6 +85,9 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
       image: event.image || null,
       description: event.description || "",
       mentors: mentorsList,
+      mentor_assignments: mentorAssignments,
+      tenure: event.tenure || null,
+      tenureName: event.tenure_name || null,
       status: event.status || "draft",
       created_at: event.created_at,
       updated_at: event.updated_at,

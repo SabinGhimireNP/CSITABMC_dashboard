@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, UserCircle, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, Copy, ExternalLink } from "lucide-react";
+import { ArrowUpDown, UserCircle, MoreHorizontal, Pencil, Trash2, Copy, ExternalLink } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { MentorDeleteDialog } from "./MentorDeleteDialog";
 
 export function MentorTable({
   mentors = [],
-  eventsList = [],
   onDeleteMentor,
   onEditMentor,
   onDuplicateMentor,
@@ -56,22 +56,22 @@ export function MentorTable({
     if (mentorToDelete) { onDeleteMentor(mentorToDelete.id); setMentorToDelete(null); }
   };
 
-  const getEventNames = (eventIds = []) => {
-    if (!eventIds.length) return "—";
-    return eventIds
-      .map((id) => eventsList.find((e) => String(e.id) === String(id))?.title)
-      .filter(Boolean)
+  // Event-specific roles come from the mentor's assignments, e.g. "Hackathon (Main Mentor)".
+  const getEventNames = (assignments = []) => {
+    if (!assignments.length) return "—";
+    return assignments
+      .map((a) => `${a.eventTitle}${a.roleLabel ? ` (${a.roleLabel})` : ""}`)
       .join(", ");
   };
 
-  const SortIndicator = ({ field }) => {
+  const renderSortIndicator = (field) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
     if (sortOrder === "asc") return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
     if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
     return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
   };
 
-  const DropdownMenu = ({ mentor }) =>
+  const renderDropdownMenu = (mentor) =>
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -107,16 +107,16 @@ export function MentorTable({
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
               <th onClick={() => onHeaderClick("id")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[8%]">
-                <div className="flex items-center gap-1.5">ID <SortIndicator field="id" /></div>
+                <div className="flex items-center gap-1.5">ID {renderSortIndicator("id")}</div>
               </th>
               <th className="py-3 px-4 w-[8%]">Photo</th>
               <th onClick={() => onHeaderClick("fullName")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[20%]">
-                <div className="flex items-center gap-1.5">Full Name <SortIndicator field="fullName" /></div>
+                <div className="flex items-center gap-1.5">Full Name {renderSortIndicator("fullName")}</div>
               </th>
               <th className="py-3 px-4 w-[30%]">Events</th>
               <th className="py-3 px-4 w-[11%]">Social</th>
               <th onClick={() => onHeaderClick("status")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Status <SortIndicator field="status" /></div>
+                <div className="flex items-center gap-1.5">Status {renderSortIndicator("status")}</div>
               </th>
               <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
             </tr>
@@ -152,7 +152,7 @@ export function MentorTable({
                     </span>
                   </td>
 
-                  <td className="py-2 px-4 text-slate-500 font-normal truncate">{getEventNames(mentor.events)}</td>
+                  <td className="py-2 px-4 text-slate-500 font-normal truncate">{getEventNames(mentor.eventAssignments)}</td>
 
                   <td className="py-2 px-4">
                     {mentor.socialLink ? (
@@ -174,7 +174,7 @@ export function MentorTable({
                     <button ref={(el) => (buttonRefs.current[mentor.id] = el)} type="button" onClick={(e) => handleMenuToggle(e, mentor.id)} className={`p-1.5 rounded-md transition-all cursor-pointer ${activeMenuId === mentor.id ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"}`}>
                       <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                     </button>
-                    {activeMenuId === mentor.id && <DropdownMenu mentor={mentor} />}
+                    {activeMenuId === mentor.id && renderDropdownMenu(mentor)}
                   </td>
                 </tr>
               ))
@@ -187,28 +187,11 @@ export function MentorTable({
         <Pagination currentPage={currentPage} totalPages={totalPages} totalRows={totalRows} rowsPerPage={rowsPerPage} onPageChange={onPageChange} onRowsPerPageChange={onRowsPerPageChange} isEmbedded={true} />
       </div>
 
-      {mentorToDelete && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl border border-slate-200 max-w-md w-full shadow-xl p-5 animate-in zoom-in-95 duration-150 relative" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={() => setMentorToDelete(null)} className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer">
-              <X className="h-4 w-4" />
-            </button>
-            <div className="flex gap-3.5">
-              <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 border border-rose-100">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Delete mentor?</h3>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">Are you sure you want to delete <span className="font-semibold text-slate-800">"{mentorToDelete?.fullName}"</span>? This cannot be undone.</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
-              <button type="button" onClick={() => setMentorToDelete(null)} className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs">Cancel</button>
-              <button type="button" onClick={handleConfirmDelete} className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs">Confirm Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <MentorDeleteDialog
+        mentor={mentorToDelete}
+        onClose={() => setMentorToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

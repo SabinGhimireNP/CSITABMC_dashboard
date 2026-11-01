@@ -6,52 +6,15 @@ import { createThrottle } from "@/lib/throttle";
 
 const getDashboardStats = createThrottle(async () => {
   try {
-    const [noticesRes, eventsRes, mentorsRes, certificatesRes] =
-      await Promise.allSettled([
-        // Cache-busting param avoids the backend's 5-minute GET cache.
-        apiClient.get("/notices", { params: { _: Date.now() } }),
-        apiClient.get("/events/", { params: { _: Date.now() } }),
-        apiClient.get("/mentors", { params: { _: Date.now() } }),
-        apiClient.get("/certificates", { params: { _: Date.now() } }),
-      ]);
-
-    const parseResult = (res, defaultValue) => {
-      if (res.status === "fulfilled") {
-        return res.value.data;
-      }
-      return defaultValue;
-    };
-
-    const notices = await parseResult(noticesRes, { count: 0, results: [] });
-    const events = await parseResult(eventsRes, { count: 0, results: [] });
-    const mentors = await parseResult(mentorsRes, []);
-    const certificates = await parseResult(certificatesRes, []);
-
-    const publishedNotices = (notices.results || []).filter(
-      (n) => n.status === "published" || n.status === "Published"
-    );
-    const eventResults = Array.isArray(events)
-      ? events
-      : Array.isArray(events?.results)
-        ? events.results
-        : [];
-    const openEvents = eventResults.filter(
-      (e) =>
-        e.status === "open" || e.status === "Open" || e.registration_link
-    );
-    const completedCertificates = Array.isArray(certificates)
-      ? certificates.filter(
-          (c) => c.is_project_complete || c.isProjectComplete
-        )
-      : [];
+    const { data } = await apiClient.get("/dashboard/stats/", {
+      params: { _: Date.now() },
+    });
 
     return {
-      publishedNoticesCount: publishedNotices.length,
-      openEventsCount: openEvents.length,
-      totalMentorsCount: Array.isArray(mentors)
-        ? mentors.length
-        : mentors.count || 0,
-      certificatesIssuedCount: completedCertificates.length,
+      publishedNoticesCount: data.publishedNoticesCount ?? data.published_notices ?? 0,
+      openEventsCount: data.openEventsCount ?? data.open_events ?? 0,
+      totalMentorsCount: data.totalMentorsCount ?? data.total_mentors ?? 0,
+      certificatesIssuedCount: data.certificatesIssuedCount ?? data.completed_certificates ?? 0,
     };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);

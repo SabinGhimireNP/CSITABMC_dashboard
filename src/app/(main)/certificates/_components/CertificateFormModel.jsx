@@ -4,40 +4,33 @@ import React, { useState, useEffect } from "react";
 import { certificateSchema } from "@/lib/Schema/certificateSchema";
 import { Loader2, X } from "lucide-react";
 
-export function CertificateFormModal({
+export function CertificateFormModal(props) {
+  if (!props.isOpen) return null;
+  const key = props.initialData?.id || "new-certificate";
+  return <CertificateFormModalContent key={key} {...props} />;
+}
+
+function CertificateFormModalContent({
   initialData = null,
   isOpen,
   eventsList = [],
   onSubmitSuccess,
   onCancel,
 }) {
-  const [formData, setFormData] = useState({
-    event: "",
-    fullName: "",
-    isProjectComplete: false,
-  });
+  const [formData, setFormData] = useState(() => ({
+    event: initialData?.event ?? "",
+    fullName: initialData?.fullName || "",
+    isProjectComplete: initialData?.isProjectComplete ?? false,
+  }));
 
   const [errors, setErrors] = useState({});
   const [submitType, setSubmitType] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        event: initialData?.event ?? "",
-        fullName: initialData?.fullName || "",
-        isProjectComplete: initialData?.isProjectComplete ?? false,
-      });
-      setErrors({});
-    }
-  }, [initialData, isOpen]);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "unset";
     return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

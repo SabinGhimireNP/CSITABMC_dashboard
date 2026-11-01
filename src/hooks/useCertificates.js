@@ -106,4 +106,4 @@ export const useBulkUpdateCertificateStatus = () => {
       queryClient.invalidateQueries({ queryKey: ["certificates"] });
     },
   });
-};
+};

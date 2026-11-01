@@ -4,48 +4,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
-const fetchAdmins = createThrottle(async (queryParams = {}) => {
-  const { search = "", page = 1, pageSize = 5 } = queryParams;
-
+// The Admin accounts table paginates, searches and sorts in the browser, so
+// the full account list is fetched once and cached under a single key.
+const fetchAdmins = createThrottle(async () => {
   const { data } = await apiClient.get("/users/", { params: { _: Date.now() } });
 
-  let admins = (Array.isArray(data) ? data : data.results || []).map((admin) => ({
+  const admins = (Array.isArray(data) ? data : data.results || []).map((admin) => ({
     id: admin.id,
-    admin_id: admin.admin_id,
     username: admin.username,
     email: admin.email,
     role: admin.role,
-    date_joined: admin.date_joined || admin.createdAt || new Date().toISOString(),
+    date_joined: admin.date_joined || null,
   }));
 
-  if (search.trim()) {
-    const query = search.toLowerCase();
-    admins = admins.filter(
-      (a) =>
-        a.username?.toLowerCase().includes(query) ||
-        a.email?.toLowerCase().includes(query) ||
-        a.role?.toLowerCase().includes(query)
-    );
-  }
-
-  const count = admins.length;
-  const totalPages = Math.ceil(count / pageSize) || 1;
-  
-  const startOffset = (page - 1) * pageSize;
-  const paginatedData = admins.slice(startOffset, startOffset + pageSize);
-
-  return {
-    count,
-    totalPages,
-    data: paginatedData,
-    allData: admins
-  };
+  return { data: admins, count: admins.length };
 });
 
-export const useAdmins = (queryParams = {}) => {
+export const useAdmins = () => {
   return useQuery({
-    queryKey: ["admins", queryParams],
-    queryFn: () => fetchAdmins(queryParams),
+    queryKey: ["admins"],
+    queryFn: () => fetchAdmins(),
   });
 };
 

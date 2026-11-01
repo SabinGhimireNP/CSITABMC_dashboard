@@ -1,26 +1,46 @@
 /**
+ * Builds a stable key for a call's arguments so only identical calls are merged.
+ * FormData is keyed by its entries (files by name, size and type).
+ */
+function argumentsKey(args) {
+  return JSON.stringify(args, (_key, value) => {
+    if (typeof FormData !== "undefined" && value instanceof FormData) {
+      return Array.from(value.entries()).map(([k, v]) =>
+        typeof File !== "undefined" && v instanceof File
+          ? [k, `file:${v.name}:${v.size}:${v.type}`]
+          : [k, v]
+      );
+    }
+    return value;
+  });
+}
+
+/**
  * Creates a single-flight / deduplicated version of an async function.
  *
- * If called while a previous call is still running, it reuses the in-flight
- * promise instead of throwing an error or firing duplicate requests.
+ * If called with the same arguments while a previous call is still running,
+ * it reuses the in-flight promise instead of firing a duplicate request.
+ * Calls with different arguments run independently.
  *
  * @param {Function} fn - The async function to deduplicate.
  * @returns {Function} A deduplicated wrapper around `fn`.
  */
 export function createThrottle(fn) {
-  let pendingPromise = null;
+  const pending = new Map();
 
   return (...args) => {
-    if (pendingPromise) {
-      return pendingPromise;
+    const key = argumentsKey(args);
+    if (pending.has(key)) {
+      return pending.get(key);
     }
-    pendingPromise = (async () => {
+    const promise = (async () => {
       try {
         return await fn(...args);
       } finally {
-        pendingPromise = null;
+        pending.delete(key);
       }
     })();
-    return pendingPromise;
+    pending.set(key, promise);
+    return promise;
   };
 }

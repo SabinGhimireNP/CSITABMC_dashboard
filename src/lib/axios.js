@@ -20,16 +20,22 @@ const apiClient = axios.create({
 // ── Refresh-token handling ────────────────────────────────────────────────
 // The backend uses cookie-based JWT auth. When the access token expires the
 // API responds 401. Instead of forcing the user to log in again, we call the
-// refresh endpoint (which reads the httpOnly refresh_token cookie and sets a
-// fresh access_token cookie), then retry the original request.
+// refresh endpoint (which reads the httpOnly refresh_token cookie, rotates it
+// and sets a fresh access_token cookie), then retry the original request.
 //
-// A single-flight guard prevents multiple concurrent 401s from firing several
-// refresh requests at once.
-
-let isRefreshing = false;
-let failedQueue = [];
+// One shared single-flight promise serves both this interceptor and the
+// background refresh timer, so concurrent 401s and a firing timer never send
+// more than one refresh request at a time.
 
 const REFRESH_URL = "/users/refresh-token/";
+
+/** Matches the backend's 1-hour ACCESS_TOKEN_LIFETIME. */
+export const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+let refreshPromise = null;
+// When the last successful refresh completed; requests sent before it carried
+// the old access token and can simply be retried.
+let lastRefreshAt = 0;
 
 // Clear the persisted auth state so the app redirects to login.
 export function clearAuth() {
@@ -39,36 +45,40 @@ export function clearAuth() {
     } catch (e) {
       /* ignore */
     }
-    window.location.href = "/login";
+    if (window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
   }
-}
-
-// Resolve (or reject) all queued requests once the refresh completes.
-function flushQueue(error) {
-  failedQueue.forEach(({ resolve, reject }) =>
-    error ? reject(error) : resolve()
-  );
-  failedQueue = [];
 }
 
 /**
- * Attempt a silent token refresh. Returns true on success, false on failure.
- * Updates the accessTokenExpiry in the store on success.
+ * Refresh the session once, sharing the in-flight request with every caller.
+ * Resolves true on success, false on failure (the backend has then cleared
+ * the session cookies).
  */
-export async function silentRefresh() {
-  try {
-    await apiClient.post(REFRESH_URL);
-    // Update the expiry in the store. The backend's ACCESS_TOKEN_LIFETIME is
-    // read from settings — we approximate it here as 15 minutes (900s) which is
-    // the typical simplejwt default. Adjust if your backend uses a different value.
-    const { useAuthStore } = await import("@/lib/store/authStore");
-    const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes from now
-    useAuthStore.getState().setAccessTokenExpiry(expiry);
-    return true;
-  } catch {
-    return false;
+export function refreshSession() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        await apiClient.post(REFRESH_URL);
+        lastRefreshAt = Date.now();
+        const { useAuthStore } = await import("@/lib/store/authStore");
+        useAuthStore.getState().setAccessTokenExpiry(Date.now() + ACCESS_TOKEN_TTL_MS);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
   }
+  return refreshPromise;
 }
+
+apiClient.interceptors.request.use((config) => {
+  config._sentAt = Date.now();
+  return config;
+});
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -76,47 +86,32 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     // Only attempt a refresh for 401 responses that:
-    // 1. Haven't already retried (prevents infinite loop)
+    // 1. Haven't already retried (prevents infinite loops)
     // 2. Are not the refresh endpoint itself
     // 3. Are not the login endpoint (we handle login errors differently)
     if (
       error.response?.status !== 401 ||
-      originalRequest?._retry ||
-      originalRequest?.url?.includes(REFRESH_URL) ||
-      originalRequest?.url?.includes("/login/")
+      !originalRequest ||
+      originalRequest._retry ||
+      originalRequest.url?.includes(REFRESH_URL) ||
+      originalRequest.url?.includes("/login/")
     ) {
       return Promise.reject(error);
     }
 
-    if (isRefreshing) {
-      // Another request is already refreshing — wait for it, then retry.
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      })
-        .then(() => apiClient(originalRequest))
-        .catch(() => Promise.reject(error));
-    }
-
-    isRefreshing = true;
     originalRequest._retry = true;
 
-    try {
-      const refreshed = await silentRefresh();
-      if (refreshed) {
-        flushQueue(null);
-        return apiClient(originalRequest);
-      } else {
-        flushQueue(new Error("Refresh failed"));
-        clearAuth();
-        return Promise.reject(error);
-      }
-    } catch (refreshError) {
-      flushQueue(refreshError);
-      clearAuth();
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
+    // Sent with an access token that a refresh has since replaced: retry as is.
+    if (originalRequest._sentAt && originalRequest._sentAt < lastRefreshAt) {
+      return apiClient(originalRequest);
     }
+
+    const refreshed = await refreshSession();
+    if (!refreshed) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+    return apiClient(originalRequest);
   }
 );
 

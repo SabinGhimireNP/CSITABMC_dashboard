@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useCallback, useTransition, useEffect, useRef, useMemo } from "react";
+import React, { useState, useCallback, useTransition, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useAlumni, useCreateAlumni, useUpdateAlumni, useDeleteAlumni } from "@/hooks/useAlumni";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { AlumniTable } from "./AlumniTable";
 import { AlumniTabs } from "./AlumniTabs";
 import { AlumniFormModal } from "./AlumniForm";
@@ -36,21 +37,50 @@ export function AlumniPageContent() {
     isLoading: alumniLoading,
     isError: alumniError,
     isFetching,
-  } = useAlumni({
-    search: searchQuery,
-    id: idQuery,
-    ordering: orderingQuery,
-    page: currentPage,
-    pageSize: rowsPerPage,
-  });
+  } = useAlumni();
 
   const createAlumniMutation = useCreateAlumni();
   const updateAlumniMutation = useUpdateAlumni();
   const deleteAlumniMutation = useDeleteAlumni();
 
-  const liveAlumni = useMemo(() => alumniData?.data ?? [], [alumniData]);
-  const totalRows = alumniData?.count || 0;
-  const totalPages = alumniData?.totalPages || 1;
+  // Frontend-side pagination: search, tab filter, sort and slicing over the full list.
+  const processedAlumni = useMemo(() => {
+    let dataset = alumniData?.data ?? [];
+    if (activeTab !== "all") {
+      dataset = dataset.filter((a) => a.status === activeTab);
+    }
+    if (idQuery) {
+      dataset = dataset.filter((a) => String(a.id) === idQuery);
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      dataset = dataset.filter((a) =>
+        [a.fullName, a.email, a.memberId, a.graduationYear].some((v) =>
+          String(v ?? "").toLowerCase().includes(q)
+        )
+      );
+    }
+    const field = orderingQuery.replace("-", "");
+    if (field) {
+      const dir = orderingQuery.startsWith("-") ? -1 : 1;
+      dataset = [...dataset].sort((a, b) => {
+        const valA = a[field] ?? "";
+        const valB = b[field] ?? "";
+        if (typeof valA === "number" && typeof valB === "number") return (valA - valB) * dir;
+        return String(valA).localeCompare(String(valB), undefined, { numeric: true }) * dir;
+      });
+    }
+    return dataset;
+  }, [alumniData, activeTab, idQuery, searchQuery, orderingQuery]);
+
+  const totalRows = processedAlumni.length;
+  const totalPages = Math.max(Math.ceil(totalRows / rowsPerPage), 1);
+  // Clamp to the last page when filters or deletes shrink the list.
+  const effectivePage = Math.min(currentPage, totalPages);
+  const liveAlumni = useMemo(
+    () => processedAlumni.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage),
+    [processedAlumni, effectivePage, rowsPerPage]
+  );
 
   const [alumniFormMode, setAlumniFormMode] = useState({ isOpen: false, editData: null });
 
@@ -73,26 +103,11 @@ export function AlumniPageContent() {
   );
 
   // ── Search debounce ─────────────────────────────────────────────────────
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
-  const debounceRef = useRef(null);
-
-  if (prevSearchQuery !== searchQuery) {
-    setPrevSearchQuery(searchQuery);
-    setLocalSearch(searchQuery);
-  }
-
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-  }, []);
-
-  const handleSearchChange = (value) => {
-    setLocalSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateQuery({ search: value.trim(), page: 1 });
-    }, 400);
-  };
+  const { value: localSearch, handleSearchChange } = useDebouncedSearch({
+    initialValue: searchQuery,
+    delay: 400,
+    onSearch: (value) => updateQuery({ search: value.trim(), page: 1 }),
+  });
 
   // ── Tab / pagination / page-size handlers ───────────────────────────────
   const handleTabChange = (tab) => {
@@ -107,7 +122,7 @@ export function AlumniPageContent() {
     updateQuery({ page: 1, page_size: amount === 5 ? "" : amount });
   };
 
-  // ── Server-side Sorting Query Handler ────────────────────────────────────
+  // ── Sorting (applied locally) ────────────────────────────────────────────
   const sortField = orderingQuery ? orderingQuery.replace("-", "") : null;
   const sortOrder = orderingQuery ? (orderingQuery.startsWith("-") ? "desc" : "asc") : "none";
 
@@ -137,10 +152,12 @@ export function AlumniPageContent() {
   const handleAlumniFormSubmitSuccess = (formData) => {
     const payload = {
       member_id: formData.memberId,
-      tenure_ids: formData.tenureIds || [],
       graduation_year: formData.graduationYear,
       bio: formData.bio || "",
     };
+    if (Array.isArray(formData.tenureIds) && formData.tenureIds.length > 0) {
+      payload.tenure_ids = formData.tenureIds;
+    }
 
     const isEdit = alumniFormMode.editData && alumniFormMode.editData.id;
     const mutationPromise = isEdit
@@ -199,9 +216,9 @@ export function AlumniPageContent() {
           onDeleteAlumni={handleDeleteAlumni}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleRowsPerPageChange}
-          currentPage={currentPage}
+          currentPage={effectivePage}
           onPageChange={handlePageChange}
-          totalPages={Math.max(totalPages, 1)}
+          totalPages={totalPages}
           totalRows={totalRows}
           sortField={sortField}
           sortOrder={sortOrder}

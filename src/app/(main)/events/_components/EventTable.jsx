@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, ImageIcon, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, Copy } from "lucide-react";
+import { ArrowUpDown, ImageIcon, MoreHorizontal, Pencil, Trash2, Copy } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { EventDeleteDialog } from "./EventDeleteDialog";
 
 export function EventTable({
   events = [],
@@ -56,7 +57,7 @@ export function EventTable({
       ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
       : "bg-rose-50 text-rose-600 border-rose-200/60";
 
-  const SortIndicator = ({ field }) => {
+  const renderSortIndicator = (field) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
     if (sortOrder === "asc") return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
     if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
@@ -73,7 +74,7 @@ export function EventTable({
     return `${start} → ${end}`;
   };
 
-  const DropdownMenu = ({ event }) =>
+  const renderDropdownMenu = (event) =>
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -109,20 +110,20 @@ export function EventTable({
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
               <th onClick={() => onHeaderClick("id")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[8%]">
-                <div className="flex items-center gap-1.5">ID <SortIndicator field="id" /></div>
+                <div className="flex items-center gap-1.5">ID {renderSortIndicator("id")}</div>
               </th>
               <th className="py-3 px-4 w-[8%]">Image</th>
               <th onClick={() => onHeaderClick("title")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[24%]">
-                <div className="flex items-center gap-1.5">Title <SortIndicator field="title" /></div>
+                <div className="flex items-center gap-1.5">Title {renderSortIndicator("title")}</div>
               </th>
               <th onClick={() => onHeaderClick("category")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Category <SortIndicator field="category" /></div>
+                <div className="flex items-center gap-1.5">Category {renderSortIndicator("category")}</div>
               </th>
               <th onClick={() => onHeaderClick("startDate")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[16%]">
-                <div className="flex items-center gap-1.5">Dates <SortIndicator field="startDate" /></div>
+                <div className="flex items-center gap-1.5">Dates {renderSortIndicator("startDate")}</div>
               </th>
               <th onClick={() => onHeaderClick("status")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Status <SortIndicator field="status" /></div>
+                <div className="flex items-center gap-1.5">Status {renderSortIndicator("status")}</div>
               </th>
               <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
             </tr>
@@ -157,7 +158,19 @@ export function EventTable({
                     <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors block truncate">
                       {event.title}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-normal truncate block">{event.organizer}</span>
+                    <span className="text-[10px] text-slate-400 font-normal truncate block">
+                      {event.organizer}{event.tenureName ? ` · ${event.tenureName}` : ""}
+                    </span>
+                    {event.mentor_assignments?.length > 0 && (() => {
+                      const mentorSummary = event.mentor_assignments
+                        .map((a) => `${a.mentor_name} (${a.role_label})`)
+                        .join(", ");
+                      return (
+                        <span className="text-[10px] text-indigo-500 font-normal truncate block" title={mentorSummary}>
+                          {mentorSummary}
+                        </span>
+                      );
+                    })()}
                   </td>
 
                   <td className="py-2 px-4 font-medium text-slate-600 truncate">{event.category}</td>
@@ -186,7 +199,7 @@ export function EventTable({
                       <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                     </button>
 
-                    {activeMenuId === event.id && <DropdownMenu event={event} />}
+                    {activeMenuId === event.id && renderDropdownMenu(event)}
                   </td>
                 </tr>
               ))
@@ -207,46 +220,11 @@ export function EventTable({
         />
       </div>
 
-      {eventToDelete && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div
-            className="bg-white rounded-xl border border-slate-200 max-w-md w-full shadow-xl p-5 animate-in zoom-in-95 duration-150 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button type="button" onClick={() => setEventToDelete(null)}
-              className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="flex gap-3.5">
-              <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 border border-rose-100">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Delete event?</h3>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  Are you sure you want to delete{" "}
-                  <span className="font-semibold text-slate-800">"{eventToDelete.title}"</span>? This will also affect mentors and certificates linked to this event. This operation cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
-              <button type="button" onClick={() => setEventToDelete(null)}
-                className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
-              >
-                Cancel
-              </button>
-              <button type="button" onClick={handleConfirmDelete}
-                className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EventDeleteDialog
+        event={eventToDelete}
+        onClose={() => setEventToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

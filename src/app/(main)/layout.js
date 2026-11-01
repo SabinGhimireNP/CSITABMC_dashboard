@@ -5,7 +5,6 @@ import Header from "@/components/common/Header";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SideBar } from "@/components/common/SideBar";
 import { AuthGuard } from "@/components/common/AuthGuard";
-import { useTokenRefresh } from "@/hooks/useAuth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,12 +18,9 @@ const geistMono = Geist_Mono({
 
 /**
  * Inner layout — rendered only when AuthGuard confirms authentication.
- * Mounts the background token-refresh schedule via useTokenRefresh.
+ * AuthGuard owns the single background token-refresh schedule.
  */
 function DashboardShell({ children }) {
-  // Proactively refresh the access token 2 minutes before it expires.
-  useTokenRefresh();
-
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full overflow-hidden">

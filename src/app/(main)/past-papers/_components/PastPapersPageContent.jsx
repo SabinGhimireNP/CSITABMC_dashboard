@@ -11,6 +11,7 @@ import { PlusCircle } from "lucide-react";
 import PastPapersSkeleton from "./PastPapersSkeleton";
 import { toast } from "sonner";
 import { parseServerError } from "@/lib/errorUtils";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "board", "model"];
 
@@ -76,20 +77,11 @@ export function PastPapersPageContent() {
   );
 
   // ── Debounced search ─────────────────────────────────────────────────────
-  const [localSearch, setLocalSearch] = useState(searchQuery);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    setLocalSearch(searchQuery);
-  }, [searchQuery]);
-
-  const handleSearchChange = (value) => {
-    setLocalSearch(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateQuery({ search: value, page: "" });
-    }, 350);
-  };
+  const { value: localSearch, handleSearchChange } = useDebouncedSearch({
+    initialValue: searchQuery,
+    delay: 350,
+    onSearch: (value) => updateQuery({ search: value, page: "" }),
+  });
 
   // ── Sort (header click → ordering query param) ────────────────────────
   const handleSortChange = (field) => {
@@ -128,6 +120,7 @@ export function PastPapersPageContent() {
       subject_name: formData.subject_code,
       semester: formData.semester,
       model_set: formData.model_set,
+      is_old_course: Boolean(formData.is_old_course),
       exam_year: formData.exam_year,
       drive_link: formData.drive_link,
     };

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, FileText, MoreHorizontal, Pencil, Trash2, AlertTriangle, X, Copy } from "lucide-react";
+import { ArrowUpDown, FileText, MoreHorizontal, Pencil, Trash2, Copy } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { NoticeDeleteDialog } from "./NoticeDeleteDialog";
 
 export function NoticeTable({ 
   notices = [], 
@@ -63,7 +64,7 @@ export function NoticeTable({
     }
   };
 
-  const SortIndicator = ({ field }) => {
+  const renderSortIndicator = (field) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
     if (sortOrder === "asc")  return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
     if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
@@ -75,7 +76,7 @@ export function NoticeTable({
   };
 
   // Portal dropdown — escapes overflow:hidden on the table wrapper
-  const DropdownMenu = ({ notice }) =>
+  const renderDropdownMenu = (notice) =>
     createPortal(
       <div
         onMouseDown={(e) => e.stopPropagation()}
@@ -111,17 +112,17 @@ export function NoticeTable({
           <thead>
             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
               <th onClick={() => onHeaderClick("id")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[10%]">
-                <div className="flex items-center gap-1.5">ID <SortIndicator field="id" /></div>
+                <div className="flex items-center gap-1.5">ID {renderSortIndicator("id")}</div>
               </th>
               <th className="py-3 px-4 w-[10%]">Image</th>
               <th onClick={() => onHeaderClick("title")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[40%]">
-                <div className="flex items-center gap-1.5">Title <SortIndicator field="title" /></div>
+                <div className="flex items-center gap-1.5">Title {renderSortIndicator("title")}</div>
               </th>
               <th onClick={() => onHeaderClick("category")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[15%]">
-                <div className="flex items-center gap-1.5">Category <SortIndicator field="category" /></div>
+                <div className="flex items-center gap-1.5">Category {renderSortIndicator("category")}</div>
               </th>
               <th onClick={() => onHeaderClick("createdAt")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[13%]">
-                <div className="flex items-center gap-1.5">Date Created <SortIndicator field="createdAt" /></div>
+                <div className="flex items-center gap-1.5">Date Created {renderSortIndicator("createdAt")}</div>
               </th>
               <th className="py-3 px-4 w-[12%]">Status</th>
               <th className="py-3 px-4 text-right pr-6 w-[10%]">Actions</th>
@@ -159,6 +160,11 @@ export function NoticeTable({
                     <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors block truncate">
                       {notice.title}
                     </span>
+                    {notice.slug && (
+                      <span className="text-[10px] text-slate-400 font-normal truncate block" title={notice.slug}>
+                        /{notice.slug}
+                      </span>
+                    )}
                   </td>
 
                   <td className="py-2 px-4 font-medium text-slate-600 truncate">{notice.category}</td>
@@ -185,7 +191,7 @@ export function NoticeTable({
                       <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
                     </button>
 
-                    {activeMenuId === notice.id && <DropdownMenu notice={notice} />}
+                    {activeMenuId === notice.id && renderDropdownMenu(notice)}
                   </td>
                 </tr>
               ))
@@ -206,47 +212,11 @@ export function NoticeTable({
         />
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      {noticeToDelete && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div
-            className="bg-white rounded-xl border border-slate-200 max-w-md w-full shadow-xl p-5 animate-in zoom-in-95 duration-150 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button type="button" onClick={() => setNoticeToDelete(null)}
-              className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="flex gap-3.5">
-              <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 border border-rose-100">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Delete platform notice?</h3>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  Are you sure you want to delete{" "}
-                  <span className="font-semibold text-slate-800">"{noticeToDelete.title}"</span>? This operation cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
-              <button type="button" onClick={() => setNoticeToDelete(null)}
-                className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
-              >
-                Cancel
-              </button>
-              <button type="button" onClick={handleConfirmDelete}
-                className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <NoticeDeleteDialog
+        notice={noticeToDelete}
+        onClose={() => setNoticeToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

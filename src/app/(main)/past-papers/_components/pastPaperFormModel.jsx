@@ -5,43 +5,35 @@ import { pastPaperSchema, SEMESTER_LABELS } from "@/lib/Schema/pastPaperSchema";
 import { Loader2, X, Link } from "lucide-react";
 import { SUBJECTS_LIST } from "@/hooks/usePastPapers";
 
-export function PastPaperFormModal({
+export function PastPaperFormModal(props) {
+  if (!props.isOpen) return null;
+  const key = props.initialData?.id || "new-past-paper";
+  return <PastPaperFormModalContent key={key} {...props} />;
+}
+
+function PastPaperFormModalContent({
   initialData = null,
   isOpen,
   onSubmitSuccess,
   onCancel,
 }) {
-  const [formData, setFormData] = useState({
-    subject_code: "",
-    semester: "",
-    model_set: false,
-    exam_year: "",
-    drive_link: "",
-  });
+  const [formData, setFormData] = useState(() => ({
+    subject_code: initialData?.subject_code || "",
+    semester: initialData?.semester ?? "",
+    model_set: initialData?.model_set ?? false,
+    is_old_course: initialData?.is_old_course ?? false,
+    exam_year: initialData?.exam_year ?? "",
+    drive_link: initialData?.drive_link || "",
+  }));
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        subject_code: initialData?.subject_code || "",
-        semester: initialData?.semester ?? "",
-        model_set: initialData?.model_set ?? false,
-        exam_year: initialData?.exam_year ?? "",
-        drive_link: initialData?.drive_link || "",
-      });
-      setErrors({});
-    }
-  }, [initialData, isOpen]);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "unset";
     return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -109,6 +101,11 @@ export function PastPaperFormModal({
               }`}
             >
               <option value="">Select subject</option>
+              {formData.subject_code && !SUBJECTS_LIST.some((s) => s.id === formData.subject_code) && (
+                <option value={formData.subject_code}>
+                  {formData.subject_code} (Custom / Unmapped)
+                </option>
+              )}
               {SUBJECTS_LIST.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.label}
@@ -173,6 +170,39 @@ export function PastPaperFormModal({
                   </label>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Course Syllabus Version (Old Course vs New Course) */}
+          <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="flex items-center justify-between">
+              <label className="font-semibold text-slate-700">Syllabus Version</label>
+              <span className="text-[10px] text-slate-400">Mark if this paper is from an older curriculum</span>
+            </div>
+            <div className="flex items-center gap-6 h-8">
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="is_old_course"
+                  checked={!formData.is_old_course}
+                  onChange={() => setFormData((prev) => ({ ...prev, is_old_course: false }))}
+                  className="h-3.5 w-3.5 border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="font-medium text-slate-700">New / Current Course</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="is_old_course"
+                  checked={Boolean(formData.is_old_course)}
+                  onChange={() => setFormData((prev) => ({ ...prev, is_old_course: true }))}
+                  className="h-3.5 w-3.5 border-amber-400 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <span className="font-medium text-amber-800 flex items-center gap-1.5">
+                  Old Course
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold border border-amber-200">Legacy</span>
+                </span>
+              </label>
             </div>
           </div>
 
