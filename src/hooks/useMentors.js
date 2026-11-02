@@ -5,6 +5,30 @@ import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 import { getAssignmentRoleLabel } from "@/lib/Constants/MentorEventRoles";
 
+export const mapMentorFromBackend = (mentor) => {
+  const eventAssignments = Array.isArray(mentor.event_assignments)
+    ? mentor.event_assignments.map((a) => ({
+        eventId: a.event_id,
+        eventTitle: a.event_title || "",
+        role: a.role,
+        customRole: a.custom_role || "",
+        roleLabel: getAssignmentRoleLabel(a),
+        responsibility: a.responsibility || "",
+      }))
+    : [];
+  return {
+    id: mentor.id,
+    fullName: mentor.name,
+    email: mentor.email || "",
+    socialLink: mentor.linkedin_profile || "",
+    image: mentor.photo || null,
+    events: eventAssignments.map((a) => a.eventId),
+    eventAssignments,
+    role: mentor.expertise || "",
+    status: "published",
+  };
+};
+
 const fetchMentors = createThrottle(async (queryParams = {}) => {
   const { search = "", status = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
@@ -21,29 +45,7 @@ const fetchMentors = createThrottle(async (queryParams = {}) => {
   const { data } = await apiClient.get("/mentors/", { params });
 
   const rawResults = Array.isArray(data) ? data : (data.results || []);
-  const fetchedMentors = rawResults.map((mentor) => {
-    const eventAssignments = Array.isArray(mentor.event_assignments)
-      ? mentor.event_assignments.map((a) => ({
-          eventId: a.event_id,
-          eventTitle: a.event_title || "",
-          role: a.role,
-          customRole: a.custom_role || "",
-          roleLabel: getAssignmentRoleLabel(a),
-          responsibility: a.responsibility || "",
-        }))
-      : [];
-    return {
-      id: mentor.id,
-      fullName: mentor.name,
-      email: mentor.email || "",
-      socialLink: mentor.linkedin_profile || "",
-      image: mentor.photo || null,
-      events: eventAssignments.map((a) => a.eventId),
-      eventAssignments,
-      role: mentor.expertise || "",
-      status: "published",
-    };
-  });
+  const fetchedMentors = rawResults.map(mapMentorFromBackend);
 
   const count = data.count ?? rawResults.length;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -61,6 +63,19 @@ export const useMentors = (queryParams = {}) => {
   return useQuery({
     queryKey: ["mentors", search, status, id, ordering, page, pageSize],
     queryFn: () => fetchMentors({ search, status, id, ordering, page, pageSize }),
+  });
+};
+
+export const useMentorDetail = (id) => {
+  return useQuery({
+    queryKey: ["mentor", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data } = await apiClient.get(`/mentors/${id}/`);
+      return mapMentorFromBackend(data);
+    },
+    enabled: Boolean(id),
+    retry: false,
   });
 };
 

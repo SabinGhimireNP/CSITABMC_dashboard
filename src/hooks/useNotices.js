@@ -4,6 +4,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
+export const mapNoticeFromBackend = (notice) => ({
+  id: notice.id,
+  slug: notice.slug,
+  title: notice.title,
+  image: notice.image,
+  category: notice.category,
+  status: notice.status,
+  description: notice.description,
+  createdAt: notice.updated_at,
+});
+
 const fetchNotices = createThrottle(async (queryParams = {}) => {
   const { search = "", status = "", category = "", date = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
@@ -21,16 +32,7 @@ const fetchNotices = createThrottle(async (queryParams = {}) => {
 
   const { data } = await apiClient.get("/notices", { params });
 
-  const fetchedNotices = (data.results || []).map((notice) => ({
-    id: notice.id,
-    slug: notice.slug,
-    title: notice.title,
-    image: notice.image,
-    category: notice.category,
-    status: notice.status,
-    description: notice.description,
-    createdAt: notice.updated_at,
-  }));
+  const fetchedNotices = (data.results || []).map(mapNoticeFromBackend);
 
   const count = data.count || 0;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -48,6 +50,19 @@ export const useNotices = (queryParams = {}) => {
   return useQuery({
     queryKey: ["notices", search, status, category, date, id, ordering, page, pageSize],
     queryFn: () => fetchNotices({ search, status, category, date, id, ordering, page, pageSize }),
+  });
+};
+
+export const useNoticeDetail = (slugOrId) => {
+  return useQuery({
+    queryKey: ["notice-detail", slugOrId],
+    queryFn: async () => {
+      if (!slugOrId) return null;
+      const { data } = await apiClient.get(`/notices/${slugOrId}/`);
+      return mapNoticeFromBackend(data);
+    },
+    enabled: Boolean(slugOrId),
+    retry: false,
   });
 };
 

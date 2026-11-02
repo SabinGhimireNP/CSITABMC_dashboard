@@ -34,10 +34,10 @@ export function MembersPageHeader({
             </button>
           )}
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-primary">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">
               {title}
             </h1>
-            <p className="text-sm text-muted-foreground font-normal flex items-center gap-2">
+            <p className="text-sm text-muted-foreground font-normal flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span>{subtitle}</span>
               {selectedTenure && (
                 <span className="text-[11px] text-slate-400">
@@ -53,7 +53,7 @@ export function MembersPageHeader({
         <Button
           size="sm"
           onClick={onAddMember}
-          className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 text-xs font-semibold h-9 px-4 shadow-2xs w-full sm:w-auto cursor-pointer"
         >
           <UserPlus className="h-4 w-4" />
           Add Member

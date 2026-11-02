@@ -1,23 +1,56 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { useAdmins, useCreateAdmin, useUpdateAdmin, useDeleteAdmin } from "@/hooks/useAdmins";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAdmins, useAdminDetail, useCreateAdmin, useUpdateAdmin, useDeleteAdmin, useToggleAdminActive } from "@/hooks/useAdmins";
 import { AdminTable } from "./AdminTable";
 import { AdminTabs } from "./AdminTabs";
 import { AdminFormModal } from "./AdminFormModal";
 import { AdminsPageHeader } from "./AdminsPageHeader";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import AdminsSkeleton from "./AdminsSkeleton";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 
-export function AdminsPageContent() {
+export function AdminsPageContent({ initialModalMode = null }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("none");
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditAdmin,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useAdminDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditAdmin) {
+        setFormMode({ isOpen: true, editData: routeEditAdmin });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditAdmin]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/admins");
+    }
+  }, [initialModalMode, router]);
 
   // One request for the full list; paging, search and sorting never refetch.
   const { data: queryData, isLoading, isError, error } = useAdmins();
@@ -25,6 +58,19 @@ export function AdminsPageContent() {
   const createMutation = useCreateAdmin();
   const updateMutation = useUpdateAdmin();
   const deleteMutation = useDeleteAdmin();
+  const toggleActiveMutation = useToggleAdminActive();
+
+  const handleToggleActive = (admin) => {
+    const nextStatus = !admin.is_active;
+    toast.promise(
+      toggleActiveMutation.mutateAsync({ id: admin.id, is_active: nextStatus }),
+      {
+        loading: nextStatus ? "Activating account..." : "Deactivating account...",
+        success: nextStatus ? "Account activated." : "Account deactivated.",
+        error: (err) => err?.response?.data?.detail || "Failed to update account status.",
+      }
+    );
+  };
 
   const liveAdmins = useMemo(() => queryData?.data || [], [queryData]);
 
@@ -60,7 +106,7 @@ export function AdminsPageContent() {
   };
 
   const handleEditAdminTrigger = (admin) => {
-    setFormMode({ isOpen: true, editData: admin });
+    router.push(`/admins/${admin.id}/edit`);
   };
 
   const handleFormSubmitSuccess = (formData) => {
@@ -72,7 +118,7 @@ export function AdminsPageContent() {
         id: "admin-mutation",
         loading: "Updating admin access",
         success: () => {
-          setFormMode({ isOpen: false, editData: null });
+          handleCloseModal();
           return "Admin access updated successfully.";
         },
         error: "Failed to update admin access.",
@@ -82,7 +128,7 @@ export function AdminsPageContent() {
         id: "admin-mutation",
         loading: "Adding admin access",
         success: () => {
-          setFormMode({ isOpen: false, editData: null });
+          handleCloseModal();
           setCurrentPage(1);
           return "Admin access added successfully.";
         },
@@ -149,9 +195,9 @@ export function AdminsPageContent() {
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
-      <AdminsPageHeader onAddAdmin={() => setFormMode({ isOpen: true, editData: null })} />
+      <AdminsPageHeader onAddAdmin={() => router.push("/admins/new")} />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <AdminTabs
           activeTab={activeTab}
           onTabChange={(tab) => {
@@ -193,6 +239,7 @@ export function AdminsPageContent() {
             sortOrder={sortOrder}
             onHeaderClick={handleSortChange}
             isDeleting={deleteMutation.isPending}
+            onToggleActive={handleToggleActive}
           />
         )}
       </div>
@@ -201,8 +248,15 @@ export function AdminsPageContent() {
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
         onSubmitSuccess={handleFormSubmitSuccess}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
         isPending={createMutation.isPending || updateMutation.isPending}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Admin"
+        returnPath="/admins"
+        onClose={() => router.push("/admins")}
       />
     </div>
   );

@@ -26,6 +26,54 @@ const parseDateTime = (dtStr) => {
   return { date, time };
 };
 
+export const mapEventFromBackend = (event) => {
+  const startDt = parseDateTime(event.date || event.start_time);
+  const endDt = parseDateTime(event.end_time || event.date);
+
+  const mentorsList = Array.isArray(event.mentors)
+    ? event.mentors.map((m) => (typeof m === "object" ? m.id : m))
+    : [];
+  const mentorAssignments = Array.isArray(event.mentor_assignments)
+    ? event.mentor_assignments.map((a) => ({
+        mentor_id: a.mentor_id,
+        mentor_name: a.mentor_name || "",
+        mentor_photo: a.mentor_photo || "",
+        role: a.role,
+        role_label: getAssignmentRoleLabel(a),
+        custom_role: a.custom_role || "",
+        responsibility: a.responsibility || "",
+      }))
+    : [];
+
+  return {
+    id: event.id,
+    title: event.title || "",
+    registrationOpen: true,
+    startDate: startDt.date,
+    endDate: endDt.date,
+    startTime: startDt.time,
+    endTime: endDt.time,
+    organizer: event.organiser || "",
+    availableSeats: event.available_seats || 0,
+    registrationFeeBMC: Number(event.registration_fee_bmc) || 0,
+    registrationFee: Number(event.registration_fee_non_bmc) || 0,
+    location: event.location || "",
+    category: mapCategoryFromBackend(event.category),
+    tags: event.tags ? [event.tags] : [],
+    registrationFormUrl: event.registration_link || "",
+    image: event.image || null,
+    description: event.description || "",
+    mentors: mentorsList,
+    mentor_assignments: mentorAssignments,
+    tenure: event.tenure || null,
+    tenureName: event.tenure_name || null,
+    status: event.status || "draft",
+    created_at: event.created_at,
+    updated_at: event.updated_at,
+    slug: event.slug,
+  };
+};
+
 const fetchEvents = createThrottle(async (queryParams = {}) => {
   const { search = "", status = "", category = "", date = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
@@ -48,52 +96,7 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
     : Array.isArray(data?.results)
       ? data.results
       : [];
-  const fetchedEvents = rawResults.map((event) => {
-    const startDt = parseDateTime(event.date || event.start_time);
-    const endDt = parseDateTime(event.end_time || event.date);
-
-    const mentorsList = Array.isArray(event.mentors)
-      ? event.mentors.map((m) => (typeof m === "object" ? m.id : m))
-      : [];
-    const mentorAssignments = Array.isArray(event.mentor_assignments)
-      ? event.mentor_assignments.map((a) => ({
-          mentor_id: a.mentor_id,
-          mentor_name: a.mentor_name || "",
-          role: a.role,
-          role_label: getAssignmentRoleLabel(a),
-          custom_role: a.custom_role || "",
-          responsibility: a.responsibility || "",
-        }))
-      : [];
-
-    return {
-      id: event.id,
-      title: event.title || "",
-      registrationOpen: true,
-      startDate: startDt.date,
-      endDate: endDt.date,
-      startTime: startDt.time,
-      endTime: endDt.time,
-      organizer: event.organiser || "",
-      availableSeats: event.available_seats || 0,
-      registrationFeeBMC: Number(event.registration_fee_bmc) || 0,
-      registrationFee: Number(event.registration_fee_non_bmc) || 0,
-      location: event.location || "",
-      category: mapCategoryFromBackend(event.category),
-      tags: event.tags ? [event.tags] : [],
-      registrationFormUrl: event.registration_link || "",
-      image: event.image || null,
-      description: event.description || "",
-      mentors: mentorsList,
-      mentor_assignments: mentorAssignments,
-      tenure: event.tenure || null,
-      tenureName: event.tenure_name || null,
-      status: event.status || "draft",
-      created_at: event.created_at,
-      updated_at: event.updated_at,
-      slug: event.slug,
-    };
-  });
+  const fetchedEvents = rawResults.map(mapEventFromBackend);
 
   const count = data?.count ?? rawResults.length;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -111,6 +114,19 @@ export const useEvents = (queryParams = {}) => {
   return useQuery({
     queryKey: ["events", search, status, category, date, id, ordering, page, pageSize],
     queryFn: () => fetchEvents({ search, status, category, date, id, ordering, page, pageSize }),
+  });
+};
+
+export const useEventDetail = (idOrSlug) => {
+  return useQuery({
+    queryKey: ["event", idOrSlug],
+    queryFn: async () => {
+      if (!idOrSlug) return null;
+      const { data } = await apiClient.get(`/events/${idOrSlug}/`);
+      return mapEventFromBackend(data);
+    },
+    enabled: Boolean(idOrSlug),
+    retry: false,
   });
 };
 

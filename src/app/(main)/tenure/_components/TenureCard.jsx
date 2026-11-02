@@ -1,135 +1,77 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Users, Calendar, Copy, Pencil, Trash2, Eye, Loader2 } from "lucide-react";
-import { createPortal } from "react-dom";
+import { Users, Calendar, Copy, Pencil, Trash2, Eye, Loader2 } from "lucide-react";
+import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 
-export function TenureCard({ tenure, memberCount, onOpen, onDuplicate, isDuplicating, onEdit, onDelete }) {
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+export function TenureCard({ tenure, memberCount, onDuplicate, isDuplicating, onEdit, onDelete }) {
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [buttonRef, setButtonRef] = useState(null);
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
-
-  const handleMenuToggle = (e) => {
-    e.stopPropagation();
-    if (menuOpen) { setMenuOpen(false); return; }
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMenuPosition({
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.right + window.scrollX - 128,
-    });
-    setMenuOpen(true);
-  };
-
-  // Close menu on outside click
-  React.useEffect(() => {
-    if (!menuOpen) return;
-    function handleClose() { setMenuOpen(false); }
-    document.addEventListener("mousedown", handleClose);
-    document.addEventListener("scroll", handleClose, true);
-    return () => {
-      document.removeEventListener("mousedown", handleClose);
-      document.removeEventListener("scroll", handleClose, true);
-    };
-  }, [menuOpen]);
 
   const handleOpenTenure = () => {
     router.push(`/tenure/${tenure.id}`);
   };
 
-  const renderDropdownMenu = () =>
-    createPortal(
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ position: "absolute", top: menuPosition.top, left: menuPosition.left }}
-        className="w-36 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-99999 animate-in fade-in slide-in-from-top-1 duration-100"
-      >
-        <button type="button"
-          onClick={() => { setMenuOpen(false); handleOpenTenure(); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <Eye className="h-3.5 w-3.5 text-slate-400" /> Open
-        </button>
-        <button type="button"
-          disabled={isDuplicating}
-          onClick={() => { if (!isDuplicating) { setMenuOpen(false); if (onDuplicate) onDuplicate(tenure); } }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isDuplicating ? (
-            <Loader2 className="h-3.5 w-3.5 text-slate-400 animate-spin" />
-          ) : (
-            <Copy className="h-3.5 w-3.5 text-slate-400" />
-          )}
-          {isDuplicating ? "Duplicating" : "Duplicate"}
-        </button>
-        <button type="button"
-          onClick={() => { setMenuOpen(false); if (onEdit) onEdit(tenure); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
-        >
-          <Pencil className="h-3.5 w-3.5 text-slate-400" /> Edit
-        </button>
-        <button type="button"
-          onClick={() => { setMenuOpen(false); if (onDelete) onDelete(tenure); }}
-          className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete
-        </button>
-      </div>,
-      document.body
-    );
-
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 hover:border-indigo-200/60 group">
-      <div className="p-5 flex flex-col gap-3">
+    <div className="bg-card text-foreground rounded-xl border border-border shadow-xs hover:shadow-md transition-all duration-200 hover:border-primary/40 group min-w-0">
+      <div className="p-4 sm:p-5 flex flex-col gap-3">
         {/* Header: Name + Menu */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div className="space-y-1 min-w-0 flex-1">
-            <h3 className="text-base font-bold text-slate-900 tracking-tight truncate">
+            <h3 className="text-base font-bold text-foreground tracking-tight truncate" title={tenure.name}>
               {tenure.name}
             </h3>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <Calendar className="h-3 w-3 text-slate-400" />
-              <span>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Calendar className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+              <span className="break-words">
                 {formatDate(tenure.startDate)} — {formatDate(tenure.endDate)}
               </span>
             </div>
           </div>
-          <button
-            ref={(el) => setButtonRef(el)}
-            type="button"
-            onClick={handleMenuToggle}
-            className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
-          >
-            <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
-          </button>
+          {/* Always visible on touch screens; revealed on hover from md up */}
+          <div className="shrink-0 -mr-1.5 -mt-1 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
+            <RowActionsMenu
+              label={`Actions for ${tenure.name}`}
+              items={[
+                { label: "Open", icon: Eye, onClick: handleOpenTenure },
+                {
+                  key: "duplicate",
+                  label: isDuplicating ? "Duplicating" : "Duplicate",
+                  icon: isDuplicating ? Loader2 : Copy,
+                  spinning: isDuplicating,
+                  disabled: isDuplicating,
+                  onClick: () => onDuplicate?.(tenure),
+                },
+                { label: "Edit", icon: Pencil, onClick: () => onEdit?.(tenure) },
+                { label: "Delete", icon: Trash2, destructive: true, onClick: () => onDelete?.(tenure) },
+              ]}
+            />
+          </div>
         </div>
 
         {/* Member Count Badge */}
-        <div className="flex items-center gap-2 text-xs text-slate-500 pt-1 border-t border-slate-100/80">
-          <Users className="h-3.5 w-3.5 text-indigo-400" />
-          <span className="font-semibold text-slate-700">{memberCount}</span>
-          <span className="text-slate-400">member{memberCount !== 1 ? "s" : ""}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-border">
+          <Users className="h-3.5 w-3.5 text-primary" />
+          <span className="font-semibold text-foreground">{memberCount}</span>
+          <span className="text-muted-foreground">member{memberCount !== 1 ? "s" : ""}</span>
         </div>
 
         {/* Open Button */}
         <button
           type="button"
           onClick={handleOpenTenure}
-          className="w-full h-9 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-indigo-100/60"
+          className="w-full h-9 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-primary/20"
         >
           <Eye className="h-3.5 w-3.5" />
           View Members
         </button>
       </div>
-
-      {menuOpen && renderDropdownMenu()}
     </div>
   );
 }

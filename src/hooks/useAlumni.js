@@ -4,6 +4,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
+export const mapAlumniFromBackend = (alumni) => ({
+  id: alumni.id || "1",
+  memberId: alumni.member?.id || alumni.id,
+  fullName: alumni.member?.name || "",
+  email: alumni.member?.email || "",
+  phoneNumber: alumni.member?.phone_number || "",
+  facebookLink: alumni.member?.fb_link || "",
+  linkedinLink: alumni.member?.linkedin_link || "",
+  githubLink: alumni.member?.github_link || "",
+  slug: alumni.member?.slug || "",
+  image: alumni.member?.image || null,
+  graduationYear: alumni.graduation_year || null,
+  tenureIds: Array.isArray(alumni.tenure_ids)
+    ? alumni.tenure_ids.map((id) => Number(id))
+    : Array.isArray(alumni.tenureIds)
+      ? alumni.tenureIds.map((id) => Number(id))
+      : [],
+  bio: alumni.bio || "",
+  status: "active",
+});
+
 // Alumni are paginated in the browser, so the full list is fetched once.
 const fetchAlumni = createThrottle(async () => {
   const { data } = await apiClient.get("/alumni/", { params: { all: true, _: Date.now() } });
@@ -13,26 +34,7 @@ const fetchAlumni = createThrottle(async () => {
     : Array.isArray(data?.results)
       ? data.results
       : [];
-  const fetchedAlumni = rawResults.map((alumni) => ({
-    id: alumni.id || "1",
-    memberId: alumni.member?.id || alumni.id,
-    fullName: alumni.member?.name || "",
-    email: alumni.member?.email || "",
-    phoneNumber: alumni.member?.phone_number || "",
-    facebookLink: alumni.member?.fb_link || "",
-    linkedinLink: alumni.member?.linkedin_link || "",
-    githubLink: alumni.member?.github_link || "",
-    slug: alumni.member?.slug || "",
-    image: alumni.member?.image || null,
-    graduationYear: alumni.graduation_year || null,
-    tenureIds: Array.isArray(alumni.tenure_ids)
-      ? alumni.tenure_ids.map((id) => Number(id))
-      : Array.isArray(alumni.tenureIds)
-        ? alumni.tenureIds.map((id) => Number(id))
-        : [],
-    bio: alumni.bio || "",
-    status: "active",
-  }));
+  const fetchedAlumni = rawResults.map(mapAlumniFromBackend);
 
   return { data: fetchedAlumni };
 });
@@ -41,6 +43,19 @@ export const useAlumni = () => {
   return useQuery({
     queryKey: ["alumni"],
     queryFn: () => fetchAlumni(),
+  });
+};
+
+export const useAlumniDetail = (id) => {
+  return useQuery({
+    queryKey: ["alumni-detail", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data } = await apiClient.get(`/alumni/${id}/`);
+      return mapAlumniFromBackend(data);
+    },
+    enabled: Boolean(id),
+    retry: false,
   });
 };
 

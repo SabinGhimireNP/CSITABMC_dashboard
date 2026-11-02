@@ -3,10 +3,11 @@
 import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { useNotices, useCreateNotice, useUpdateNotice, useDeleteNotice } from "@/hooks/useNotices";
+import { useNotices, useNoticeDetail, useCreateNotice, useUpdateNotice, useDeleteNotice } from "@/hooks/useNotices";
 import { NoticeTable } from "./noticeTable";
 import { NoticeTabs } from "./noticeTabs";
 import { NoticeFormModal } from "./noticeForm";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import NoticesSkeleton from "./NoticesSkeleton";
@@ -15,11 +16,45 @@ import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "published", "draft"];
 
-export function NoticesPageContent() {
+import { usePermission } from "@/hooks/usePermission";
+
+export function NoticesPageContent({ initialModalMode = null }) {
+  const { can } = usePermission();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditNotice,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useNoticeDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditNotice) {
+        setFormMode({ isOpen: true, editData: routeEditNotice });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditNotice]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/notices");
+    }
+  }, [initialModalMode, router]);
 
   const activeTab = VALID_TABS.includes(searchParams.get("tab"))
     ? searchParams.get("tab")
@@ -32,7 +67,6 @@ export function NoticesPageContent() {
     ? parseInt(rowsPerPageParam, 10)
     : 5;
 
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
   const createNoticeMutation = useCreateNotice();
   const updateNoticeMutation = useUpdateNotice();
   const deleteNoticeMutation = useDeleteNotice();
@@ -122,7 +156,7 @@ export function NoticesPageContent() {
   };
 
   const handleEditNoticeTrigger = (notice) => {
-    setFormMode({ isOpen: true, editData: notice });
+    router.push(`/notices/${notice.slug || notice.id}/edit`);
   };
 
   const handleDuplicateNoticeTrigger = (notice) => {
@@ -154,7 +188,7 @@ export function NoticesPageContent() {
       id: "notice-mutation",
       loading: isEdit ? "Updating notice" : "Adding notice",
       success: () => {
-        setFormMode({ isOpen: false, editData: null });
+        handleCloseModal();
         if (!isEdit) updateQuery({ page: 1 });
         return isEdit ? "Notice updated successfully." : "Notice created successfully.";
       },
@@ -180,22 +214,24 @@ export function NoticesPageContent() {
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Notices</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Notices</h1>
           <p className="text-sm text-muted-foreground font-normal">Manage, coordinate, and review your platform notice outputs.</p>
         </div>
-        <div className="shrink-0">
-          <Button
-            size="sm"
-            onClick={() => setFormMode({ isOpen: true, editData: null })}
-            className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Publish Notice
-          </Button>
-        </div>
+        {can("notices.create") && (
+          <div className="shrink-0">
+            <Button
+              size="sm"
+              onClick={() => router.push("/notices/new")}
+              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Publish Notice
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <NoticeTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -232,7 +268,14 @@ export function NoticesPageContent() {
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
         onSubmitSuccess={handleFormSubmitSuccess}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Notice"
+        returnPath="/notices"
+        onClose={() => router.push("/notices")}
       />
     </div>
   );

@@ -6,13 +6,14 @@ import { toast } from "sonner";
 import { FormSection } from "@/components/common/FormSection";
 import { MarkdownEditor } from "@/components/common/MarkdownEditor";
 import { FeaturedImagePicker } from "@/components/common/FeaturedImagePicker";
-import { useBlog, useCreateBlog, useUpdateBlog, uploadBlogImage, toBlogPayload } from "@/hooks/useBlogs";
+import { useBlog, useCreateBlog, useUpdateBlog, uploadBlogImage, deleteBlogImage, toBlogPayload } from "@/hooks/useBlogs";
 import { useMembersList } from "@/hooks/useMembers";
 import { MemberSearchCombobox } from "@/components/common/MemberSearchCombobox";
 import { blogSchema, BLOG_LIMITS } from "@/lib/Schema/blogSchema";
 import { parseServerError } from "@/lib/errorUtils";
 import { BlogConfirmDialog } from "./BlogDeleteDialog";
 import { slugifyText, formatDate } from "./blogUtils";
+import { MODAL_OVERLAY_CLASS, MODAL_BACKDROP_CLASS, modalPanelClass } from "@/components/common/ModalShell";
 
 // API field name → form field name, for mapping server validation errors
 const SERVER_FIELD_MAP = {
@@ -67,28 +68,28 @@ function ModalShell({ title, subtitle, onClose, children, footer, headerExtra })
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200" />
+    <div className={MODAL_OVERLAY_CLASS}>
+      <div className={MODAL_BACKDROP_CLASS} />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="blog-form-title"
-        className="relative bg-white w-full max-w-6xl rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200 z-10 text-xs"
+        className={modalPanelClass("max-w-6xl", "sm:max-h-[94dvh]")}
       >
-        <div className="p-5 sm:px-8 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50 shrink-0">
+        <div className="px-4 py-4 sm:p-5 sm:px-8 border-b border-border/80 dark:border-white/10 flex items-center justify-between gap-4 bg-muted/40 dark:bg-[#16181e] shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 id="blog-form-title" className="font-semibold text-lg text-[#0b2574]">{title}</h2>
+              <h2 id="blog-form-title" className="font-semibold text-base sm:text-lg text-foreground break-words">{title}</h2>
               {headerExtra}
             </div>
-            {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer shrink-0"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
           >
             <X className="h-4 w-4 stroke-[2.5]" />
           </button>
@@ -248,12 +249,12 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
   );
 
   const footer = (
-    <div className="p-5 sm:px-8 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 w-full shrink-0">
+    <div className="px-4 py-3 sm:p-5 sm:px-8 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
       <button
         type="button"
         disabled={busy}
         onClick={requestClose}
-        className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs transition-colors"
+        className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors"
       >
         Cancel
       </button>
@@ -265,7 +266,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
               type="button"
               disabled={busy}
               onClick={requestUnpublish}
-              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] hover:bg-muted/50 dark:hover:bg-white/10 rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {spinner("unpublish") || <EyeOff className="h-3.5 w-3.5" />}
               Unpublish
@@ -274,7 +275,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
               type="button"
               disabled={busy}
               onClick={() => submit("save-published")}
-              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 disabled:opacity-60 text-white rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {spinner("save-published") || <CheckCircle2 className="h-3.5 w-3.5" />}
               Save Changes
@@ -286,7 +287,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
               type="button"
               disabled={busy}
               onClick={() => submit("draft")}
-              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] hover:bg-muted/50 dark:hover:bg-white/10 rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {spinner("draft")}
               Save Draft
@@ -295,7 +296,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
               type="button"
               disabled={busy}
               onClick={() => submit("publish")}
-              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 disabled:opacity-60 text-white rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {spinner("publish") || <CheckCircle2 className="h-3.5 w-3.5" />}
               Publish
@@ -320,7 +321,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
       onClose={requestClose}
       footer={footer}
     >
-      <div className="p-6 sm:p-8 overflow-y-auto space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
+      <div className="p-4 sm:p-8 overflow-y-auto min-h-0 space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
         {/* Section 1: Basic Information */}
         <FormSection
           title="Basic Information"
@@ -380,7 +381,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
               </div>
               <div
                 aria-labelledby="blog-slug-label"
-                className="flex items-center min-h-[42px] px-3.5 border border-slate-200 rounded-xl bg-slate-50 font-mono text-[11px] text-slate-600 overflow-hidden"
+                className="flex items-center min-h-[42px] px-3.5 border border-border/80 dark:border-white/10 rounded-xl bg-muted/30 font-mono text-[11px] text-muted-foreground overflow-hidden"
               >
                 <span className="text-slate-400 shrink-0">/blogs/</span>
                 <span className="truncate">{slugPreview || "—"}</span>
@@ -431,6 +432,7 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
             imageUrl={form.featuredImageUrl}
             imageAlt={form.featuredImageAlt}
             isUploadedAsset={Boolean(form.featuredImagePublicId)}
+            publicId={form.featuredImagePublicId}
             onUpload={uploadBlogImage}
             onChange={({ url, publicId, suggestedAlt }) => {
               setForm((prev) => ({
@@ -442,9 +444,15 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
               setErrors((prev) => ({ ...prev, featuredImageUrl: undefined }));
             }}
             onAltChange={(alt) => setField("featuredImageAlt", alt)}
-            onRemove={() =>
-              setForm((prev) => ({ ...prev, featuredImageUrl: "", featuredImagePublicId: "", featuredImageAlt: "" }))
-            }
+            onRemove={() => {
+              setForm((prev) => ({ ...prev, featuredImageUrl: "", featuredImagePublicId: "", featuredImageAlt: "" }));
+              toast.info("Image cleared from current form draft.");
+            }}
+            onDestroy={async ({ url, publicId }) => {
+              await deleteBlogImage({ url, publicId, excludeBlogId: initialData?.id });
+              setForm((prev) => ({ ...prev, featuredImageUrl: "", featuredImagePublicId: "", featuredImageAlt: "" }));
+              toast.success("Asset permanently destroyed from media storage.");
+            }}
             error={errors.featuredImageUrl || errors.featuredImageAlt}
           />
         </FormSection>
@@ -512,16 +520,25 @@ function BlogEditLoader({ blogId, onClose, onSaved }) {
           </>
         )}
         {isError && (
-          <>
+          <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-rose-500 font-medium">Failed to load this article.</p>
-            <button
-              type="button"
-              onClick={() => refetch()}
-              className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
-            >
-              Try again
-            </button>
-          </>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-9 px-4 text-xs font-semibold bg-[#0b2574] text-white rounded-lg hover:bg-[#0b2574]/90 cursor-pointer shadow-2xs"
+              >
+                Back to Blogs
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </ModalShell>

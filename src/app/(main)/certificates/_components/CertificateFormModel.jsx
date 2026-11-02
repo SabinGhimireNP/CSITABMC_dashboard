@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { certificateSchema } from "@/lib/Schema/certificateSchema";
 import { Loader2, X } from "lucide-react";
+import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
 
 export function CertificateFormModal(props) {
   if (!props.isOpen) return null;
@@ -72,51 +73,52 @@ function CertificateFormModalContent({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none">
+    <div className={MODAL_OVERLAY_CLASS}>
       <div
         onClick={onCancel}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+        className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
       />
 
-      <div className="relative bg-white w-full max-w-lg rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-in scale-in-95 duration-200 z-10 text-xs">
+      <div className={modalPanelClass("max-w-lg")}>
         {/* Header */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="font-semibold text-lg text-primary">
+        <div className="p-4 border-b border-border/80 dark:border-white/10 flex items-center justify-between bg-muted/40 dark:bg-[#16181e]">
+          <div className="font-semibold text-lg text-foreground">
             {initialData ? "Edit Certificate" : "Issue Certificate"}
           </div>
           <button type="button" onClick={onCancel}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            aria-label="Close dialog"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10 transition-all cursor-pointer"
           >
             <X className="h-4 w-4 stroke-[2.5]" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 flex-1 w-full">
+        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 space-y-5 flex-1 w-full text-foreground">
           {/* Full Name */}
           <div className="space-y-1.5 w-full">
-            <label className="font-semibold text-slate-700">Full Name *</label>
+            <label className="font-semibold text-foreground text-xs">Full Name *</label>
             <input
               name="fullName"
               type="text"
               value={formData.fullName}
               onChange={handleInputChange}
               placeholder="e.g., Sujata Gurung"
-              className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                errors.fullName ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
+              className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all bg-background text-foreground text-xs ${
+                errors.fullName ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
               }`}
             />
-            {errors.fullName && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.fullName}</p>}
+            {errors.fullName && <p className="text-destructive text-[11px] font-medium mt-0.5">{errors.fullName}</p>}
           </div>
 
           {/* Event dropdown */}
           <div className="space-y-1.5 w-full">
-            <label className="font-semibold text-slate-700">Event *</label>
+            <label className="font-semibold text-foreground text-xs">Event *</label>
             <select
               name="event"
               value={formData.event}
               onChange={handleInputChange}
-              className={`w-full h-9 px-2.5 border rounded-lg bg-white focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                errors.event ? "border-rose-400 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
+              className={`w-full h-9 px-2.5 border rounded-lg bg-background text-foreground text-xs focus:outline-none focus:ring-1 transition-all cursor-pointer ${
+                errors.event ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
               }`}
             >
               <option value="">Select an event</option>
@@ -126,24 +128,24 @@ function CertificateFormModalContent({
                 </option>
               ))}
             </select>
-            {errors.event && <p className="text-rose-500 text-[11px] font-medium mt-0.5">{errors.event}</p>}
+            {errors.event && <p className="text-destructive text-[11px] font-medium mt-0.5">{errors.event}</p>}
           </div>
 
           {/* Project Complete toggle */}
-          <div className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 w-full">
+          <div className="flex items-start gap-3 p-3.5 rounded-xl border border-border/80 dark:border-white/10 bg-muted/20 w-full">
             <input
               id="isProjectComplete"
               name="isProjectComplete"
               type="checkbox"
               checked={formData.isProjectComplete}
               onChange={handleInputChange}
-              className="h-4 w-4 mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+              className="h-4 w-4 mt-0.5 rounded border-input text-primary focus:ring-primary cursor-pointer shrink-0"
             />
             <div>
-              <label htmlFor="isProjectComplete" className="font-semibold text-slate-700 cursor-pointer select-none">
+              <label htmlFor="isProjectComplete" className="font-semibold text-foreground cursor-pointer select-none">
                 Project is complete
               </label>
-              <p className="text-[10px] text-slate-400 font-normal mt-0.5">
+              <p className="text-[10px] text-muted-foreground font-normal mt-0.5">
                 Check this if the participant has fully submitted and completed their project for this event.
               </p>
             </div>
@@ -151,12 +153,12 @@ function CertificateFormModalContent({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/30 w-full shrink-0">
+        <div className="p-4 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
           <button
             type="button"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+            className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs"
           >
             Cancel
           </button>
@@ -164,7 +166,7 @@ function CertificateFormModalContent({
             type="button"
             disabled={submitType !== null}
             onClick={handleSubmit}
-            className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+            className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
           >
             {submitType === "save" ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}</>

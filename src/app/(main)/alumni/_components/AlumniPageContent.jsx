@@ -1,24 +1,56 @@
 "use client";
 
-import React, { useState, useCallback, useTransition, useMemo } from "react";
+import React, { useState, useCallback, useTransition, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { useAlumni, useCreateAlumni, useUpdateAlumni, useDeleteAlumni } from "@/hooks/useAlumni";
+import { useAlumni, useAlumniDetail, useCreateAlumni, useUpdateAlumni, useDeleteAlumni } from "@/hooks/useAlumni";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { AlumniTable } from "./AlumniTable";
 import { AlumniTabs } from "./AlumniTabs";
 import { AlumniFormModal } from "./AlumniForm";
 import { AlumniPageHeader } from "./AlumniPageHeader";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import AlumniSkeleton from "./AlumniSkeleton";
 import { parseServerError } from "@/lib/errorUtils";
 
 const VALID_TABS = ["all", "active", "draft"];
 
-export function AlumniPageContent() {
+export function AlumniPageContent({ initialModalMode = null }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditAlumni,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useAlumniDetail(editId);
+
+  const [alumniFormMode, setAlumniFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setAlumniFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditAlumni) {
+        setAlumniFormMode({ isOpen: true, editData: routeEditAlumni });
+      }
+    } else if (!initialModalMode) {
+      setAlumniFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditAlumni]);
+
+  const handleCloseModal = useCallback(() => {
+    setAlumniFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/alumni");
+    }
+  }, [initialModalMode, router]);
 
   const activeTab = VALID_TABS.includes(searchParams.get("tab"))
     ? searchParams.get("tab")
@@ -82,8 +114,6 @@ export function AlumniPageContent() {
     [processedAlumni, effectivePage, rowsPerPage]
   );
 
-  const [alumniFormMode, setAlumniFormMode] = useState({ isOpen: false, editData: null });
-
   // ── URL query params helpers ────────────────────────────────────────────
   const updateQuery = useCallback(
     (updates) => {
@@ -146,7 +176,7 @@ export function AlumniPageContent() {
   };
 
   const handleEditAlumniTrigger = (alumni) => {
-    setAlumniFormMode({ isOpen: true, editData: alumni });
+    router.push(`/alumni/${alumni.id}/edit`);
   };
 
   const handleAlumniFormSubmitSuccess = (formData) => {
@@ -168,7 +198,7 @@ export function AlumniPageContent() {
       id: "alumni-mutation",
       loading: isEdit ? "Updating alumni" : "Adding alumni",
       success: () => {
-        setAlumniFormMode({ isOpen: false, editData: null });
+        handleCloseModal();
         if (!isEdit) updateQuery({ page: 1 });
         return isEdit ? "Alumni updated successfully." : "Alumni added successfully.";
       },
@@ -192,9 +222,9 @@ export function AlumniPageContent() {
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
-      <AlumniPageHeader onAddAlumni={() => setAlumniFormMode({ isOpen: true, editData: null })} />
+      <AlumniPageHeader onAddAlumni={() => router.push("/alumni/new")} />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <AlumniTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -231,7 +261,14 @@ export function AlumniPageContent() {
         isOpen={alumniFormMode.isOpen}
         initialData={alumniFormMode.editData}
         onSubmitSuccess={handleAlumniFormSubmitSuccess}
-        onCancel={() => setAlumniFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Alumni"
+        returnPath="/alumni"
+        onClose={() => router.push("/alumni")}
       />
     </div>
   );

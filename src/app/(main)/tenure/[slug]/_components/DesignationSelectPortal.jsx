@@ -107,13 +107,13 @@ export function DesignationSelectPortal({
   }, []);
 
   const inputBase =
-    "w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-white";
-  const inputNormal = `${inputBase} border-slate-200 focus:ring-indigo-500`;
-  const inputError = `${inputBase} border-rose-400 focus:ring-rose-500`;
+    "w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-background text-foreground placeholder:text-muted-foreground";
+  const inputNormal = `${inputBase} border-input focus:ring-primary`;
+  const inputError = `${inputBase} border-destructive focus:ring-destructive`;
 
   return (
     <div className="space-y-1.5" ref={designationRef}>
-      <label className="font-semibold text-slate-700">Designation / Post *</label>
+      <label className="font-semibold text-foreground text-xs">Designation / Post *</label>
       <div className="relative">
         <input
           name="designation"
@@ -143,7 +143,7 @@ export function DesignationSelectPortal({
               openDropdown();
             }
           }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           aria-label="Toggle suggestions"
         >
           <ChevronDown
@@ -154,10 +154,10 @@ export function DesignationSelectPortal({
         </button>
       </div>
 
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[10px] text-muted-foreground">
         Choose a suggested title from the dropdown or type a custom designation.
       </p>
-      {error && <p className="text-rose-500 text-[11px] font-medium">{error}</p>}
+      {error && <p className="text-destructive text-[11px] font-medium">{error}</p>}
 
       {/* Floating Custom Designation Dropdown Portal rendered outside modal scroll container */}
       {isOpen &&
@@ -175,9 +175,9 @@ export function DesignationSelectPortal({
               left: dropdownPosition.left,
               width: dropdownPosition.width,
             }}
-            className="bg-white border border-slate-200 rounded-xl shadow-2xl z-[99999] overflow-hidden py-1 max-h-52 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 text-xs"
+            className="bg-card dark:bg-[#1a1d24] border border-border/80 dark:border-white/12 rounded-xl shadow-2xl z-[99999] overflow-hidden py-1 max-h-52 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 text-xs"
           >
-            <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/80 border-b border-slate-100">
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/40 dark:bg-[#16181e] border-b border-border">
               Suggested {roleType === "ADVISOR" ? "Advisor" : "Executive"} Posts
             </div>
             {suggestions.map((post) => {
@@ -191,12 +191,12 @@ export function DesignationSelectPortal({
                   }}
                   className={`px-3 py-2 flex items-center justify-between cursor-pointer transition-colors text-xs ${
                     isSelected
-                      ? "bg-indigo-50/80 text-indigo-900 font-medium"
-                      : "hover:bg-slate-50 text-slate-700"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted/50 text-foreground"
                   }`}
                 >
                   <span>{post}</span>
-                  {isSelected && <Check className="h-3.5 w-3.5 text-indigo-600 shrink-0" />}
+                  {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
                 </div>
               );
             })}

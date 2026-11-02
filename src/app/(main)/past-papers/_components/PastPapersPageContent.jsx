@@ -2,20 +2,31 @@
 
 import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { usePastPapers, useCreatePastPaper, useUpdatePastPaper, useDeletePastPaper } from "@/hooks/usePastPapers";
+import {
+  usePastPapers,
+  usePastPaperDetail,
+  useCreatePastPaper,
+  useUpdatePastPaper,
+  useDeletePastPaper,
+} from "@/hooks/usePastPapers";
 import { PastPaperTable } from "./pastPaperTable";
 import { PastPaperTabs } from "./pastPaperTabs";
 import { PastPaperFormModal } from "./pastPaperFormModel";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import PastPapersSkeleton from "./PastPapersSkeleton";
 import { toast } from "sonner";
 import { parseServerError } from "@/lib/errorUtils";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import { usePermission } from "@/hooks/usePermission";
 
 const VALID_TABS = ["all", "board", "model"];
 
-export function PastPapersPageContent() {
+export function PastPapersPageContent({ initialModalMode = null }) {
+  const { can } = usePermission();
+  const canCreate = can("papers.create");
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -32,7 +43,36 @@ export function PastPapersPageContent() {
     ? parseInt(rowsPerPageParam, 10)
     : 10;
 
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditPaper,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = usePastPaperDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditPaper) {
+        setFormMode({ isOpen: true, editData: routeEditPaper });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditPaper]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/past-papers");
+    }
+  }, [initialModalMode, router]);
 
   const createPaperMutation = useCreatePastPaper();
   const updatePaperMutation = useUpdatePastPaper();
@@ -111,7 +151,7 @@ export function PastPapersPageContent() {
   };
 
   const handleEditPaperTrigger = (paper) => {
-    setFormMode({ isOpen: true, editData: paper });
+    router.push(`/past-papers/${paper.slug || paper.id}/edit`);
   };
 
   const handleFormSubmitSuccess = (formData) => {
@@ -133,7 +173,7 @@ export function PastPapersPageContent() {
       id: "paper-mutation",
       loading: isEdit ? "Updating past paper" : "Adding past paper",
       success: () => {
-        setFormMode({ isOpen: false, editData: null });
+        handleCloseModal();
         return isEdit ? "Past paper updated successfully." : "Past paper added successfully.";
       },
       error: (err) => {
@@ -158,22 +198,24 @@ export function PastPapersPageContent() {
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Past Papers</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Past Papers</h1>
           <p className="text-sm text-muted-foreground font-normal">Manage, coordinate, and review academic past papers and official model questions.</p>
         </div>
-        <div className="shrink-0">
-          <Button
-            size="sm"
-            onClick={() => setFormMode({ isOpen: true, editData: null })}
-            className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add Paper
-          </Button>
-        </div>
+        {canCreate && (
+          <div className="shrink-0">
+            <Button
+              size="sm"
+              onClick={() => router.push("/past-papers/new")}
+              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Add Paper
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <PastPaperTabs
           activeTab={activeTab}
           onTabChange={(tab) => updateQuery({ tab: tab === "all" ? "" : tab, page: "" })}
@@ -205,7 +247,14 @@ export function PastPapersPageContent() {
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
         onSubmitSuccess={handleFormSubmitSuccess}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Past Paper"
+        returnPath="/past-papers"
+        onClose={() => router.push("/past-papers")}
       />
     </div>
   );

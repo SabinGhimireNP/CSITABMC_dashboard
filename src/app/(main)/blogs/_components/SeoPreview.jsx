@@ -52,33 +52,33 @@ export function SeoPreview({ title = "", slug = "", excerpt = "", content = "", 
             <span className="truncate font-mono">{displaySlug}</span>
           </div>
           <p className="text-base font-medium text-[#1a0dab] truncate">{displayTitle}</p>
-          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{description}</p>
           {usesFallback && (
-            <p className="text-[10px] text-amber-600 pt-1">
+            <p className="text-[10px] text-amber-500 pt-1">
               No excerpt yet: using text from the article. A short excerpt usually reads better.
             </p>
           )}
         </div>
 
         {/* Social share card */}
-        <div className="rounded-lg bg-white border border-slate-200 shadow-2xs overflow-hidden min-w-0">
-          <div className="aspect-[1.91/1] bg-slate-100 flex items-center justify-center border-b border-slate-200">
+        <div className="rounded-lg bg-card border border-border shadow-2xs overflow-hidden min-w-0">
+          <div className="aspect-[1.91/1] bg-muted/50 flex items-center justify-center border-b border-border">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imageUrl} alt={imageAlt || ""} className="w-full h-full object-cover" />
             ) : (
-              <div className="flex flex-col items-center gap-1 text-slate-400">
+              <div className="flex flex-col items-center gap-1 text-muted-foreground">
                 <ImageIcon className="h-5 w-5" />
                 <span className="text-[10px]">No featured image: no share image</span>
               </div>
             )}
           </div>
           <div className="p-3 space-y-0.5">
-            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <Share2 className="h-3 w-3" /> Social share (Open Graph)
             </p>
-            <p className="text-xs font-semibold text-slate-800 truncate">{displayTitle}</p>
-            <p className="text-[11px] text-slate-500 line-clamp-2">{description}</p>
+            <p className="text-xs font-semibold text-foreground truncate">{displayTitle}</p>
+            <p className="text-[11px] text-muted-foreground line-clamp-2">{description}</p>
           </div>
         </div>
       </div>

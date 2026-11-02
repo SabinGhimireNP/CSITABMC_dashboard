@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { getDropdownPlacement } from "@/lib/dropdownPlacement";
 import { ChevronDown, Plus, Trash2, UserCheck, Shield } from "lucide-react";
 import { MENTOR_EVENT_ROLES } from "@/lib/Constants/MentorEventRoles";
 
@@ -17,6 +18,7 @@ export function EventMentorsSelect({
   onUpdateAssignment,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [placement, setPlacement] = useState({ up: false, maxHeight: 224 });
   const [searchFilter, setSearchFilter] = useState("");
   const dropdownRef = useRef(null);
 
@@ -44,11 +46,11 @@ export function EventMentorsSelect({
   return (
     <div className="space-y-3 w-full">
       <div className="flex items-center justify-between">
-        <label className="font-semibold text-slate-700 flex items-center gap-1.5">
-          <UserCheck className="h-4 w-4 text-indigo-600" />
+        <label className="font-semibold text-foreground flex items-center gap-1.5 text-xs">
+          <UserCheck className="h-4 w-4 text-primary" />
           Event Mentors & Roles
         </label>
-        <span className="text-[11px] text-slate-400">
+        <span className="text-[11px] text-muted-foreground">
           {assignments.length} assigned
         </span>
       </div>
@@ -57,33 +59,38 @@ export function EventMentorsSelect({
       <div className="relative w-full" ref={dropdownRef}>
         <button
           type="button"
-          onClick={() => setDropdownOpen((prev) => !prev)}
-          className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white flex items-center justify-between text-left hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+          onClick={() => {
+            if (!dropdownOpen) setPlacement(getDropdownPlacement(dropdownRef.current));
+            setDropdownOpen((prev) => !prev);
+          }}
+          className="w-full h-9 px-3 border border-input rounded-lg bg-background flex items-center justify-between text-left hover:bg-muted/50 transition-all cursor-pointer shadow-2xs"
         >
-          <span className="text-slate-500 text-xs flex items-center gap-1.5">
-            <Plus className="h-3.5 w-3.5 text-indigo-600" />
+          <span className="text-muted-foreground text-xs flex items-center gap-1.5">
+            <Plus className="h-3.5 w-3.5 text-primary" />
             Assign a mentor to this event...
           </span>
           <ChevronDown
-            className={`h-3.5 w-3.5 text-slate-400 transition-transform ${
+            className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
               dropdownOpen ? "rotate-180" : ""
             }`}
           />
         </button>
 
         {dropdownOpen && (
-          <div className="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto p-1.5 animate-in fade-in duration-100">
+          <div
+            style={{ maxHeight: placement.maxHeight }}
+            className={`absolute z-30 ${placement.up ? "bottom-full mb-1" : "top-full mt-1"} w-full bg-card dark:bg-[#1a1d24] border border-border rounded-xl shadow-xl overflow-y-auto p-1.5 animate-in fade-in duration-100`}>
             <input
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder="Search mentors by name..."
-              className="w-full h-8 px-2.5 mb-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full h-8 px-2.5 mb-1.5 text-xs bg-background border border-input text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
             />
 
             {availableMentors.length === 0 ? (
-              <p className="px-3 py-3 text-center text-slate-400 text-xs">
+              <p className="px-3 py-3 text-center text-muted-foreground text-xs">
                 {searchFilter
                   ? "No matching unassigned mentors found."
                   : "All available mentors are already assigned."}
@@ -98,13 +105,13 @@ export function EventMentorsSelect({
                     setDropdownOpen(false);
                     setSearchFilter("");
                   }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-indigo-50/70 text-xs text-slate-700 flex items-center justify-between gap-2 cursor-pointer transition-colors"
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-muted/60 text-xs text-foreground flex items-center justify-between gap-2 cursor-pointer transition-colors"
                 >
-                  <span className="font-medium text-slate-800">
+                  <span className="font-medium text-foreground">
                     {mentor.fullName}
                   </span>
                   {mentor.role && (
-                    <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
                       {mentor.role}
                     </span>
                   )}

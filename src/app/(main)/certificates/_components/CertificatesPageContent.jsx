@@ -4,6 +4,7 @@ import React, { useState, useCallback, useTransition, useEffect, useRef } from "
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { 
   useCertificates,
+  useCertificateDetail,
   useCreateCertificate,
   useUpdateCertificate,
   useDeleteCertificate,
@@ -13,16 +14,22 @@ import { useEvents } from "@/hooks/useEvents";
 import { CertificateTable } from "./CertificateTable";
 import { CertificateTabs } from "./CertificateTabs";
 import { CertificateFormModal } from "./CertificateFormModel";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
 import CertificatesSkeleton from "./CertificatesSkeleton";
 import { toast } from "sonner";
 import { parseServerError } from "@/lib/errorUtils";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import { usePermission } from "@/hooks/usePermission";
 
 const VALID_TABS = ["all", "complete", "incomplete"];
 
-export function CertificatesPageContent() {
+export function CertificatesPageContent({ initialModalMode = null }) {
+  const { can } = usePermission();
+  const canCreate = can("certificates.create");
+  const canEdit = can("certificates.edit");
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -39,7 +46,37 @@ export function CertificatesPageContent() {
     ? parseInt(rowsPerPageParam, 10)
     : 5;
 
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditCert,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useCertificateDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditCert) {
+        setFormMode({ isOpen: true, editData: routeEditCert });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditCert]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/certificates");
+    }
+  }, [initialModalMode, router]);
+
   const [selectedIds, setSelectedIds] = useState([]);
 
   const createCertificateMutation = useCreateCertificate();
@@ -123,7 +160,7 @@ export function CertificatesPageContent() {
   };
 
   const handleEditCertificateTrigger = (cert) => {
-    setFormMode({ isOpen: true, editData: cert });
+    router.push(`/certificates/${cert.id}/edit`);
   };
 
   const handleDuplicateCertificateTrigger = (cert) => {
@@ -152,7 +189,7 @@ export function CertificatesPageContent() {
       id: "certificate-mutation",
       loading: isEdit ? "Updating certificate" : "Adding certificate",
       success: () => {
-        setFormMode({ isOpen: false, editData: null });
+        handleCloseModal();
         return isEdit ? "Certificate updated successfully." : "Certificate added successfully.";
       },
       error: (err) => {
@@ -197,51 +234,57 @@ export function CertificatesPageContent() {
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Certificates</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Certificates</h1>
           <p className="text-sm text-muted-foreground font-normal">Issue and manage participant certificates across events.</p>
         </div>
-        <div className="shrink-0">
-          <Button
-            size="sm"
-            onClick={() => setFormMode({ isOpen: true, editData: null })}
-            className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Issue Certificate
-          </Button>
-        </div>
+        {canCreate && (
+          <div className="shrink-0">
+            <Button
+              size="sm"
+              onClick={() => router.push("/certificates/new")}
+              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Issue Certificate
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         {selectedIds.length > 0 ? (
-          <div className="flex items-center gap-4 bg-indigo-50/50 border border-indigo-100 rounded-lg px-4 py-2 w-full animate-in fade-in slide-in-from-top-2">
-            <span className="text-sm font-medium text-indigo-700">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-primary/10 border border-primary/20 rounded-lg px-3 sm:px-4 py-2 w-full animate-in fade-in slide-in-from-top-2">
+            <span className="text-sm font-medium text-primary">
               {selectedIds.length} selected
             </span>
-            <div className="h-4 w-px bg-indigo-200" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-2">Project Status:</span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleBulkStatusUpdate(true)}
-                disabled={bulkUpdateStatusMutation.isPending}
-                className="h-8 text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 text-xs gap-1.5"
-              >
-                {bulkUpdateStatusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                True
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleBulkStatusUpdate(false)}
-                disabled={bulkUpdateStatusMutation.isPending}
-                className="h-8 text-amber-700 border-amber-200 hover:bg-amber-50 hover:text-amber-800 text-xs gap-1.5"
-              >
-                {bulkUpdateStatusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
-                False
-              </Button>
-            </div>
+            {canEdit && (
+              <>
+                <div className="hidden sm:block h-4 w-px bg-indigo-200" />
+                <div className="flex flex-wrap items-center gap-2 order-3 sm:order-none w-full sm:w-auto">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-2">Project Status:</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkStatusUpdate(true)}
+                    disabled={bulkUpdateStatusMutation.isPending}
+                    className="h-8 text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 text-xs gap-1.5"
+                  >
+                    {bulkUpdateStatusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                    True
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkStatusUpdate(false)}
+                    disabled={bulkUpdateStatusMutation.isPending}
+                    className="h-8 text-amber-700 border-amber-200 hover:bg-amber-50 hover:text-amber-800 text-xs gap-1.5"
+                  >
+                    {bulkUpdateStatusMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                    False
+                  </Button>
+                </div>
+              </>
+            )}
             <div className="ml-auto">
               <Button
                 size="sm"
@@ -291,7 +334,14 @@ export function CertificatesPageContent() {
         initialData={formMode.editData}
         eventsList={eventsList}
         onSubmitSuccess={handleFormSubmitSuccess}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Certificate"
+        returnPath="/certificates"
+        onClose={() => router.push("/certificates")}
       />
     </div>
   );

@@ -24,18 +24,18 @@ export function MemberSkillsInput({ skills = [], onAddSkill, onRemoveSkill }) {
 
   return (
     <div className="space-y-1.5">
-      <label className="font-semibold text-slate-700">Skills</label>
-      <div className="flex flex-wrap items-center gap-1.5 p-2 bg-white border border-slate-200 rounded-lg min-h-[42px] focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+      <label className="font-semibold text-foreground text-xs">Skills</label>
+      <div className="flex flex-wrap items-center gap-1.5 p-2 bg-background border border-input text-foreground rounded-lg min-h-[42px] focus-within:ring-1 focus-within:ring-primary">
         {skills.map((skill) => (
           <span
             key={skill}
-            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
           >
             {skill}
             <button
               type="button"
               onClick={() => onRemoveSkill(skill)}
-              className="text-indigo-400 hover:text-indigo-700 cursor-pointer"
+              className="text-primary/70 hover:text-primary cursor-pointer"
             >
               <X className="h-3 w-3" />
             </button>
@@ -56,10 +56,10 @@ export function MemberSkillsInput({ skills = [], onAddSkill, onRemoveSkill }) {
               ? "Type a skill and press Enter or comma..."
               : "Add more..."
           }
-          className="flex-1 min-w-[140px] text-xs outline-none bg-transparent placeholder:text-slate-400"
+          className="flex-1 min-w-[140px] text-xs outline-none bg-transparent text-foreground placeholder:text-muted-foreground"
         />
       </div>
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[10px] text-muted-foreground">
         Press Enter or comma to add skills (e.g., Python, React, UI/UX).
       </p>
     </div>

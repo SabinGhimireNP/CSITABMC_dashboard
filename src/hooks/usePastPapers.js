@@ -12,6 +12,26 @@ import {
 
 export { SUBJECT_CODE_MAP, SUBJECTS_LIST, findSubjectName };
 
+export const mapPastPaperFromBackend = (paper) => {
+  const rawCode = paper.subject_name;
+  const name = findSubjectName(rawCode);
+  const displayName = `${name} (${rawCode})`;
+
+  return {
+    id: paper.id,
+    subject_code: rawCode,
+    subject_name: displayName,
+    semester: paper.semester,
+    model_set: paper.model_set,
+    is_old_course: Boolean(paper.is_old_course),
+    exam_year: paper.exam_year,
+    drive_link: paper.drive_link,
+    slug: paper.slug,
+    created_at: paper.created_at,
+    updated_at: paper.updated_at,
+  };
+};
+
 const fetchPastPapers = createThrottle(async (queryParams = {}) => {
   const {
     search = "",
@@ -35,25 +55,7 @@ const fetchPastPapers = createThrottle(async (queryParams = {}) => {
   const { data } = await apiClient.get("/past-papers/", { params });
 
   const rawResults = Array.isArray(data) ? data : (data.results || []);
-  const fetchedPastPapers = rawResults.map((paper) => {
-    const rawCode = paper.subject_name;
-    const name = findSubjectName(rawCode);
-    const displayName = `${name} (${rawCode})`;
-
-    return {
-      id: paper.id,
-      subject_code: rawCode,
-      subject_name: displayName,
-      semester: paper.semester,
-      model_set: paper.model_set,
-      is_old_course: Boolean(paper.is_old_course),
-      exam_year: paper.exam_year,
-      drive_link: paper.drive_link,
-      slug: paper.slug,
-      created_at: paper.created_at,
-      updated_at: paper.updated_at,
-    };
-  });
+  const fetchedPastPapers = rawResults.map(mapPastPaperFromBackend);
 
   const count = data.count ?? rawResults.length;
   const totalPages = Math.ceil(count / pageSize) || 1;
@@ -79,6 +81,19 @@ export const usePastPapers = (queryParams = {}) => {
     queryKey: ["pastPapers", search, ordering, page, pageSize, model_set, is_old_course],
     queryFn: () =>
       fetchPastPapers({ search, ordering, page, pageSize, model_set, is_old_course }),
+  });
+};
+
+export const usePastPaperDetail = (slugOrId) => {
+  return useQuery({
+    queryKey: ["pastPaper-detail", slugOrId],
+    queryFn: async () => {
+      if (!slugOrId) return null;
+      const { data } = await apiClient.get(`/past-papers/${slugOrId}/`);
+      return mapPastPaperFromBackend(data);
+    },
+    enabled: Boolean(slugOrId),
+    retry: false,
   });
 };
 

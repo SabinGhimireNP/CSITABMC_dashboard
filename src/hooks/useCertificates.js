@@ -4,6 +4,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
+export const mapCertificateFromBackend = (certificate) => ({
+  id: certificate.certificate_id || certificate.id,
+  certificate_id: certificate.certificate_id || certificate.id,
+  event: certificate.event,
+  fullName: certificate.full_name,
+  full_name: certificate.full_name,
+  createdAt: certificate.issued_at,
+  isProjectComplete: certificate.is_project_completed ?? false,
+  is_project_completed: certificate.is_project_completed ?? false,
+});
+
 const fetchCertificates = createThrottle(async (queryParams = {}) => {
   const { search = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
@@ -21,13 +32,7 @@ const fetchCertificates = createThrottle(async (queryParams = {}) => {
   const rawResults = Array.isArray(data) ? data : (data.results || []);
   const count = data.count ?? rawResults.length;
 
-  const fetchedCertificates = rawResults.map((certificate) => ({
-    id: certificate.certificate_id,
-    event: certificate.event,
-    fullName: certificate.full_name,
-    createdAt: certificate.issued_at,
-    isProjectComplete: certificate.is_project_completed ?? false,
-  }));
+  const fetchedCertificates = rawResults.map(mapCertificateFromBackend);
 
   const totalPages = Math.ceil(count / pageSize) || 1;
 
@@ -44,6 +49,19 @@ export const useCertificates = (queryParams = {}) => {
   return useQuery({
     queryKey: ["certificates", search, ordering, page, pageSize],
     queryFn: () => fetchCertificates({ search, ordering, page, pageSize }),
+  });
+};
+
+export const useCertificateDetail = (id) => {
+  return useQuery({
+    queryKey: ["certificate-detail", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data } = await apiClient.get(`/certificates/${id}/`);
+      return mapCertificateFromBackend(data);
+    },
+    enabled: Boolean(id),
+    retry: false,
   });
 };
 

@@ -1,14 +1,7 @@
 import { z } from "zod";
 
-// Editable role list — add/remove roles here to update the dropdown and validation
-// Super Admin is the owner account — not assignable via the form.
-// Only sub-admin roles are listed here.
-// Super Admin is the owner account — not assignable via the form.
-// Only these roles can be assigned to sub-admins.
-export const ADMIN_ROLES = [
-  { label: "Admin", value: "admin" },
-  { label: "CMS User", value: "cms_user" }
-];
+// Role options are not defined here: they come from GET /users/roles/ (backend ROLE_DEFINITIONS).
+export const ADMIN_ROLES = [];
 
 export const adminSchema = z.object({
   username: z.string().min(1, "Username is required").max(120, "Name is too long"),

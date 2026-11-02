@@ -28,7 +28,7 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplic
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Tenures</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Tenures</h1>
           <p className="text-sm text-muted-foreground font-normal">
             Manage academic years/tenures and their members.
           </p>

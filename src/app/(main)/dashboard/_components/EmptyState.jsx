@@ -1,13 +1,22 @@
-"use strict";
+"use client";
 
 import React from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
-export default function EmptyState({ icon: Icon, description }) {
+export default function EmptyState({ description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center p-8 border border-dashed border-border rounded-lg bg-muted/40">
-      {Icon && <Icon className="w-5 h-5 text-brand-text/60 mb-2" />}
-      <p className="text-xs font-semibold text-foreground">No records found</p>
-      {description && <p className="text-[11px] text-brand-text mt-0.5">{description}</p>}
+    <div className="flex flex-col items-center justify-center text-center gap-2 py-6 px-4 border border-dashed border-border rounded-md bg-muted/40">
+      <p className="text-sm text-muted-foreground">{description || "No records found."}</p>
+      {action && (
+        <Link
+          href={action.href}
+          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+        >
+          <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+          {action.label}
+        </Link>
+      )}
     </div>
   );
 }

@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { FormSection } from "@/components/common/FormSection";
 import { MentorSocialInputs } from "./MentorSocialInputs";
+import { MentorEventsSelect } from "./MentorEventsSelect";
+import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
 
 export function MentorFormModal(props) {
   if (!props.isOpen) return null;
@@ -19,6 +21,7 @@ export function MentorFormModal(props) {
 function MentorFormModalContent({
   initialData = null,
   isOpen,
+  eventsList = [],
   onSubmitSuccess,
   onCancel,
 }) {
@@ -29,6 +32,19 @@ function MentorFormModalContent({
     role: initialData?.role || "",
     status: initialData?.status || "published",
   }));
+
+  const [assignedEvents, setAssignedEvents] = useState(() => {
+    if (Array.isArray(initialData?.eventAssignments)) {
+      return initialData.eventAssignments.map((a) => ({
+        eventId: a.eventId || a.event_id,
+        eventTitle: a.eventTitle || "",
+        role: a.role || "main_mentor",
+        customRole: a.customRole || a.custom_role || "",
+        responsibility: a.responsibility || "",
+      }));
+    }
+    return [];
+  });
 
   const [errors, setErrors] = useState({});
   const [submitType, setSubmitType] = useState(null);
@@ -63,7 +79,34 @@ function MentorFormModalContent({
     }
   };
 
-  const eventAssignments = initialData?.eventAssignments || [];
+  const handleAddEvent = (eventId) => {
+    setAssignedEvents((prev) => {
+      if (prev.some((a) => String(a.eventId) === String(eventId))) return prev;
+      return [
+        ...prev,
+        {
+          eventId,
+          role: "main_mentor",
+          customRole: "",
+          responsibility: "",
+        },
+      ];
+    });
+  };
+
+  const handleRemoveEvent = (eventId) => {
+    setAssignedEvents((prev) =>
+      prev.filter((a) => String(a.eventId) !== String(eventId))
+    );
+  };
+
+  const handleUpdateAssignment = (eventId, field, value) => {
+    setAssignedEvents((prev) =>
+      prev.map((a) =>
+        String(a.eventId) === String(eventId) ? { ...a, [field]: value } : a
+      )
+    );
+  };
 
   const handleSubmit = async (e, statusOverride) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -91,7 +134,10 @@ function MentorFormModalContent({
 
     try {
       if (onSubmitSuccess) {
-        await onSubmitSuccess(result.data);
+        await onSubmitSuccess({
+          ...result.data,
+          assignedEvents,
+        });
       }
     } catch (err) {
       console.error(err);
@@ -101,25 +147,25 @@ function MentorFormModalContent({
   };
 
   const inputBase =
-    "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-white shadow-2xs";
-  const inputNormal = `${inputBase} border-slate-200 focus:ring-indigo-500`;
-  const inputError = `${inputBase} border-rose-400 focus:ring-rose-500`;
+    "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-background text-foreground shadow-2xs";
+  const inputNormal = `${inputBase} border-input focus:ring-primary`;
+  const inputError = `${inputBase} border-destructive focus:ring-destructive`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none">
+    <div className={MODAL_OVERLAY_CLASS}>
       <div
         onClick={onCancel}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+        className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
       />
 
-      <div className="relative bg-white w-full max-w-2xl rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-in scale-in-95 duration-200 z-10 text-xs">
+      <div className={modalPanelClass("max-w-2xl")}>
         {/* Header */}
-        <div className="p-5 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+        <div className="p-5 sm:px-8 border-b border-border/80 dark:border-white/10 flex items-center justify-between bg-muted/40 dark:bg-[#16181e] shrink-0">
           <div>
-            <h2 className="font-semibold text-lg text-[#0b2574]">
+            <h2 className="font-semibold text-lg text-foreground">
               {initialData ? "Edit Mentor" : "Add Mentor"}
             </h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {initialData
                 ? "Update mentor details, photo, and external portfolio."
                 : "Register a mentor to guide association workshops and events."}
@@ -129,14 +175,14 @@ function MentorFormModalContent({
             type="button"
             onClick={onCancel}
             aria-label="Close dialog"
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10 transition-all cursor-pointer"
           >
             <X className="h-4 w-4 stroke-[2.5]" />
           </button>
         </div>
 
         {/* Scrollable Form Body with Semantic Sections */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
+        <div className="p-4 sm:p-8 overflow-y-auto min-h-0 space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
           {/* Section 1: Mentor Details */}
           <FormSection
             title="Mentor Details"
@@ -198,29 +244,18 @@ function MentorFormModalContent({
             </div>
           </FormSection>
 
-          {/* Section 2: Event Assignments (Read-only context) */}
+          {/* Section 2: Event Assignments */}
           <FormSection
             title="Event Assignments"
-            description="Events where this mentor is assigned. Manage assignments directly from Event forms."
+            description="Assign this mentor to events, specify their roles, or remove existing assignments."
           >
-            {eventAssignments.length === 0 ? (
-              <p className="text-xs text-slate-400 italic bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                Not assigned to any event yet. Event assignments and responsibilities are configured within individual events.
-              </p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {eventAssignments.map((a) => (
-                  <li
-                    key={a.eventId}
-                    className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100/80 truncate max-w-[280px]"
-                  >
-                    <span className="font-semibold">{a.eventTitle}</span>
-                    <span className="opacity-80"> — {a.roleLabel}</span>
-                    {a.responsibility ? ` · ${a.responsibility}` : ""}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <MentorEventsSelect
+              eventsList={eventsList}
+              assignments={assignedEvents}
+              onAddEvent={handleAddEvent}
+              onRemoveEvent={handleRemoveEvent}
+              onUpdateAssignment={handleUpdateAssignment}
+            />
           </FormSection>
 
           {/* Section 3: Profile Photo */}
@@ -256,17 +291,17 @@ function MentorFormModalContent({
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-slate-800 truncate">
+                  <p className="text-xs font-semibold text-foreground truncate">
                     {fileMeta.name || "Profile Photo"}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-normal">
+                  <p className="text-[10px] text-muted-foreground font-normal">
                     Uploaded Photo
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setFileMeta({ preview: null, name: "" })}
-                  className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 rounded-md cursor-pointer shadow-2xs transition-colors"
+                  className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 text-muted-foreground hover:text-destructive bg-card border border-border rounded-md cursor-pointer shadow-2xs transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -281,12 +316,12 @@ function MentorFormModalContent({
         </div>
 
         {/* Footer with Ergonomic Responsive Layout */}
-        <div className="p-5 sm:px-8 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 w-full shrink-0">
+        <div className="px-4 py-3 sm:p-5 sm:px-8 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
           <button
             type="button"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs transition-colors"
+            className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors"
           >
             Cancel
           </button>
@@ -296,7 +331,7 @@ function MentorFormModalContent({
               type="button"
               disabled={submitType !== null}
               onClick={(e) => handleSubmit(e, "draft")}
-              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {submitType === "draft" ? (
                 <>
@@ -311,7 +346,7 @@ function MentorFormModalContent({
               type="button"
               disabled={submitType !== null}
               onClick={(e) => handleSubmit(e, "published")}
-              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {submitType === "published" ? (
                 <>

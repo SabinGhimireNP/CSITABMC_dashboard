@@ -125,3 +125,39 @@ export const useTokenRefresh = () => {
 
   return { isInitializing };
 };
+
+export const useRequestPasswordReset = () => {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.post("/users/password-reset/", payload);
+      return data;
+    },
+  });
+};
+
+export const useConfirmPasswordReset = () => {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.post("/users/password-reset-confirm/", payload);
+      return data;
+    },
+  });
+};
+
+export const useChangePassword = () => {
+  const setAccessTokenExpiry = useAuthStore((state) => state.setAccessTokenExpiry);
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.post("/users/change-password/", payload);
+      return data;
+    },
+    // The backend signs out other sessions and re-issues this browser's cookies.
+    onSuccess: () => setAccessTokenExpiry(Date.now() + ACCESS_TOKEN_TTL_MS),
+  });
+};
+
+/** Re-reads the signed-in user (role, label, permissions) from the backend. */
+export async function fetchCurrentUser() {
+  const { data } = await apiClient.get("/users/me/");
+  return data;
+}

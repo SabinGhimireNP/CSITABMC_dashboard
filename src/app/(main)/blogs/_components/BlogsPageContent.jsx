@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useTransition } from "react";
+import React, { useState, useCallback, useTransition, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
@@ -18,13 +18,15 @@ import BlogsSkeleton from "./BlogsSkeleton";
 const VALID_TABS = ["all", "published", "draft"];
 const DEFAULT_PAGE_SIZE = 10;
 
-export function BlogsPageContent() {
+import { usePermission } from "@/hooks/usePermission";
+
+export function BlogsPageContent({ initialModalMode = null }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
-  const { user } = useAuthStore();
-  const canDelete = isAdminRole(user);
+  const { can, isAdmin } = usePermission();
+  const canDelete = isAdmin || can("blogs.delete");
 
   const activeTab = VALID_TABS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "all";
   const searchQuery = searchParams.get("search") || "";
@@ -34,7 +36,28 @@ export function BlogsPageContent() {
   const rowsPerPage = [5, 10, 25].includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
 
   // `null` = closed, `{ id: null }` = create, `{ id }` = edit
-  const [formTarget, setFormTarget] = useState(null);
+  const [formTarget, setFormTarget] = useState(() => {
+    if (initialModalMode?.action === "create") return { id: null };
+    if (initialModalMode?.action === "edit") return { id: initialModalMode.id };
+    return null;
+  });
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormTarget({ id: null });
+    } else if (initialModalMode?.action === "edit") {
+      setFormTarget({ id: initialModalMode.id });
+    } else if (!initialModalMode) {
+      setFormTarget(null);
+    }
+  }, [initialModalMode]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormTarget(null);
+    if (initialModalMode) {
+      router.push("/blogs");
+    }
+  }, [initialModalMode, router]);
   const deleteBlogMutation = useDeleteBlog();
 
   const {
@@ -116,24 +139,26 @@ export function BlogsPageContent() {
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Blogs</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Blogs</h1>
           <p className="text-sm text-muted-foreground font-normal">
             Write articles, manage media, review search snippets, and control publication.
           </p>
         </div>
-        <div className="shrink-0">
-          <Button
-            size="sm"
-            onClick={() => setFormTarget({ id: null })}
-            className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            New Article
-          </Button>
-        </div>
+        {can("blogs.create") && (
+          <div className="shrink-0">
+            <Button
+              size="sm"
+              onClick={() => router.push("/blogs/new")}
+              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+            >
+              <PlusCircle className="h-4 w-4" />
+              New Article
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <BlogTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -164,7 +189,7 @@ export function BlogsPageContent() {
           <BlogTable
             blogs={blogs}
             canDelete={canDelete}
-            onEditBlog={(blog) => setFormTarget({ id: blog.id })}
+            onEditBlog={(blog) => router.push(`/blogs/${blog.slug || blog.id}/edit`)}
             onDeleteBlog={handleDeleteBlog}
             sortField={sortField}
             sortOrder={sortOrder}
@@ -182,8 +207,9 @@ export function BlogsPageContent() {
       <BlogFormModal
         isOpen={Boolean(formTarget)}
         blogId={formTarget?.id || null}
-        onClose={() => setFormTarget(null)}
+        onClose={handleCloseModal}
         onSaved={(saved, wasCreate) => {
+          handleCloseModal();
           if (wasCreate) updateQuery({ page: "" });
         }}
       />

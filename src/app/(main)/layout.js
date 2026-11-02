@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 function DashboardShell({ children }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden">
+      <div className="flex h-dvh w-full overflow-hidden">
         {/* 1. Left Sidebar */}
         <SideBar />
 

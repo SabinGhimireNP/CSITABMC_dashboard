@@ -1,18 +1,44 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { ArrowUpDown, Image as ImageIcon, MoreHorizontal, Pencil, Trash2, User } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowUpDown, Image as ImageIcon, Pencil, Trash2, User } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { RowActionsMenu } from "@/components/common/RowActionsMenu";
+import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { BlogDeleteDialog } from "./BlogDeleteDialog";
 import { formatDate } from "./blogUtils";
+import { usePermission } from "@/hooks/usePermission";
 
 const STATUS_STYLES = {
-  published: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
-  draft: "bg-amber-50 text-amber-700 border-amber-200/60",
+  published: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  draft: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
 };
 
-const MENU_WIDTH = 128; // w-32
+const StatusBadge = ({ status }) => (
+  <span
+    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+      STATUS_STYLES[status] || "bg-muted text-muted-foreground border-border"
+    }`}
+  >
+    {(status || "draft").toUpperCase()}
+  </span>
+);
+
+const BlogThumb = ({ blog }) => (
+  <div className="h-10 w-16 rounded-lg overflow-hidden border border-border bg-muted/40 shrink-0 flex items-center justify-center">
+    {blog.featuredImageUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={blog.featuredImageUrl}
+        alt={blog.featuredImageAlt || ""}
+        className="w-full h-full object-cover"
+        onError={(e) => { e.currentTarget.style.display = "none"; }}
+      />
+    ) : (
+      <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+    )}
+  </div>
+);
 
 export function BlogTable({
   blogs = [],
@@ -29,54 +55,20 @@ export function BlogTable({
   onPageChange,
   onRowsPerPageChange,
 }) {
-  const [activeMenuId, setActiveMenuId] = useState(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const { can } = usePermission();
+  const canEdit = can("blogs.edit");
   const [blogToDelete, setBlogToDelete] = useState(null);
-  const buttonRefs = useRef({});
-
-  // Close on outside click/tap, Escape, or any scroll
-  useEffect(() => {
-    if (!activeMenuId) return;
-    function handleClose() { setActiveMenuId(null); }
-    function handleKeyDown(e) { if (e.key === "Escape") setActiveMenuId(null); }
-    document.addEventListener("mousedown", handleClose);
-    document.addEventListener("touchstart", handleClose);
-    document.addEventListener("scroll", handleClose, true);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClose);
-      document.removeEventListener("touchstart", handleClose);
-      document.removeEventListener("scroll", handleClose, true);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [activeMenuId]);
-
-  const handleMenuToggle = useCallback((e, blogId) => {
-    e.stopPropagation();
-    if (activeMenuId === blogId) { setActiveMenuId(null); return; }
-    const btn = buttonRefs.current[blogId];
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      // Right-align with the trigger, but keep the menu inside the viewport on small screens
-      const left = Math.max(8, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8));
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: left + window.scrollX,
-      });
-    }
-    setActiveMenuId(blogId);
-  }, [activeMenuId]);
 
   const renderSortIndicator = (field) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
-    if (sortOrder === "asc") return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
-    if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
-    return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
+    if (sortOrder === "asc") return <span className="text-primary font-bold text-[11px]">&uarr;</span>;
+    if (sortOrder === "desc") return <span className="text-primary font-bold text-[11px]">&darr;</span>;
+    return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
   };
 
   const sortableHeader = (field, label, className) => (
     <th
-      className={`py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors ${className}`}
+      className={`py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors ${className}`}
       aria-sort={sortField === field ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}
     >
       <button type="button" onClick={() => onHeaderClick(field)} className="flex items-center gap-1.5 cursor-pointer">
@@ -92,40 +84,46 @@ export function BlogTable({
     }
   };
 
-  // Portal dropdown — escapes overflow:hidden on the table wrapper
-  const renderDropdownMenu = (blog) =>
-    createPortal(
-      <div
-        role="menu"
-        onMouseDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        style={{ position: "absolute", top: menuPosition.top, left: menuPosition.left }}
-        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-9999 animate-in fade-in slide-in-from-top-1 duration-100"
-      >
-        <button type="button" role="menuitem"
-          onClick={() => { onEditBlog(blog); setActiveMenuId(null); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <Pencil className="h-3.5 w-3.5 text-slate-400" /> Edit
-        </button>
-        {canDelete && (
-          <button type="button" role="menuitem"
-            onClick={() => { setBlogToDelete(blog); setActiveMenuId(null); }}
-            className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
-          >
-            <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete
-          </button>
-        )}
-      </div>,
-      document.body
-    );
+  const renderActions = (blog) => (
+    <RowActionsMenu
+      label={`Actions for ${blog.title}`}
+      items={[
+        { label: "Edit", icon: Pencil, hidden: !canEdit, onClick: () => onEditBlog(blog) },
+        { label: "Delete", icon: Trash2, destructive: true, hidden: !canDelete, onClick: () => setBlogToDelete(blog) },
+      ]}
+    />
+  );
 
   return (
     <div className="w-full flex flex-col">
-      <div className="w-full overflow-x-auto scrollbar-thin">
-        <table className="w-full text-left border-collapse min-w-275 table-fixed">
+      {/* Mobile: record cards */}
+      <ResponsiveRecordList
+        className="md:hidden"
+        items={blogs}
+        getKey={(b) => b.id}
+        emptyText="No matching blog articles found."
+        renderLeading={(b) => <BlogThumb blog={b} />}
+        renderTitle={(b) => (
+          <button type="button" onClick={() => onEditBlog(b)} className="text-left break-words cursor-pointer">
+            {b.title}
+          </button>
+        )}
+        renderSubtitle={(b) => b.reference}
+        renderBadge={(b) => <StatusBadge status={b.status} />}
+        fields={[
+          { label: "Author", render: (b) => b.author?.name },
+          { label: "Created", render: (b) => formatDate(b.createdAt) },
+          { label: "Published", render: (b) => (b.publishedAt ? formatDate(b.publishedAt) : null) },
+          { label: "Updated", render: (b) => formatDate(b.updatedAt) },
+        ]}
+        renderActions={renderActions}
+      />
+
+      {/* md+: full table */}
+      <div className="hidden md:block w-full overflow-x-auto scrollbar-thin">
+        <table className="w-full text-left border-collapse min-w-240 table-fixed">
           <thead>
-            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
+            <tr className="border-b border-border bg-muted/40 text-muted-foreground font-semibold text-xs select-none">
               {sortableHeader("id", "ID", "w-[9%]")}
               {sortableHeader("title", "Article", "w-[29%]")}
               <th className="py-3 px-4 w-[14%]">Author</th>
@@ -133,49 +131,37 @@ export function BlogTable({
               {sortableHeader("created_at", "Created", "w-[11%]")}
               {sortableHeader("published_at", "Published", "w-[11%]")}
               {sortableHeader("updated_at", "Updated", "w-[10%]")}
-              <th className="py-3 px-4 text-right pr-6 w-[6%]">Actions</th>
+              <th className="py-3 px-4 text-right pr-6 w-[6%] sticky right-0 bg-muted/95 border-b border-border">Actions</th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
+          <tbody className="divide-y divide-border text-foreground text-xs">
             {blogs.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium bg-white">
+                <td colSpan={8} className="py-12 text-center text-muted-foreground font-medium bg-card">
                   No matching blog articles found.
                 </td>
               </tr>
             ) : (
               blogs.map((blog) => (
-                <tr key={blog.id} className="hover:bg-slate-50/40 transition-colors group h-16 bg-white">
-                  <td className="py-2 px-4 font-semibold text-slate-900 font-mono tabular-nums truncate">
+                <tr key={blog.id} className="hover:bg-muted/40 transition-colors group h-16 bg-card">
+                  <td className="py-2 px-4 font-semibold text-foreground font-mono tabular-nums truncate">
                     {blog.reference}
                   </td>
 
                   <td className="py-2 px-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-16 rounded-lg overflow-hidden border border-slate-200 bg-slate-50 shrink-0 flex items-center justify-center">
-                        {blog.featuredImageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={blog.featuredImageUrl}
-                            alt={blog.featuredImageAlt || ""}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          />
-                        ) : (
-                          <ImageIcon className="h-4 w-4 text-slate-300" />
-                        )}
-                      </div>
+                      <BlogThumb blog={blog} />
                       <div className="min-w-0">
                         <button
                           type="button"
                           onClick={() => onEditBlog(blog)}
-                          className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors block truncate max-w-full text-left cursor-pointer"
+                          className="font-semibold text-foreground group-hover:text-primary transition-colors block truncate max-w-full text-left cursor-pointer"
                           title={blog.title}
                         >
                           {blog.title}
                         </button>
-                        <span className="text-[10px] text-slate-400 font-mono truncate block" title={blog.slug}>
+                        <span className="text-[10px] text-muted-foreground font-mono truncate block" title={blog.slug}>
                           /blogs/{blog.slug}
                         </span>
                       </div>
@@ -185,57 +171,33 @@ export function BlogTable({
                   <td className="py-2 px-4">
                     {blog.author ? (
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="h-6 w-6 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                        <div className="h-6 w-6 rounded-full bg-muted border border-border overflow-hidden shrink-0 flex items-center justify-center">
                           {blog.author.image ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={blog.author.image} alt="" className="h-full w-full object-cover" />
                           ) : (
-                            <User className="h-3 w-3 text-slate-400" />
+                            <User className="h-3 w-3 text-muted-foreground" />
                           )}
                         </div>
-                        <span className="font-medium text-slate-700 truncate" title={blog.author.name}>
+                        <span className="font-medium text-foreground/80 truncate" title={blog.author.name}>
                           {blog.author.name}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
 
                   <td className="py-2 px-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        STATUS_STYLES[blog.status] || "bg-slate-50 text-slate-600 border-slate-200"
-                      }`}
-                    >
-                      {(blog.status || "draft").toUpperCase()}
-                    </span>
+                    <StatusBadge status={blog.status} />
                   </td>
 
-                  <td className="py-2 px-4 text-slate-500 tabular-nums truncate">{formatDate(blog.createdAt)}</td>
-                  <td className="py-2 px-4 text-slate-500 tabular-nums truncate">{formatDate(blog.publishedAt)}</td>
-                  <td className="py-2 px-4 text-slate-500 tabular-nums truncate">{formatDate(blog.updatedAt)}</td>
+                  <td className="py-2 px-4 text-muted-foreground tabular-nums truncate">{formatDate(blog.createdAt)}</td>
+                  <td className="py-2 px-4 text-muted-foreground tabular-nums truncate">{formatDate(blog.publishedAt)}</td>
+                  <td className="py-2 px-4 text-muted-foreground tabular-nums truncate">{formatDate(blog.updatedAt)}</td>
 
-                  <td className="py-2 px-4 text-right pr-6">
-                    <button
-                      ref={(el) => (buttonRefs.current[blog.id] = el)}
-                      type="button"
-                      aria-label={`Actions for ${blog.title}`}
-                      aria-haspopup="menu"
-                      aria-expanded={activeMenuId === blog.id}
-                      onClick={(e) => handleMenuToggle(e, blog.id)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                        activeMenuId === blog.id
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
-                    </button>
-
-                    {activeMenuId === blog.id && renderDropdownMenu(blog)}
+                  <td className="py-2 px-4 text-right pr-6 sticky right-0 bg-card group-hover:bg-muted/40 transition-colors">
+                    {renderActions(blog)}
                   </td>
                 </tr>
               ))
@@ -244,7 +206,7 @@ export function BlogTable({
         </table>
       </div>
 
-      <div className="border-t border-slate-200/80 bg-slate-50/30">
+      <div className="border-t border-border bg-muted/20">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

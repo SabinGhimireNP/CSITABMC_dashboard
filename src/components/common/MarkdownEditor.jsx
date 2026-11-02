@@ -240,43 +240,43 @@ export function MarkdownEditor({
   return (
     <div className="space-y-1.5 w-full relative">
       <div
-        className={`w-full border rounded-xl bg-white overflow-hidden transition-all flex flex-col ${
+        className={`w-full border rounded-xl bg-card overflow-hidden transition-all flex flex-col ${
           error
-            ? "border-rose-400 focus-within:border-rose-500 focus-within:ring-rose-500/30"
-            : "border-slate-200 focus-within:border-indigo-500 focus-within:ring-indigo-500/30"
+            ? "border-destructive focus-within:border-destructive focus-within:ring-destructive/30"
+            : "border-input focus-within:border-primary focus-within:ring-primary/30"
         } focus-within:ring-1`}
       >
         {/* Toolbar */}
-        <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-center justify-between gap-4 flex-wrap select-none">
+        <div className="bg-muted/40 border-b border-border px-3 py-1.5 flex items-center justify-between gap-4 flex-wrap select-none">
           <div className={`flex items-center gap-0.5 flex-wrap ${editorTab === "preview" ? "opacity-25 pointer-events-none" : ""}`}>
             {[{ icon: Heading1, type: "h1" }, { icon: Heading2, type: "h2" }, { icon: Heading3, type: "h3" }].map(({ icon: Icon, type }) => (
-              <button key={type} type="button" onClick={() => injectMarkdown(type)} className="h-7 w-7 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md flex items-center justify-center cursor-pointer">
+              <button key={type} type="button" onClick={() => injectMarkdown(type)} className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md flex items-center justify-center cursor-pointer transition-colors">
                 <Icon className="h-3.5 w-3.5" />
               </button>
             ))}
-            <div className="w-px h-4 bg-slate-200 mx-1" />
+            <div className="w-px h-4 bg-border mx-1" />
             {[{ icon: Bold, type: "bold" }, { icon: Italic, type: "italic" }, { icon: Underline, type: "underline" }, { icon: Quote, type: "quote" }].map(({ icon: Icon, type }) => (
-              <button key={type} type="button" onClick={() => injectMarkdown(type)} className="h-7 w-7 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md flex items-center justify-center cursor-pointer">
+              <button key={type} type="button" onClick={() => injectMarkdown(type)} className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md flex items-center justify-center cursor-pointer transition-colors">
                 <Icon className="h-3.5 w-3.5" />
               </button>
             ))}
-            <div className="w-px h-4 bg-slate-200 mx-1" />
+            <div className="w-px h-4 bg-border mx-1" />
             {[{ icon: List, type: "ul" }, { icon: ListOrdered, type: "ol" }, { icon: Link, type: "link" }, { icon: Minus, type: "hr" }].map(({ icon: Icon, type }) => (
-              <button key={type} type="button" onClick={() => injectMarkdown(type)} className="h-7 w-7 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md flex items-center justify-center cursor-pointer">
+              <button key={type} type="button" onClick={() => injectMarkdown(type)} className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md flex items-center justify-center cursor-pointer transition-colors">
                 <Icon className="h-3.5 w-3.5" />
               </button>
             ))}
             {showImageButton && (
               <>
-                <div className="w-px h-4 bg-slate-200 mx-1" />
+                <div className="w-px h-4 bg-border mx-1" />
                 <button
                   type="button"
                   onClick={openImageModal}
                   title="Insert image, or place the cursor on an existing image to edit it"
                   aria-label="Insert or edit image"
-                  className="h-7 px-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-200 rounded-md flex items-center gap-1 cursor-pointer text-xs"
+                  className="h-7 px-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-md flex items-center gap-1 cursor-pointer text-xs transition-colors"
                 >
-                  <ImageIcon className="h-3.5 w-3.5 text-indigo-500" />
+                  <ImageIcon className="h-3.5 w-3.5 text-primary" />
                   <span className="hidden sm:inline font-medium text-[11px]">Image</span>
                 </button>
               </>
@@ -284,11 +284,11 @@ export function MarkdownEditor({
           </div>
 
           {/* Mode Switcher */}
-          <div className="flex bg-slate-200/70 p-0.5 rounded-lg border border-slate-200/30">
-            <button type="button" onClick={() => setEditorTab("write")} className={`px-2.5 py-1 text-[11px] font-semibold rounded-md flex items-center gap-1 cursor-pointer ${editorTab === "write" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600"}`}>
+          <div className="flex bg-muted p-0.5 rounded-lg border border-border">
+            <button type="button" onClick={() => setEditorTab("write")} className={`px-2.5 py-1 text-[11px] font-semibold rounded-md flex items-center gap-1 cursor-pointer transition-colors ${editorTab === "write" ? "bg-card text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"}`}>
               <Code className="h-3 w-3" /> Editing
             </button>
-            <button type="button" onClick={() => setEditorTab("preview")} className={`px-2.5 py-1 text-[11px] font-semibold rounded-md flex items-center gap-1 cursor-pointer ${editorTab === "preview" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600"}`}>
+            <button type="button" onClick={() => setEditorTab("preview")} className={`px-2.5 py-1 text-[11px] font-semibold rounded-md flex items-center gap-1 cursor-pointer transition-colors ${editorTab === "preview" ? "bg-card text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"}`}>
               <Eye className="h-3 w-3" /> Preview
             </button>
           </div>
@@ -304,22 +304,27 @@ export function MarkdownEditor({
             rows={rows}
             placeholder={placeholder}
             style={{ minHeight }}
-            className="w-full p-4 focus:outline-none resize-y border-0 text-slate-700 leading-relaxed font-mono text-[11px] bg-transparent"
+            className="w-full p-4 focus:outline-none resize-y border-0 text-foreground placeholder:text-muted-foreground leading-relaxed font-mono text-[11px] bg-transparent"
           />
         ) : (
           <div
             style={{ minHeight, maxHeight: Math.max(minHeight * 1.5, 384) }}
-            className="w-full p-5 overflow-y-auto bg-slate-50/40 text-slate-700 text-xs break-words
-            [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-1 [&_h1]:text-[#0b2574]
-            [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-2.5 [&_h2]:mb-1 [&_h2]:text-[#0b2574]
-            [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-0.5
-            [&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-slate-500
+            className="w-full min-w-0 p-4 sm:p-5 overflow-y-auto bg-muted/20 text-foreground text-xs break-words
+            [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-1 [&_h1]:text-primary
+            [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-2.5 [&_h2]:mb-1 [&_h2]:text-primary
+            [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-0.5 [&_h3]:text-foreground
+            [&_blockquote]:border-l-4 [&_blockquote]:border-primary [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:my-2 [&_blockquote]:text-muted-foreground
             [&_u]:underline
             [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2
             [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2
             [&_p]:mb-2 [&_p]:leading-relaxed
-            [&_a]:text-indigo-600 [&_a]:underline
-            [&_img]:max-h-72 [&_img]:rounded-lg [&_img]:my-3 [&_img]:object-contain [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-2xs"
+            [&_a]:text-primary [&_a]:underline
+            [&_img]:max-h-72 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-3 [&_img]:object-contain [&_img]:border [&_img]:border-border [&_img]:shadow-2xs
+            [&_pre]:my-2 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:bg-slate-950 [&_pre]:text-slate-100 [&_pre]:overflow-x-auto [&_pre]:max-w-full
+            [&_code]:font-mono [&_code]:text-[11px] [&_:not(pre)>code]:break-words [&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:text-foreground [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:rounded
+            [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:my-2 [&_table]:border-collapse
+            [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:bg-muted/50 [&_th]:text-foreground [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_td]:text-foreground
+            [&_iframe]:max-w-full [&_video]:max-w-full"
           >
             {value.trim() ? (
               <ReactMarkdown
@@ -329,7 +334,7 @@ export function MarkdownEditor({
                 {value}
               </ReactMarkdown>
             ) : (
-              <span className="text-slate-400 italic text-[11px]">Nothing to preview</span>
+              <span className="text-muted-foreground italic text-[11px]">Nothing to preview</span>
             )}
           </div>
         )}
@@ -337,12 +342,12 @@ export function MarkdownEditor({
 
       {/* Image Insertion Modal */}
       {showImageModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-card dark:bg-[#1a1d24] text-foreground rounded-2xl shadow-2xl border border-border/80 dark:border-white/12 max-w-md w-full max-h-[calc(100dvh-1.5rem)] overflow-y-auto animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/80 dark:border-white/10 bg-muted/40 dark:bg-[#16181e]">
               <div className="flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-indigo-600" />
-                <h3 className="font-semibold text-xs text-slate-800">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-xs text-foreground">
                   {imageTarget?.replace ? "Edit Article Image" : "Insert Image into Article"}
                 </h3>
               </div>
@@ -351,7 +356,7 @@ export function MarkdownEditor({
                 onClick={closeImageModal}
                 disabled={isUploading}
                 aria-label="Close image dialog"
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-md cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -359,14 +364,14 @@ export function MarkdownEditor({
 
             {/* Modal Tabs */}
             {allowImages && canUpload && (
-              <div className="flex border-b border-slate-100 px-5 pt-3 gap-2 bg-slate-50/30">
+              <div className="flex border-b border-border px-5 pt-3 gap-2 bg-muted/20">
                 <button
                   type="button"
                   onClick={() => { setImageModalTab("url"); setUploadError(""); }}
                   className={`pb-2 px-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer ${
                     imageModalTab === "url"
-                      ? "border-indigo-600 text-indigo-600"
-                      : "border-transparent text-slate-500 hover:text-slate-700"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Globe className="h-3.5 w-3.5" /> Image URL
@@ -377,8 +382,8 @@ export function MarkdownEditor({
                   onClick={() => { setImageModalTab("upload"); setUploadError(""); }}
                   className={`pb-2 px-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer ${
                     imageModalTab === "upload"
-                      ? "border-indigo-600 text-indigo-600"
-                      : "border-transparent text-slate-500 hover:text-slate-700"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <UploadCloud className="h-3.5 w-3.5" /> Upload File
@@ -388,7 +393,7 @@ export function MarkdownEditor({
 
             <div className="p-5 space-y-4">
               {uploadError && (
-                <div role="alert" className="p-2.5 bg-rose-50 border border-rose-200 text-rose-600 text-[11px] rounded-lg">
+                <div role="alert" className="p-2.5 bg-destructive/10 border border-destructive/20 text-destructive text-[11px] rounded-lg">
                   {uploadError}
                 </div>
               )}
@@ -396,14 +401,14 @@ export function MarkdownEditor({
               {imageModalTab === "url" ? (
                 <form onSubmit={handleInsertUrlImage} className="space-y-3" noValidate>
                   <div className="space-y-1">
-                    <label htmlFor={`${id}-image-url`} className="text-[11px] font-semibold text-slate-700">Image Web URL</label>
+                    <label htmlFor={`${id}-image-url`} className="text-[11px] font-semibold text-foreground">Image Web URL</label>
                     <input
                       id={`${id}-image-url`}
                       type="url"
                       placeholder="https://example.com/images/banner.jpg"
                       value={imageUrl}
                       onChange={(e) => { setImageUrl(e.target.value); setUploadError(""); }}
-                      className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full h-9 px-3 bg-background border border-input text-foreground rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   {imageUrl && !validateImageUrl(imageUrl) && (
@@ -411,12 +416,12 @@ export function MarkdownEditor({
                     <img
                       src={imageUrl.trim()}
                       alt="Image URL preview"
-                      className="max-h-32 rounded-lg border border-slate-200 object-contain bg-slate-50"
+                      className="max-h-32 rounded-lg border border-border object-contain bg-muted"
                       onError={() => setUploadError("This URL could not be loaded as an image. Check the link.")}
                     />
                   )}
                   <div className="space-y-1">
-                    <label htmlFor={`${id}-image-alt`} className="text-[11px] font-semibold text-slate-700">Alternative Text (Alt)</label>
+                    <label htmlFor={`${id}-image-alt`} className="text-[11px] font-semibold text-foreground">Alternative Text (Alt)</label>
                     <input
                       id={`${id}-image-alt`}
                       type="text"
@@ -424,20 +429,20 @@ export function MarkdownEditor({
                       placeholder="Descriptive image label for SEO & accessibility"
                       value={imageAlt}
                       onChange={(e) => setImageAlt(e.target.value)}
-                      className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full h-9 px-3 bg-background border border-input text-foreground rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <button
                       type="button"
                       onClick={closeImageModal}
-                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                      className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted rounded-lg cursor-pointer transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
+                      className="px-4 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors"
                     >
                       {imageTarget?.replace ? "Update Image" : "Insert Image"}
                     </button>
@@ -446,12 +451,12 @@ export function MarkdownEditor({
               ) : (
                 <form onSubmit={handleUploadAndInsert} className="space-y-3">
                   <div className="space-y-1">
-                    <span className="text-[11px] font-semibold text-slate-700">Select Image File</span>
+                    <span className="text-[11px] font-semibold text-foreground">Select Image File</span>
                     {!filePreview ? (
-                      <label className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                        <UploadCloud className="h-6 w-6 text-slate-400" />
-                        <span className="text-xs font-semibold text-slate-700">Click to choose image</span>
-                        <span className="text-[10px] text-slate-400">PNG, JPG, WEBP, GIF up to 5MB</span>
+                      <label className="border-2 border-dashed border-border hover:border-primary/50 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors">
+                        <UploadCloud className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-foreground">Click to choose image</span>
+                        <span className="text-[10px] text-muted-foreground">PNG, JPG, WEBP, GIF up to 5MB</span>
                         <input
                           type="file"
                           ref={fileInputRef}
@@ -461,16 +466,16 @@ export function MarkdownEditor({
                         />
                       </label>
                     ) : (
-                      <div className="relative border border-slate-200 rounded-xl p-2 bg-slate-50 flex items-center gap-3">
+                      <div className="relative border border-border rounded-xl p-2 bg-muted/30 flex items-center gap-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={filePreview}
                           alt="Upload preview"
-                          className="h-14 w-14 object-cover rounded-lg border border-slate-200 bg-white"
+                          className="h-14 w-14 object-cover rounded-lg border border-border bg-card"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-slate-800 truncate">{selectedFile?.name}</p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-xs font-semibold text-foreground truncate">{selectedFile?.name}</p>
+                          <p className="text-[10px] text-muted-foreground">
                             {(selectedFile?.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
@@ -479,7 +484,7 @@ export function MarkdownEditor({
                             type="button"
                             onClick={() => { setSelectedFile(null); setFilePreview(""); }}
                             aria-label="Remove selected file"
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded-md cursor-pointer"
+                            className="p-1 text-muted-foreground hover:text-destructive rounded-md cursor-pointer transition-colors"
                           >
                             <X className="h-4 w-4" />
                           </button>
@@ -490,18 +495,18 @@ export function MarkdownEditor({
 
                   {isUploading && (
                     <div className="space-y-1" aria-live="polite">
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-indigo-600 transition-all duration-200"
+                          className="h-full bg-primary transition-all duration-200"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <p className="text-[10px] text-slate-500 tabular-nums">Uploading… {uploadProgress}%</p>
+                      <p className="text-[10px] text-muted-foreground tabular-nums">Uploading… {uploadProgress}%</p>
                     </div>
                   )}
 
                   <div className="space-y-1">
-                    <label htmlFor={`${id}-upload-alt`} className="text-[11px] font-semibold text-slate-700">Alternative Text (Alt)</label>
+                    <label htmlFor={`${id}-upload-alt`} className="text-[11px] font-semibold text-foreground">Alternative Text (Alt)</label>
                     <input
                       id={`${id}-upload-alt`}
                       type="text"
@@ -509,7 +514,7 @@ export function MarkdownEditor({
                       placeholder="Descriptive image label for SEO & accessibility"
                       value={imageAlt}
                       onChange={(e) => setImageAlt(e.target.value)}
-                      className="w-full h-9 px-3 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full h-9 px-3 bg-background border border-input text-foreground rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
@@ -517,14 +522,14 @@ export function MarkdownEditor({
                       type="button"
                       onClick={closeImageModal}
                       disabled={isUploading}
-                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                      className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted rounded-lg cursor-pointer transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={isUploading || !selectedFile}
-                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors"
                     >
                       {isUploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                       {isUploading ? "Uploading..." : imageTarget?.replace ? "Upload & Replace" : "Upload & Insert"}

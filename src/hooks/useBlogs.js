@@ -72,7 +72,7 @@ const fetchBlogs = createThrottle(async (queryParams = {}) => {
   if (status) params.status = status;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/blogs/", { params });
+  const { data } = await apiClient.get("/blogs/", { params, signal: queryParams.signal });
 
   const count = data.count || 0;
   return {
@@ -93,7 +93,7 @@ export const useBlogs = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["blogs", search, status, ordering, page, pageSize],
-    queryFn: () => fetchBlogs({ search, status, ordering, page, pageSize }),
+    queryFn: ({ signal }) => fetchBlogs({ search, status, ordering, page, pageSize, signal }),
   });
 };
 
@@ -171,3 +171,16 @@ export const uploadBlogImage = async (file, { onProgress } = {}) => {
   });
   return { url: data.url, publicId: data.public_id || "" };
 };
+
+/**
+ * Permanently deletes an uploaded image from storage after reference checks.
+ */
+export const deleteBlogImage = async ({ url, publicId, excludeBlogId } = {}) => {
+  const { data } = await apiClient.post("/blogs/delete-image/", {
+    url,
+    public_id: publicId,
+    exclude_blog_id: excludeBlogId,
+  });
+  return data;
+};
+

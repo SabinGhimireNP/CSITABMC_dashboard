@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useCallback, useTransition } from "react";
+import React, { useState, useCallback, useTransition, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { useMentors, useCreateMentor, useUpdateMentor, useDeleteMentor } from "@/hooks/useMentors";
+import { useMentors, useMentorDetail, useCreateMentor, useUpdateMentor, useDeleteMentor } from "@/hooks/useMentors";
+import { useEvents } from "@/hooks/useEvents";
 import { MentorTable } from "./MentorsTable";
 import { MentorTabs } from "./MentorTabs";
 import { MentorFormModal } from "./MentorForm";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import MentorsSkeleton from "./MentorsSkeleton";
@@ -15,7 +17,7 @@ import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 
 const VALID_TABS = ["all", "published", "draft"];
 
-export function MentorsPageContent() {
+export function MentorsPageContent({ initialModalMode = null }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -33,7 +35,36 @@ export function MentorsPageContent() {
     ? parseInt(rowsPerPageParam, 10)
     : 5;
 
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditMentor,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useMentorDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditMentor) {
+        setFormMode({ isOpen: true, editData: routeEditMentor });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditMentor]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/mentors");
+    }
+  }, [initialModalMode, router]);
 
   const createMentorMutation = useCreateMentor();
   const updateMentorMutation = useUpdateMentor();
@@ -52,6 +83,9 @@ export function MentorsPageContent() {
     page: currentPage,
     pageSize: rowsPerPage,
   });
+
+  const { data: eventsData } = useEvents({ pageSize: 100 });
+  const eventsList = eventsData?.data || [];
 
   const mentorsList = mentorsData?.data || [];
   const totalRows = mentorsData?.count || 0;
@@ -128,7 +162,7 @@ export function MentorsPageContent() {
   };
 
   const handleEditMentorTrigger = (mentor) => {
-    setFormMode({ isOpen: true, editData: mentor });
+    router.push(`/mentors/${mentor.id}/edit`);
   };
 
   const handleDuplicateMentorTrigger = (mentor) => {
@@ -154,7 +188,20 @@ export function MentorsPageContent() {
       payload.append("photo", formData.image);
     }
 
-    // Saving a mentor never touches event assignments; those are edited from the Event form.
+    if (Array.isArray(formData.assignedEvents)) {
+      payload.append(
+        "assigned_events",
+        JSON.stringify(
+          formData.assignedEvents.map((a) => ({
+            event_id: a.eventId || a.event_id,
+            role: a.role || "main_mentor",
+            custom_role: a.customRole || a.custom_role || "",
+            responsibility: a.responsibility || "",
+          }))
+        )
+      );
+    }
+
     const isEdit = Boolean(formMode.editData?.id);
     const mutationPromise = isEdit
       ? updateMentorMutation.mutateAsync({ id: formMode.editData.id, formData: payload })
@@ -164,7 +211,7 @@ export function MentorsPageContent() {
       id: "mentor-mutation",
       loading: isEdit ? "Updating mentor..." : "Adding mentor...",
       success: () => {
-        setFormMode({ isOpen: false, editData: null });
+        handleCloseModal();
         if (!isEdit) updateQuery({ page: 1 });
         return isEdit ? "Mentor updated successfully." : "Mentor added successfully.";
       },
@@ -190,13 +237,13 @@ export function MentorsPageContent() {
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Mentors</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Mentors</h1>
           <p className="text-sm text-muted-foreground font-normal">Manage mentors and their linked events.</p>
         </div>
         <div className="shrink-0">
           <Button
             size="sm"
-            onClick={() => setFormMode({ isOpen: true, editData: null })}
+            onClick={() => router.push("/mentors/new")}
             className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" />
@@ -205,7 +252,7 @@ export function MentorsPageContent() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <MentorTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -241,8 +288,16 @@ export function MentorsPageContent() {
       <MentorFormModal
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
+        eventsList={eventsList}
         onSubmitSuccess={handleFormSubmitSuccess}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Mentor"
+        returnPath="/mentors"
+        onClose={() => router.push("/mentors")}
       />
     </div>
   );

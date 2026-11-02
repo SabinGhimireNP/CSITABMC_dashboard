@@ -3,12 +3,13 @@
 import React, { useState, useCallback, useTransition, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useEvents";
+import { useEvents, useEventDetail, useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useEvents";
 import { useMentors } from "@/hooks/useMentors";
 import { useTenures } from "@/hooks/useMembers";
 import { EventTable } from "./EventTable";
 import { EventTabs } from "./EventTabs";
 import { EventFormModal } from "./EventForm";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import EventsSkeleton from "./EventsSkeleton";
@@ -40,7 +41,10 @@ const mapTagToBackend = (tagsInput) => {
   return "web";
 };
 
-export function EventsPageContent() {
+import { usePermission } from "@/hooks/usePermission";
+
+export function EventsPageContent({ initialModalMode = null }) {
+  const { can } = usePermission();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -57,7 +61,36 @@ export function EventsPageContent() {
     ? parseInt(rowsPerPageParam, 10)
     : 5;
 
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditEvent,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useEventDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditEvent) {
+        setFormMode({ isOpen: true, editData: routeEditEvent });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditEvent]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/events");
+    }
+  }, [initialModalMode, router]);
 
   const createEventMutation = useCreateEvent();
   const updateEventMutation = useUpdateEvent();
@@ -156,7 +189,7 @@ export function EventsPageContent() {
   };
 
   const handleEditEventTrigger = (event) => {
-    setFormMode({ isOpen: true, editData: event });
+    router.push(`/events/${event.slug || event.id}/edit`);
   };
 
   const handleDuplicateEventTrigger = (event) => {
@@ -248,7 +281,7 @@ export function EventsPageContent() {
       id: "event-mutation",
       loading: isEdit ? "Updating event..." : "Creating event...",
       success: () => {
-        setFormMode({ isOpen: false, editData: null });
+        handleCloseModal();
         if (!isEdit) updateQuery({ page: 1 });
         return isEdit ? "Event updated successfully." : "Event created successfully.";
       },
@@ -274,22 +307,24 @@ export function EventsPageContent() {
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary">Events</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">Events</h1>
           <p className="text-sm text-muted-foreground font-normal">Manage, schedule, and review your platform events.</p>
         </div>
-        <div className="shrink-0">
-          <Button
-            size="sm"
-            onClick={() => setFormMode({ isOpen: true, editData: null })}
-            className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Create Event
-          </Button>
-        </div>
+        {can("events.create") && (
+          <div className="shrink-0">
+            <Button
+              size="sm"
+              onClick={() => router.push("/events/new")}
+              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Create Event
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <EventTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -328,7 +363,14 @@ export function EventsPageContent() {
         mentorsList={mentorsList}
         tenuresList={tenuresList}
         onSubmitSuccess={handleFormSubmitSuccess}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Event"
+        returnPath="/events"
+        onClose={() => router.push("/events")}
       />
     </div>
   );

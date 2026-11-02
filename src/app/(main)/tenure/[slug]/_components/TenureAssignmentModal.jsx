@@ -16,6 +16,7 @@ import {
   EXECUTIVE_POSTS,
   ADVISOR_POSTS,
 } from "./DesignationSelectPortal";
+import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
 
 function TenureAssignmentModalContent({
   initialData = null,
@@ -153,34 +154,34 @@ function TenureAssignmentModalContent({
   };
 
   const inputBase =
-    "w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-white";
-  const inputNormal = `${inputBase} border-slate-200 focus:ring-indigo-500`;
-  const inputError = `${inputBase} border-rose-400 focus:ring-rose-500`;
+    "w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-background text-foreground placeholder:text-muted-foreground";
+  const inputNormal = `${inputBase} border-input focus:ring-primary`;
+  const inputError = `${inputBase} border-destructive focus:ring-destructive`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none">
+    <div className={MODAL_OVERLAY_CLASS}>
       <div
         onClick={onCancel}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+        className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
       />
 
-      <div className="relative bg-white w-full max-w-2xl rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 z-10 text-xs">
+      <div className={modalPanelClass("max-w-2xl")}>
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+        <div className="px-6 py-4 border-b border-border/80 dark:border-white/10 flex items-center justify-between bg-muted/40 dark:bg-[#16181e] shrink-0">
           <div>
-            <div className="font-semibold text-lg text-[#0b2574]">
+            <div className="font-semibold text-lg text-foreground">
               {initialData ? "Edit Tenure Assignment" : "Assign Member to Tenure"}
             </div>
             {tenure?.name && (
-              <p className="text-[11px] text-slate-500 font-medium">
-                Academic Tenure: <span className="text-slate-800 font-semibold">{tenure.name}</span>
+              <p className="text-[11px] text-muted-foreground font-medium">
+                Academic Tenure: <span className="text-foreground font-semibold">{tenure.name}</span>
               </p>
             )}
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
           >
             <X className="h-4 w-4 stroke-[2.5]" />
           </button>
@@ -192,9 +193,9 @@ function TenureAssignmentModalContent({
             e.preventDefault();
             handleSubmitWithStatus(formData.status || "published");
           }}
-          className="flex flex-col flex-1 overflow-hidden"
+          className="flex flex-col flex-1 min-h-0 overflow-hidden"
         >
-          <div className="p-6 sm:p-7 overflow-y-auto space-y-5 flex-1">
+          <div className="p-4 sm:p-7 overflow-y-auto min-h-0 space-y-5 flex-1">
             {/* Searchable Member Combobox */}
             <MemberSearchCombobox
               members={members}
@@ -208,7 +209,7 @@ function TenureAssignmentModalContent({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Role Type */}
               <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700">Role Type *</label>
+                <label className="font-semibold text-foreground text-xs">Role Type *</label>
                 <select
                   name="role_type"
                   value={formData.role_type}
@@ -219,13 +220,13 @@ function TenureAssignmentModalContent({
                   <option value="ADVISOR">Advisor</option>
                 </select>
                 {errors.role_type && (
-                  <p className="text-rose-500 text-[11px] font-medium">{errors.role_type}</p>
+                  <p className="text-destructive text-[11px] font-medium">{errors.role_type}</p>
                 )}
               </div>
 
               {/* Hierarchy Order */}
               <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700">Hierarchy Order *</label>
+                <label className="font-semibold text-foreground text-xs">Hierarchy Order *</label>
                 <input
                   name="order"
                   type="number"
@@ -236,7 +237,7 @@ function TenureAssignmentModalContent({
                   className={errors.order ? inputError : inputNormal}
                 />
                 {errors.order && (
-                  <p className="text-rose-500 text-[11px] font-medium">{errors.order}</p>
+                  <p className="text-destructive text-[11px] font-medium">{errors.order}</p>
                 )}
               </div>
             </div>
@@ -251,12 +252,12 @@ function TenureAssignmentModalContent({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/40 shrink-0">
+          <div className="px-6 py-4 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] shrink-0">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onCancel}
-              className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-sm transition-all"
+              className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-border text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 cursor-pointer shadow-2xs transition-all"
             >
               Cancel
             </button>
@@ -266,7 +267,7 @@ function TenureAssignmentModalContent({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => handleSubmitWithStatus("draft")}
-                className="h-9 w-full sm:w-auto px-2 sm:px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-sm transition-all text-center flex items-center justify-center"
+                className="h-9 w-full sm:w-auto px-2 sm:px-4 text-xs font-semibold border border-border text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 cursor-pointer shadow-2xs transition-all text-center flex items-center justify-center"
               >
                 Save as Draft
               </button>
@@ -274,7 +275,7 @@ function TenureAssignmentModalContent({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="h-9 w-full sm:w-auto px-2 sm:px-5 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-sm transition-all flex items-center justify-center text-center gap-1.5"
+                className="h-9 w-full sm:w-auto px-2 sm:px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-all flex items-center justify-center text-center gap-1.5"
               >
                 {isSubmitting ? (
                   <>

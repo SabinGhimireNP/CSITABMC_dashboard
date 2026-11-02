@@ -22,27 +22,27 @@ export function FormSection({
     <section
       className={`w-full ${
         withDivider
-          ? "pt-8 sm:pt-10 border-t border-slate-200/70 first:border-0 first:pt-0"
+          ? "pt-8 sm:pt-10 border-t border-border/80 dark:border-white/10 first:border-0 first:pt-0"
           : ""
       } ${className}`}
     >
       {(title || description || action) && (
-        <div className="mb-6 sm:mb-7 flex items-start justify-between gap-4">
-          <div className="space-y-1">
+        <div className="mb-6 sm:mb-7 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="space-y-1 min-w-0">
             {title && (
               <div className="flex items-center gap-2.5">
-                <h3 className="text-base font-semibold text-slate-900 tracking-tight">
+                <h3 className="text-base font-semibold text-foreground tracking-tight">
                   {title}
                 </h3>
                 {badge && (
-                  <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+                  <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
                     {badge}
                   </span>
                 )}
               </div>
             )}
             {description && (
-              <p className="text-xs text-slate-500 leading-relaxed max-w-xl">
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
                 {description}
               </p>
             )}

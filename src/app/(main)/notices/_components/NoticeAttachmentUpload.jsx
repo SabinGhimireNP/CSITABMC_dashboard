@@ -43,17 +43,17 @@ export function NoticeAttachmentUpload({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-800 truncate">
+            <p className="text-xs font-semibold text-foreground truncate">
               {fileMeta.name}
             </p>
-            <p className="text-[10px] text-slate-400 font-normal">
+            <p className="text-[10px] text-muted-foreground font-normal">
               Image Media Asset
             </p>
           </div>
           <button
             type="button"
             onClick={onRemoveFile}
-            className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 rounded-md cursor-pointer shadow-2xs"
+            className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 text-muted-foreground hover:text-destructive bg-card border border-border rounded-md cursor-pointer shadow-2xs"
           >
             <X className="h-3.5 w-3.5" />
           </button>

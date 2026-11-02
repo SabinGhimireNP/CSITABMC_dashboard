@@ -276,3 +276,76 @@ export const useMembersList = (queryParams = {}) => {
     data: memberList,
   };
 };
+
+export const mapMemberFromBackend = (member) => ({
+  id: member.id,
+  name: member.name,
+  email: member.email,
+  image: member.image,
+  slug: member.slug,
+  facebookLink: member.fb_link || "",
+  linkedinLink: member.linkedin_link || "",
+  githubLink: member.github_link || "",
+  fb_link: member.fb_link || "",
+  linkedin_link: member.linkedin_link || "",
+  github_link: member.github_link || "",
+  description: member.description || "",
+  skills: Array.isArray(member.skills) ? member.skills : [],
+  status: member.status || "published",
+  createdAt: member.created_at || "",
+});
+
+export const useMemberDetail = (slugOrId) => {
+  return useQuery({
+    queryKey: ["member", slugOrId],
+    queryFn: async () => {
+      if (!slugOrId) return null;
+      const { data } = await apiClient.get(`/members/${slugOrId}/`);
+      return mapMemberFromBackend(data);
+    },
+    enabled: Boolean(slugOrId),
+    retry: false,
+  });
+};
+
+export const mapTenureFromBackend = (tenure) => ({
+  id: tenure.id,
+  Members: (tenure.memberships || []).map((membership) => ({
+    id: membership.member.id,
+    memberId: membership.member.id,
+    membershipId: membership.id,
+    slug: membership.member.slug,
+    fullName: membership.member.name,
+    post: membership.designation,
+    roleType: membership.role_type,
+    order: membership.order,
+    email: membership.member.email,
+    facebookLink: membership.member.fb_link,
+    linkedinLink: membership.member.linkedin_link,
+    githubLink: membership.member.github_link,
+    tags: membership.member.skills || [],
+    skills: membership.member.skills || [],
+    description: membership.member.description || "",
+    image: membership.member.image,
+    status: membership.status || membership.member.status || "published",
+    createdAt: membership.member.created_at,
+  })),
+  name: tenure.name,
+  startDate: tenure.start_date,
+  endDate: tenure.end_date,
+  slug: tenure.slug,
+  signature: tenure.signature,
+});
+
+export const useTenureDetail = (slugOrId) => {
+  return useQuery({
+    queryKey: ["tenure", slugOrId],
+    queryFn: async () => {
+      if (!slugOrId) return null;
+      const { data } = await apiClient.get(`/tenures/${slugOrId}/`);
+      return mapTenureFromBackend(data);
+    },
+    enabled: Boolean(slugOrId),
+    retry: false,
+  });
+};

@@ -1,18 +1,63 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
-import {
-  ArrowUpDown,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  User,
-  ExternalLink,
-} from "lucide-react";
+import React, { useState } from "react";
+import { ArrowUpDown, Pencil, Trash2, User } from "lucide-react";
 import { FaFacebook, FaLinkedin, FaGithub } from "react-icons/fa";
 import { Pagination } from "@/components/common/pagination";
+import { RowActionsMenu } from "@/components/common/RowActionsMenu";
+import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { MemberDeleteDialog } from "./MemberDeleteDialog";
+import { usePermission } from "@/hooks/usePermission";
+
+const StatusBadge = ({ status }) => (
+  <span
+    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+      status === "draft"
+        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+        : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+    }`}
+  >
+    {status === "draft" ? "Draft" : "Published"}
+  </span>
+);
+
+const MemberAvatar = ({ member }) => (
+  <div className="h-8 w-8 rounded-full bg-muted border border-border overflow-hidden shrink-0 flex items-center justify-center">
+    {member.image ? (
+      <img src={member.image} alt={member.name} className="h-full w-full object-cover" />
+    ) : (
+      <User className="h-4 w-4 text-muted-foreground" />
+    )}
+  </div>
+);
+
+const SOCIALS = [
+  { key: "facebook", icon: FaFacebook, label: "Facebook", hover: "hover:text-blue-500", get: (m) => m.fb_link || m.facebookLink },
+  { key: "linkedin", icon: FaLinkedin, label: "LinkedIn", hover: "hover:text-blue-600", get: (m) => m.linkedin_link || m.linkedinLink },
+  { key: "github", icon: FaGithub, label: "GitHub", hover: "hover:text-foreground", get: (m) => m.github_link || m.githubLink },
+];
+
+const SocialLinks = ({ member }) => {
+  const links = SOCIALS.filter((s) => s.get(member));
+  if (links.length === 0) return <span className="text-muted-foreground text-[11px]">—</span>;
+  return (
+    <div className="flex items-center gap-3">
+      {links.map(({ key, icon: Icon, label, hover, get }) => (
+        <a
+          key={key}
+          href={get(member)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${label} Profile`}
+          title={label}
+          className={`text-muted-foreground ${hover} transition-colors p-0.5`}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </a>
+      ))}
+    </div>
+  );
+};
 
 export function MembersTable({
   members = [],
@@ -28,54 +73,17 @@ export function MembersTable({
   onPageChange,
   onRowsPerPageChange,
 }) {
-  const [activeMenuId, setActiveMenuId] = useState(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const { can } = usePermission();
+  const canEdit = can("tenure.edit");
+  const canDelete = can("tenure.member_delete");
   const [memberToDelete, setMemberToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const buttonRefs = useRef({});
-
-  // Close dropdown on outside click or scroll
-  useEffect(() => {
-    if (!activeMenuId) return;
-    function handleClose() {
-      setActiveMenuId(null);
-    }
-    document.addEventListener("mousedown", handleClose);
-    document.addEventListener("scroll", handleClose, true);
-    return () => {
-      document.removeEventListener("mousedown", handleClose);
-      document.removeEventListener("scroll", handleClose, true);
-    };
-  }, [activeMenuId]);
-
-  const handleMenuToggle = useCallback((e, memberId) => {
-    e.stopPropagation();
-    if (activeMenuId === memberId) {
-      setActiveMenuId(null);
-      return;
-    }
-    const btn = buttonRefs.current[memberId];
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.right + window.scrollX - 128, // 128 = w-32
-      });
-    }
-    setActiveMenuId(memberId);
-  }, [activeMenuId]);
 
   const renderSortIndicator = (field) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
-    }
-    if (sortOrder === "asc") {
-      return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
-    }
-    if (sortOrder === "desc") {
-      return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
-    }
-    return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
+    if (sortOrder === "asc") return <span className="text-primary font-bold text-[11px]">&uarr;</span>;
+    if (sortOrder === "desc") return <span className="text-primary font-bold text-[11px]">&darr;</span>;
+    return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
   };
 
   const handleConfirmDelete = async () => {
@@ -92,208 +100,100 @@ export function MembersTable({
     }
   };
 
-  const renderDropdownMenu = (member) => {
-    if (typeof document === "undefined") return null;
-    return createPortal(
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ position: "absolute", top: menuPosition.top, left: menuPosition.left }}
-        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-99999 animate-in fade-in slide-in-from-top-1 duration-100"
-      >
-        <button
-          type="button"
-          onClick={() => {
-            setActiveMenuId(null);
-            onEditMember(member);
-          }}
-          className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition-colors"
-        >
-          <Pencil className="h-3.5 w-3.5 text-slate-500" />
-          Edit
-        </button>
-        <div className="h-px bg-slate-100 my-1" />
-        <button
-          type="button"
-          onClick={() => {
-            setActiveMenuId(null);
-            setMemberToDelete(member);
-          }}
-          className="w-full px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-          Delete
-        </button>
-      </div>,
-      document.body
-    );
-  };
-
+  const renderActions = (member) => (
+    <RowActionsMenu
+      label={`Actions for ${member.name}`}
+      items={[
+        { label: "Edit", icon: Pencil, hidden: !canEdit, onClick: () => onEditMember(member) },
+        { label: "Delete", icon: Trash2, destructive: true, hidden: !canDelete, onClick: () => setMemberToDelete(member) },
+      ]}
+    />
+  );
 
   return (
     <>
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-2xs overflow-hidden select-none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+      <div className="w-full bg-card rounded-sm border border-border shadow-2xs overflow-hidden">
+        {/* Mobile: record cards */}
+        <ResponsiveRecordList
+          className="md:hidden"
+          items={members}
+          getKey={(m) => m.id || m.slug}
+          emptyText="No members found."
+          renderLeading={(m) => <MemberAvatar member={m} />}
+          renderTitle={(m) => m.name}
+          renderSubtitle={(m) => [m.id != null ? `#${m.id}` : null, m.slug ? `@${m.slug}` : null].filter(Boolean).join(" · ")}
+          renderBadge={(m) => <StatusBadge status={m.status} />}
+          fields={[
+            { label: "Email", render: (m) => <span className="font-mono text-[11px] break-all">{m.email || "—"}</span> },
+            { label: "Social Links", render: (m) => <SocialLinks member={m} /> },
+          ]}
+          renderActions={renderActions}
+        />
+
+        {/* md+: full table */}
+        <div className="hidden md:block overflow-x-auto select-none">
+          <table className="w-full min-w-180 text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200/80 bg-slate-50/50 text-slate-500 font-semibold tracking-tight">
+              <tr className="border-b border-border bg-muted/40 text-muted-foreground font-semibold tracking-tight">
                 <th
                   onClick={() => onHeaderClick && onHeaderClick("id")}
-                  className="py-3 px-4 w-20 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/60 transition-colors"
+                  className="py-3 px-4 w-20 font-semibold text-foreground/80 cursor-pointer hover:bg-muted/60 transition-colors"
                 >
-                  <div className="flex items-center justify-center gap-1.5">
-                    ID
-                    {renderSortIndicator("id")}
-                  </div>
+                  <div className="flex items-center justify-center gap-1.5">ID {renderSortIndicator("id")}</div>
                 </th>
                 <th
                   onClick={() => onHeaderClick && onHeaderClick("name")}
-                  className="py-3 px-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/60 transition-colors"
+                  className="py-3 px-4 font-semibold text-foreground/80 cursor-pointer hover:bg-muted/60 transition-colors"
                 >
-                  <div className="flex items-center gap-1.5">
-                    Member Name
-                    {renderSortIndicator("name")}
-                  </div>
+                  <div className="flex items-center gap-1.5">Member Name {renderSortIndicator("name")}</div>
                 </th>
                 <th
                   onClick={() => onHeaderClick && onHeaderClick("email")}
-                  className="py-3 px-4 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/60 transition-colors"
+                  className="py-3 px-4 font-semibold text-foreground/80 cursor-pointer hover:bg-muted/60 transition-colors"
                 >
-                  <div className="flex items-center gap-1.5">
-                    Email
-                    {renderSortIndicator("email")}
-                  </div>
+                  <div className="flex items-center gap-1.5">Email {renderSortIndicator("email")}</div>
                 </th>
-                <th className="py-3 px-4 font-semibold text-slate-700 w-24 text-center">Status</th>
-                <th className="py-3 px-4 font-semibold text-slate-700">Social Links</th>
-                <th className="py-3 px-4 text-center font-semibold text-slate-700 w-16">Actions</th>
+                <th className="py-3 px-4 font-semibold text-foreground/80 w-24 text-center">Status</th>
+                <th className="py-3 px-4 font-semibold text-foreground/80">Social Links</th>
+                <th className="py-3 px-4 text-center font-semibold text-foreground/80 w-16 sticky right-0 bg-muted/95 border-b border-border">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-border text-foreground">
               {members.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <User className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                  <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <User className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
                     No members found.
                   </td>
                 </tr>
               ) : (
-                members.map((member) => {
-                  return (
-                    <tr
-                      key={member.id || member.slug}
-                      className="hover:bg-slate-50/80 transition-colors group"
-                    >
-                      <td className="py-3 px-4 text-center text-slate-500 font-mono text-[11px] font-medium">
-                        {member.id ?? "—"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-                            {member.image ? (
-                              <img
-                                src={member.image}
-                                alt={member.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <User className="h-4 w-4 text-slate-400" />
-                            )}
-                          </div>
-                          <div>
-                            <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                              {member.name}
-                            </span>
-                            {member.slug && (
-                              <p className="text-[10px] text-slate-400 font-mono">@{member.slug}</p>
-                            )}
-                          </div>
+                members.map((member) => (
+                  <tr key={member.id || member.slug} className="hover:bg-muted/40 transition-colors group">
+                    <td className="py-3 px-4 text-center text-muted-foreground font-mono text-[11px] font-medium">{member.id ?? "—"}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <MemberAvatar member={member} />
+                        <div className="min-w-0">
+                          <span className="font-semibold text-foreground group-hover:text-primary transition-colors block truncate max-w-56" title={member.name}>
+                            {member.name}
+                          </span>
+                          {member.slug && <p className="text-[10px] text-muted-foreground font-mono truncate max-w-56">@{member.slug}</p>}
                         </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                        {member.email || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            member.status === "draft"
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          }`}
-                        >
-                          {member.status === "draft" ? "Draft" : "Published"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          {member.fb_link || member.facebookLink ? (
-                            <a
-                              href={member.fb_link || member.facebookLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label="Facebook Profile"
-                              title="Facebook"
-                              className="text-slate-400 hover:text-blue-600 transition-colors"
-                            >
-                              <FaFacebook className="h-3.5 w-3.5" />
-                            </a>
-                          ) : null}
-                          {member.linkedin_link || member.linkedinLink ? (
-                            <a
-                              href={member.linkedin_link || member.linkedinLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label="LinkedIn Profile"
-                              title="LinkedIn"
-                              className="text-slate-400 hover:text-blue-700 transition-colors"
-                            >
-                              <FaLinkedin className="h-3.5 w-3.5" />
-                            </a>
-                          ) : null}
-                          {member.github_link || member.githubLink ? (
-                            <a
-                              href={member.github_link || member.githubLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label="GitHub Profile"
-                              title="GitHub"
-                              className="text-slate-400 hover:text-slate-900 transition-colors"
-                            >
-                              <FaGithub className="h-3.5 w-3.5" />
-                            </a>
-                          ) : null}
-                          {!member.fb_link &&
-                            !member.facebookLink &&
-                            !member.linkedin_link &&
-                            !member.linkedinLink &&
-                            !member.github_link &&
-                            !member.githubLink && (
-                              <span className="text-slate-400 text-[11px]">—</span>
-                            )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          type="button"
-                          ref={(el) => {
-                            buttonRefs.current[member.id] = el;
-                          }}
-                          onClick={(e) => handleMenuToggle(e, member.id)}
-                          className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                        {activeMenuId === member.id && renderDropdownMenu(member)}
-                      </td>
-                    </tr>
-                  );
-                })
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 font-mono text-[11px] text-foreground/80 break-all">{member.email || "—"}</td>
+                    <td className="py-3 px-4 text-center"><StatusBadge status={member.status} /></td>
+                    <td className="py-3 px-4"><SocialLinks member={member} /></td>
+                    <td className="py-3 px-4 text-center sticky right-0 bg-card group-hover:bg-muted/40 transition-colors">{renderActions(member)}</td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
         {totalRows > 0 && (
-          <div className="border-t border-slate-200/80 px-4 py-3 bg-slate-50/30">
+          <div className="border-t border-border px-4 py-3 bg-muted/20">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

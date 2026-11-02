@@ -32,8 +32,8 @@ export function TenureMembersPageHeader({
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-primary">{title}</h1>
-            <p className="text-sm text-muted-foreground font-normal flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">{title}</h1>
+            <p className="text-sm text-muted-foreground font-normal flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span>{subtitle}</span>
               {selectedTenure && (
                 <span className="text-[11px] text-slate-400">

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
   useTenures,
+  useTenureDetail,
   useCreateTenure,
   useUpdateTenure,
   useDeleteTenure,
@@ -22,6 +23,7 @@ import { TenureListView } from "./TenureListView";
 import { TenureFormModal } from "./TenureFormModal";
 import { MembersPageHeader } from "./MembersPageHeader";
 import { TenureDeleteDialog } from "./TenureDeleteDialog";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import MembersSkeleton from "./MembersSkeleton";
 import { toast } from "sonner"; // Assuming sonner is used for toasts, standard in modern dashboards. Or just fallback to console.
 import { parseServerError } from "@/lib/errorUtils";
@@ -36,9 +38,40 @@ const getPostOrder = (post) => {
   return 99;
 };
 
-export function MembersPageContent() {
+export function MembersPageContent({ initialModalMode = null }) {
   const router = useRouter();
   const { data: tenuresData, isLoading: tenuresLoading, isError: tenuresError } = useTenures();
+
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditTenure,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useTenureDetail(editId);
+
+  const [tenureFormMode, setTenureFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setTenureFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditTenure) {
+        setTenureFormMode({ isOpen: true, editData: routeEditTenure });
+      }
+    } else if (!initialModalMode) {
+      setTenureFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditTenure]);
+
+  const handleCloseTenureModal = useCallback(() => {
+    setTenureFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/tenure");
+    }
+  }, [initialModalMode, router]);
 
   const createTenureMutation = useCreateTenure();
   const updateTenureMutation = useUpdateTenure();
@@ -54,7 +87,6 @@ export function MembersPageContent() {
   const [currentView, setCurrentView] = useState("tenures");
   const [selectedTenure, setSelectedTenure] = useState(null);
   
-  const [tenureFormMode, setTenureFormMode] = useState({ isOpen: false, editData: null });
   const [memberFormMode, setMemberFormMode] = useState({ isOpen: false, editData: null });
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,8 +108,8 @@ export function MembersPageContent() {
     );
   }, [liveTenures]);
 
-  const handleCreateTenure = () => setTenureFormMode({ isOpen: true, editData: null });
-  const handleEditTenure = (tenure) => setTenureFormMode({ isOpen: true, editData: tenure });
+  const handleCreateTenure = () => router.push("/tenure/new");
+  const handleEditTenure = (tenure) => router.push(`/tenure/${tenure.slug || tenure.id}/edit`);
 
   const handleTenureFormSubmit = async (formData) => {
     const isEdit = !!tenureFormMode.editData;
@@ -104,7 +136,7 @@ export function MembersPageContent() {
       id: "tenure-mutation",
       loading: isEdit ? "Updating tenure" : "Adding tenure",
       success: () => {
-        setTenureFormMode({ isOpen: false, editData: null });
+        handleCloseTenureModal();
         return isEdit ? "Tenure updated successfully." : "Tenure created successfully.";
       },
       error: (err) => {
@@ -359,7 +391,14 @@ export function MembersPageContent() {
           isOpen={tenureFormMode.isOpen}
           initialData={tenureFormMode.editData}
           onSubmitSuccess={handleTenureFormSubmit}
-          onCancel={() => setTenureFormMode({ isOpen: false, editData: null })}
+          onCancel={handleCloseTenureModal}
+        />
+
+        <ResourceNotFoundDialog
+          isOpen={Boolean(editId && routeEditError)}
+          resourceName="Tenure"
+          returnPath="/tenure"
+          onClose={() => router.push("/tenure")}
         />
 
         {tenureToDelete && (
@@ -383,7 +422,7 @@ export function MembersPageContent() {
         onAddMember={() => setMemberFormMode({ isOpen: true, editData: null })}
       />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <MemberTabs
           activeTab={activeTab}
           onTabChange={(tab) => {

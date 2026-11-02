@@ -2,147 +2,45 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
-import { createThrottle } from "@/lib/throttle";
+import { useAuthStore } from "@/lib/store/authStore";
+import { getUserRole } from "@/lib/roles";
 
-const getDashboardStats = createThrottle(async () => {
-  try {
-    const { data } = await apiClient.get("/dashboard/stats/", {
-      params: { _: Date.now() },
-    });
+/**
+ * Role-aware dashboard overview.
+ *
+ * The backend aggregates statistics and the latest records for every module the
+ * authenticated user can view and omits the rest, so the response shape is
+ * `{ role, modules: { [key]: { stats, recent } | { error: true } } }`.
+ *
+ * The query key keeps the "dashboard" prefix so existing
+ * `invalidateQueries({ queryKey: ["dashboard"] })` calls still refresh it.
+ */
+export const useDashboardOverview = () => {
+  const user = useAuthStore((state) => state.user);
+  const role = getUserRole(user);
 
-    return {
-      publishedNoticesCount: data.publishedNoticesCount ?? data.published_notices ?? 0,
-      openEventsCount: data.openEventsCount ?? data.open_events ?? 0,
-      totalMentorsCount: data.totalMentorsCount ?? data.total_mentors ?? 0,
-      certificatesIssuedCount: data.certificatesIssuedCount ?? data.completed_certificates ?? 0,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
-    return {
-      publishedNoticesCount: 0,
-      openEventsCount: 0,
-      totalMentorsCount: 0,
-      certificatesIssuedCount: 0,
-    };
-  }
-});
-
-const getRecentNotices = createThrottle(async () => {
-  try {
-    // Cache-busting param avoids the backend's 5-minute GET cache.
-    const { data } = await apiClient.get("/notices", {
-      params: { _: Date.now() },
-    });
-    const results = data.results || [];
-
-    const published = results.filter(
-      (n) => n.status === "published" || n.status === "Published"
-    );
-
-    return published
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at) -
-          new Date(a.updated_at || a.created_at)
-      )
-      .slice(0, 5)
-      .map((notice) => ({
-        id: notice.id,
-        title: notice.title,
-        category: notice.category,
-        status: notice.status,
-        date: notice.updated_at || notice.created_at,
-      }));
-  } catch (error) {
-    console.error("Error fetching recent notices:", error);
-    return [];
-  }
-});
-
-const getRecentEvents = createThrottle(async () => {
-  try {
-    const { data } = await apiClient.get("/events/", {
-      params: { _: Date.now() },
-    });
-    const results = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.results)
-        ? data.results
-        : [];
-
-    return results
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at) -
-          new Date(a.updated_at || a.created_at)
-      )
-      .slice(0, 5)
-      .map((event) => ({
-        id: event.id,
-        title: event.title,
-        location: event.location || "TBD",
-        registrationOpen: !!(
-          event.registration_link || event.status === "open"
-        ),
-        startDate: event.start_date || event.startDate,
-      }));
-  } catch (error) {
-    console.error("Error fetching recent events:", error);
-    return [];
-  }
-});
-
-const getRecentCertificates = createThrottle(async () => {
-  try {
-    const { data } = await apiClient.get("/certificates", {
-      params: { _: Date.now() },
-    });
-    const results = Array.isArray(data) ? data : data.results || [];
-
-    return results
-      .sort(
-        (a, b) =>
-          new Date(b.issued_at || b.created_at) -
-          new Date(a.issued_at || a.created_at)
-      )
-      .slice(0, 5)
-      .map((cert) => ({
-        id: cert.certificate_id || cert.id,
-        fullName: cert.full_name || cert.fullName,
-        createdAt: cert.issued_at || cert.created_at,
-        isProjectComplete:
-          cert.is_project_complete || cert.isProjectComplete || false,
-      }));
-  } catch (error) {
-    console.error("Error fetching recent certificates:", error);
-    return [];
-  }
-});
-
-export const useDashboardStats = () => {
   return useQuery({
-    queryKey: ["dashboard", "stats"],
-    queryFn: getDashboardStats,
+    queryKey: ["dashboard", "overview", role],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/dashboard/overview/");
+      return data;
+    },
+    enabled: !!role,
+    staleTime: 60 * 1000,
   });
 };
 
-export const useRecentNotices = () => {
-  return useQuery({
-    queryKey: ["dashboard", "recentNotices"],
-    queryFn: getRecentNotices,
-  });
-};
+/** Authenticated user's own profile (display name etc.). */
+export const useCurrentUser = () => {
+  const user = useAuthStore((state) => state.user);
 
-export const useRecentEvents = () => {
   return useQuery({
-    queryKey: ["dashboard", "recentEvents"],
-    queryFn: getRecentEvents,
-  });
-};
-
-export const useRecentCertificates = () => {
-  return useQuery({
-    queryKey: ["dashboard", "recentCertificates"],
-    queryFn: getRecentCertificates,
+    queryKey: ["users", "me", user?.id],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/users/me/");
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 };

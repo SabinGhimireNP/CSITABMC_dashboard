@@ -1,32 +1,67 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useTransition } from "react";
+import React, { useState, useMemo, useCallback, useTransition, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
-import { useMembers, useMembersList, useDeleteMember } from "@/hooks/useMembers";
+import { useMembers, useMembersList, useMemberDetail, useDeleteMember } from "@/hooks/useMembers";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { MembersTabs } from "./MembersTabs";
 import { MembersTable } from "./MembersTable";
 import { MemberFormModal } from "./MemberFormModal";
+import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { MembersSkeleton } from "./MembersSkeleton";
 import { parseServerError } from "@/lib/errorUtils";
+import { usePermission } from "@/hooks/usePermission";
 
-export function MembersPageContent() {
+const VALID_TABS = ["all", "published", "draft"];
+
+export function MembersPageContent({ initialModalMode = null }) {
+  const { can } = usePermission();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
-  const activeTab = searchParams.get("status") || "all";
+  const statusParam = searchParams.get("status") || searchParams.get("tab") || "all";
+  const activeTab = VALID_TABS.includes(statusParam) ? statusParam : "all";
   const searchQuery = searchParams.get("search") || "";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
-  const rowsPerPageParam = searchParams.get("page_size") || "10";
+  const rowsPerPageParam = searchParams.get("page_size") || "5";
   const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
     ? parseInt(rowsPerPageParam, 10)
-    : 10;
+    : 5;
 
-  const [formMode, setFormMode] = useState({ isOpen: false, editData: null });
+  const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
+  const {
+    data: routeEditMember,
+    isLoading: routeEditLoading,
+    isError: routeEditError,
+  } = useMemberDetail(editId);
+
+  const [formMode, setFormMode] = useState(() => ({
+    isOpen: initialModalMode?.action === "create",
+    editData: null,
+  }));
+
+  useEffect(() => {
+    if (initialModalMode?.action === "create") {
+      setFormMode({ isOpen: true, editData: null });
+    } else if (initialModalMode?.action === "edit") {
+      if (routeEditMember) {
+        setFormMode({ isOpen: true, editData: routeEditMember });
+      }
+    } else if (!initialModalMode) {
+      setFormMode({ isOpen: false, editData: null });
+    }
+  }, [initialModalMode, routeEditMember]);
+
+  const handleCloseModal = useCallback(() => {
+    setFormMode({ isOpen: false, editData: null });
+    if (initialModalMode) {
+      router.push("/members");
+    }
+  }, [initialModalMode, router]);
   const [sortField, setSortField] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
 
@@ -143,25 +178,27 @@ export function MembersPageContent() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0b2574]">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             Team Members
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Manage organization members, profile details, and external links.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setFormMode({ isOpen: true, editData: null })}
-          className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-md bg-[#0b2574] hover:bg-[#0b2574]/90 text-white font-semibold text-xs shadow-sm hover:shadow transition-all cursor-pointer shrink-0"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Add Member
-        </button>
+        {can("tenure.create") && (
+          <button
+            type="button"
+            onClick={() => router.push("/members/new")}
+            className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs hover:shadow transition-all cursor-pointer shrink-0"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Add Member
+          </button>
+        )}
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="border-b border-slate-100 pb-4">
+      <div className="border-b border-border pb-4">
         <MembersTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -174,7 +211,7 @@ export function MembersPageContent() {
       {/* Members Table */}
       <MembersTable
         members={members}
-        onEditMember={(member) => setFormMode({ isOpen: true, editData: member })}
+        onEditMember={(member) => router.push(`/members/${member.slug || member.id}/edit`)}
         onDeleteMember={handleDeleteMember}
         sortField={sortField}
         sortOrder={sortOrder}
@@ -191,8 +228,15 @@ export function MembersPageContent() {
       <MemberFormModal
         isOpen={formMode.isOpen}
         initialData={formMode.editData}
-        onSubmitSuccess={() => setFormMode({ isOpen: false, editData: null })}
-        onCancel={() => setFormMode({ isOpen: false, editData: null })}
+        onSubmitSuccess={handleCloseModal}
+        onCancel={handleCloseModal}
+      />
+
+      <ResourceNotFoundDialog
+        isOpen={Boolean(editId && routeEditError)}
+        resourceName="Member"
+        returnPath="/members"
+        onClose={() => router.push("/members")}
       />
     </div>
   );

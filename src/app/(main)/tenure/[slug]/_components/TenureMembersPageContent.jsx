@@ -134,7 +134,7 @@ export function TenureMembersPageContent() {
         onAddMember={() => setAssignmentModalMode({ isOpen: true, editData: null })}
       />
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <MemberTabs
           activeTab={activeTab}
           onTabChange={(tab) => {

@@ -45,7 +45,9 @@ export function clearAuth() {
     } catch (e) {
       /* ignore */
     }
-    if (window.location.pathname !== "/login") {
+    const publicPaths = ["/login", "/forgot-password", "/reset-password"];
+    const isPublic = publicPaths.some((p) => window.location.pathname.startsWith(p));
+    if (!isPublic) {
       window.location.href = "/login";
     }
   }

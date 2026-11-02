@@ -73,7 +73,7 @@ export function MemberSearchCombobox({
 
   return (
     <div className={`space-y-1.5 ${className}`} ref={comboboxRef}>
-      {label && <label className="font-semibold text-slate-700 block">{label}</label>}
+      {label && <label className="font-semibold text-foreground block text-xs">{label}</label>}
 
       {/* Combobox Trigger */}
       <div
@@ -89,17 +89,17 @@ export function MemberSearchCombobox({
             setComboboxOpen((prev) => !prev);
           }
         }}
-        className={`w-full min-h-[42px] px-3 py-1.5 border rounded-xl flex items-center justify-between gap-2 cursor-pointer transition-all bg-white focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 ${
+        className={`w-full min-h-[42px] px-3 py-1.5 border rounded-xl flex items-center justify-between gap-2 cursor-pointer transition-all bg-background focus:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
           error
-            ? "border-rose-400 ring-1 ring-rose-500"
+            ? "border-destructive ring-1 ring-destructive"
             : comboboxOpen
-              ? "border-indigo-500 ring-1 ring-indigo-500"
-              : "border-slate-200 hover:border-slate-300"
+              ? "border-primary ring-1 ring-primary"
+              : "border-input hover:border-primary/50"
         }`}
       >
         {selectedMember ? (
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-7 w-7 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+            <div className="h-7 w-7 rounded-full bg-muted border border-border overflow-hidden shrink-0 flex items-center justify-center">
               {selectedMember.image ? (
                 <img
                   src={selectedMember.image}
@@ -107,20 +107,20 @@ export function MemberSearchCombobox({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <User className="h-3.5 w-3.5 text-slate-400" />
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
               )}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-900 truncate text-xs">
+              <p className="font-semibold text-foreground truncate text-xs">
                 {selectedMember.name}
               </p>
-              <p className="text-[10px] text-slate-400 truncate font-mono">
+              <p className="text-[10px] text-muted-foreground truncate font-mono">
                 {selectedMember.email}
               </p>
             </div>
           </div>
         ) : (
-          <span className="text-slate-400 text-xs">
+          <span className="text-muted-foreground text-xs">
             {isLoading ? "Loading members..." : placeholder}
           </span>
         )}
@@ -133,13 +133,13 @@ export function MemberSearchCombobox({
                 e.stopPropagation();
                 onClear();
               }}
-              className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+              className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
           <ChevronDown
-            className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
+            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
               comboboxOpen ? "rotate-180" : ""
             }`}
           />
@@ -148,30 +148,30 @@ export function MemberSearchCombobox({
 
       {/* Dropdown Popover */}
       {comboboxOpen && (
-        <div className={`absolute ${popoverClassName} mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100 max-h-60 flex flex-col`}>
+        <div className={`absolute ${popoverClassName} mt-1 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100 max-h-60 flex flex-col`}>
           {/* Search bar inside combobox */}
-          <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+          <div className="p-2 border-b border-border bg-muted/40">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
                 type="text"
                 autoFocus
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
                 placeholder="Search member by name, email, slug..."
-                className="w-full h-8 pl-8 pr-3 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-input text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
           {/* Member List */}
-          <div id={listboxId} role="listbox" className="overflow-y-auto flex-1 divide-y divide-slate-50">
+          <div id={listboxId} role="listbox" className="overflow-y-auto flex-1 divide-y divide-border">
             {loadError ? (
-              <div className="p-4 text-center text-rose-500 text-xs">Failed to load members.</div>
+              <div className="p-4 text-center text-destructive text-xs">Failed to load members.</div>
             ) : isLoading ? (
-              <div className="p-4 text-center text-slate-400 text-xs">Loading members...</div>
+              <div className="p-4 text-center text-muted-foreground text-xs">Loading members...</div>
             ) : filteredMembers.length === 0 ? (
-              <div className="p-4 text-center text-slate-400 text-xs">
+              <div className="p-4 text-center text-muted-foreground text-xs">
                 {memberSearch.trim()
                   ? <>No members matching &quot;{memberSearch}&quot;.</>
                   : "No members found. Add members in the Members section first."}
@@ -187,12 +187,12 @@ export function MemberSearchCombobox({
                     onClick={() => handleSelect(member)}
                     className={`p-2.5 flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-indigo-50/60 text-indigo-900"
-                        : "hover:bg-slate-50 text-slate-700"
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted/50 text-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-7 w-7 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                      <div className="h-7 w-7 rounded-full bg-muted border border-border overflow-hidden shrink-0 flex items-center justify-center">
                         {member.image ? (
                           <img
                             src={member.image}
@@ -200,18 +200,18 @@ export function MemberSearchCombobox({
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <User className="h-3.5 w-3.5 text-slate-400" />
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-xs truncate">{member.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono truncate">
+                        <p className="text-[10px] text-muted-foreground font-mono truncate">
                           {member.email}
                         </p>
                       </div>
                     </div>
                     {isSelected && (
-                      <Check className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <Check className="h-4 w-4 text-primary shrink-0" />
                     )}
                   </div>
                 );

@@ -6,6 +6,7 @@ import { Loader2, X } from "lucide-react";
 import { MarkdownEditor } from "@/components/common/MarkdownEditor";
 import { FormSection } from "@/components/common/FormSection";
 import { NoticeAttachmentUpload } from "./NoticeAttachmentUpload";
+import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
 
 function NoticeFormModalContent({
   initialData = null,
@@ -94,25 +95,25 @@ function NoticeFormModalContent({
   };
 
   const inputBase =
-    "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-white shadow-2xs";
-  const inputNormal = `${inputBase} border-slate-200 focus:ring-indigo-500`;
-  const inputError = `${inputBase} border-rose-400 focus:ring-rose-500`;
+    "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-background text-foreground shadow-2xs";
+  const inputNormal = `${inputBase} border-input focus:ring-primary`;
+  const inputError = `${inputBase} border-destructive focus:ring-destructive`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none">
+    <div className={MODAL_OVERLAY_CLASS}>
       <div
         onClick={onCancel}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+        className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
       />
 
-      <div className="relative bg-white w-full max-w-3xl rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-in scale-in-95 duration-200 z-10 text-xs">
+      <div className={modalPanelClass("max-w-3xl")}>
         {/* Header */}
-        <div className="p-5 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+        <div className="p-5 sm:px-8 border-b border-border/80 dark:border-white/10 flex items-center justify-between bg-muted/40 dark:bg-[#16181e] shrink-0">
           <div>
-            <h2 className="font-semibold text-lg text-[#0b2574]">
+            <h2 className="font-semibold text-lg text-foreground">
               {initialData ? "Edit Notice" : "Create Notice"}
             </h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {initialData
                 ? "Update notice announcements, body text, or attached documents."
                 : "Publish an official announcement to the association portal."}
@@ -122,14 +123,14 @@ function NoticeFormModalContent({
             type="button"
             onClick={onCancel}
             aria-label="Close dialog"
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10 transition-all cursor-pointer"
           >
             <X className="h-4 w-4 stroke-[2.5]" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
+        <div className="p-4 sm:p-8 overflow-y-auto min-h-0 space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
           {/* Section 1: Notice Information */}
           <FormSection
             title="Notice Information"
@@ -216,12 +217,12 @@ function NoticeFormModalContent({
         </div>
 
         {/* Footer with Balanced Responsive Buttons */}
-        <div className="p-5 sm:px-8 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50 w-full shrink-0">
+        <div className="px-4 py-3 sm:p-5 sm:px-8 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
           <button
             type="button"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs transition-colors"
+            className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors"
           >
             Cancel
           </button>
@@ -231,7 +232,7 @@ function NoticeFormModalContent({
               type="button"
               disabled={submitType !== null}
               onClick={(e) => handleActionClick(e, "draft")}
-              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {submitType === "draft" ? (
                 <>
@@ -248,7 +249,7 @@ function NoticeFormModalContent({
               type="button"
               disabled={submitType !== null}
               onClick={(e) => handleActionClick(e, "published")}
-              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               {submitType === "published" ? (
                 <>
