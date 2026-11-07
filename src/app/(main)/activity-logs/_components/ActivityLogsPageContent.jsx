@@ -15,8 +15,6 @@ import {
   RefreshCw,
   Loader2,
   X,
-  ChevronLeft,
-  ChevronRight,
   Shield,
   Info,
 } from "lucide-react";
@@ -24,6 +22,8 @@ import { useActivityLogs, useActivityLogSummary, useActivityLogDetail } from "@/
 import { ActivityLogDetailModal, formatNepalTime } from "./ActivityLogDetailModal";
 import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/common/pagination";
 
 const MODULE_OPTIONS = [
   { value: "", label: "All Sections" },
@@ -77,7 +77,7 @@ function getActionBadge(action) {
 export function ActivityLogsPageContent({ initialModalMode = null }) {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(10);
   const [moduleFilter, setModuleFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -96,6 +96,8 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
 
   useEffect(() => {
     if (routeEditLog) {
+      // Route data is external state that must populate the edit modal.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedLog(routeEditLog);
     } else if (!initialModalMode) {
       setSelectedLog(null);
@@ -144,32 +146,36 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">
             Activity Logs
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground font-normal">
             Track user actions and system changes. Times shown in Nepal Time.
           </p>
         </div>
 
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-muted/50 cursor-pointer shadow-2xs disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-primary" : "text-muted-foreground"}`} />
-          Refresh
-        </button>
+        <div className="shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-1.5 shadow-2xs w-full sm:w-auto cursor-pointer"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin text-primary" : "text-muted-foreground"}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* 4 Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Activities */}
-        <div className="bg-card p-3 sm:p-5 rounded-2xl border border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
+        <div className="bg-card p-3 sm:p-5 rounded-xl border border-slate-200/90 dark:border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
           <div className="space-y-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate">Total Activities</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
@@ -182,7 +188,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
         </div>
 
         {/* Logins This Week */}
-        <div className="bg-card p-3 sm:p-5 rounded-2xl border border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
+        <div className="bg-card p-3 sm:p-5 rounded-xl border border-slate-200/90 dark:border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
           <div className="space-y-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate">Logins This Week</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
@@ -195,7 +201,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
         </div>
 
         {/* Changes Today */}
-        <div className="bg-card p-3 sm:p-5 rounded-2xl border border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
+        <div className="bg-card p-3 sm:p-5 rounded-xl border border-slate-200/90 dark:border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
           <div className="space-y-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate">Changes Today</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
@@ -208,7 +214,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
         </div>
 
         {/* Most Active Section */}
-        <div className="bg-card p-3 sm:p-5 rounded-2xl border border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
+        <div className="bg-card p-3 sm:p-5 rounded-xl border border-slate-200/90 dark:border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
           <div className="space-y-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate">Most Active Section</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground capitalize truncate">
@@ -222,7 +228,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-3">
+      <div className="bg-card p-4 rounded-xl border border-slate-200/90 dark:border-border shadow-2xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {/* Search Input */}
           <div className="relative sm:col-span-2 lg:col-span-2">
@@ -286,12 +292,14 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
           {/* Reset Filters */}
           {hasActiveFilters && (
             <div className="flex items-center">
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={handleResetFilters}
-                className="h-9 px-3 text-xs font-semibold text-destructive hover:text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-lg flex items-center gap-1.5 cursor-pointer w-full justify-center transition-colors"
+                className="w-full justify-center shadow-2xs"
               >
                 <X className="h-3.5 w-3.5" /> Clear Filters
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -328,7 +336,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
       </div>
 
       {/* Activity Logs Table */}
-      <div className="bg-card rounded-2xl border border-border shadow-2xs overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
         {/* Mobile: record cards */}
         <div className="md:hidden">
           {isLogsLoading ? (
@@ -366,13 +374,15 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
                 { label: "IP Address", render: (log) => <span className="font-mono text-[11px] text-muted-foreground">{log.ip_address || "—"}</span> },
               ]}
               renderActions={(log) => (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => router.push(`/activity-logs/${log.id}`)}
-                  className="inline-flex items-center gap-1 h-8 px-2.5 text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg cursor-pointer transition-colors"
+                  className="text-primary hover:text-primary hover:bg-primary/10"
                 >
                   <Eye className="h-3 w-3" /> View
-                </button>
+                </Button>
               )}
             />
           )}
@@ -470,12 +480,15 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
 
                     {/* Actions */}
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <button
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => router.push(`/activity-logs/${log.id}`)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-primary hover:text-primary/90 bg-primary/10 hover:bg-primary/20 rounded-lg cursor-pointer transition-colors"
+                        className="text-primary hover:text-primary hover:bg-primary/10"
                       >
                         <Eye className="h-3 w-3" /> View
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -486,31 +499,16 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
 
         {/* Pagination Bar */}
         {totalCount > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border gap-3 text-xs text-muted-foreground">
-            <div>
-              Showing <span className="font-semibold text-foreground">{logs.length}</span> of{" "}
-              <span className="font-semibold text-foreground">{totalCount}</span> logs
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 border border-border rounded-lg hover:bg-muted/50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="px-3 font-semibold text-foreground">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="p-1.5 border border-border rounded-lg hover:bg-muted/50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+          <div className="border-t border-border bg-muted/20">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRows={totalCount}
+              rowsPerPage={pageSize}
+              onPageChange={setPage}
+              onRowsPerPageChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+              isEmbedded={true}
+            />
           </div>
         )}
       </div>

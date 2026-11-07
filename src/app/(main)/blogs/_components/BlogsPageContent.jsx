@@ -33,7 +33,7 @@ export function BlogsPageContent({ initialModalMode = null }) {
   const orderingQuery = searchParams.get("ordering") || "";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
   const pageSizeParam = parseInt(searchParams.get("page_size") || "", 10);
-  const rowsPerPage = [5, 10, 25].includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
+  const rowsPerPage = [10, 25, 50, 100].includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
 
   // `null` = closed, `{ id: null }` = create, `{ id }` = edit
   const [formTarget, setFormTarget] = useState(() => {
@@ -44,6 +44,8 @@ export function BlogsPageContent({ initialModalMode = null }) {
 
   useEffect(() => {
     if (initialModalMode?.action === "create") {
+      // Route modal state is synchronized from navigation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormTarget({ id: null });
     } else if (initialModalMode?.action === "edit") {
       setFormTarget({ id: initialModalMode.id });
@@ -149,7 +151,7 @@ export function BlogsPageContent({ initialModalMode = null }) {
             <Button
               size="sm"
               onClick={() => router.push("/blogs/new")}
-              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+              className="gap-1.5 shadow-2xs w-full sm:w-auto cursor-pointer"
             >
               <PlusCircle className="h-4 w-4" />
               New Article
@@ -167,7 +169,7 @@ export function BlogsPageContent({ initialModalMode = null }) {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
         {(isPending || isFetching) && (
           <div className="progress-bar-track">
             <div className="progress-bar-indicator" />
@@ -175,12 +177,12 @@ export function BlogsPageContent({ initialModalMode = null }) {
         )}
 
         {isError ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 bg-white text-center">
+          <div className="flex flex-col items-center justify-center gap-3 py-16 bg-card text-center">
             <p className="text-sm text-rose-500 font-medium">Failed to load blog articles.</p>
             <button
               type="button"
               onClick={() => refetch()}
-              className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+              className="h-9 px-4 text-xs font-semibold border border-slate-200 dark:border-border text-slate-700 dark:text-slate-200 bg-white dark:bg-card rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer shadow-2xs"
             >
               Try again
             </button>

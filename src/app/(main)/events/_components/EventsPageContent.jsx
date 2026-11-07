@@ -56,10 +56,10 @@ export function EventsPageContent({ initialModalMode = null }) {
   const searchQuery = searchParams.get("search") || "";
   const orderingQuery = searchParams.get("ordering") || "";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
-  const rowsPerPageParam = searchParams.get("page_size") || "5";
-  const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
+  const rowsPerPageParam = searchParams.get("page_size") || "10";
+  const rowsPerPage = [10, 25, 50, 100].includes(parseInt(rowsPerPageParam, 10))
     ? parseInt(rowsPerPageParam, 10)
-    : 5;
+    : 10;
 
   const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
   const {
@@ -75,9 +75,13 @@ export function EventsPageContent({ initialModalMode = null }) {
 
   useEffect(() => {
     if (initialModalMode?.action === "create") {
+      // Route modal state is synchronized from navigation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormMode({ isOpen: true, editData: null });
     } else if (initialModalMode?.action === "edit") {
       if (routeEditEvent) {
+        // Route data is external state that must populate the edit modal.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormMode({ isOpen: true, editData: routeEditEvent });
       }
     } else if (!initialModalMode) {
@@ -85,6 +89,8 @@ export function EventsPageContent({ initialModalMode = null }) {
     }
   }, [initialModalMode, routeEditEvent]);
 
+  // The callback intentionally closes local modal state and navigates together.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleCloseModal = useCallback(() => {
     setFormMode({ isOpen: false, editData: null });
     if (initialModalMode) {
@@ -294,7 +300,7 @@ export function EventsPageContent({ initialModalMode = null }) {
     return mutationPromise;
   };
 
-  if (eventsLoading || mentorsLoading) return <EventsSkeleton />;
+  if (eventsLoading || (mentorsLoading && !eventsData)) return <EventsSkeleton />;
   if (eventsError) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -315,7 +321,7 @@ export function EventsPageContent({ initialModalMode = null }) {
             <Button
               size="sm"
               onClick={() => router.push("/events/new")}
-              className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+              className="gap-1.5 shadow-2xs w-full sm:w-auto cursor-pointer"
             >
               <PlusCircle className="h-4 w-4" />
               Create Event
@@ -333,7 +339,7 @@ export function EventsPageContent({ initialModalMode = null }) {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
         {/* Indeterminate progress bar shown while filters/pagination fetch */}
         {(isPending || isFetching) && (
           <div className="progress-bar-track">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Loader2, Megaphone, UploadCloud, X, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
+import { Megaphone, UploadCloud, X, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 import { announcementSchema } from "@/lib/Schema/announcementSchema";
 import { ModalShell } from "@/components/common/ModalShell";
 import { Button } from "@/components/ui/button";
@@ -27,12 +27,15 @@ export function AnnouncementModal({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset form state when the modal receives a new record.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         title: initialData?.title || "",
         description: initialData?.description || "",
         link: initialData?.link || "",
         image: undefined,
       });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImagePreview(initialData?.image || null);
       setErrors({});
     }
@@ -134,18 +137,11 @@ export function AnnouncementModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500"
+            loading={isSubmitting}
+            loadingText="Saving..."
+            className="text-xs shadow-2xs"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                Saving...
-              </>
-            ) : isEdit ? (
-              "Save Changes"
-            ) : (
-              "Publish & Send Push"
-            )}
+            {isEdit ? "Save Changes" : "Publish & Send Push"}
           </Button>
         </div>
       }

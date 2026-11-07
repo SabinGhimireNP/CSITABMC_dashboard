@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { adminSchema, adminCreateSchema } from "@/lib/Schema/adminSchema";
-import { Loader2, X, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useRoles } from "@/hooks/useAdmins";
+import { useAuthStore } from "@/lib/store/authStore";
+import { getUserRole, ORDINARY_CMS_ROLES } from "@/lib/roles";
 import { ModalShell } from "@/components/common/ModalShell";
+import { PasswordRequirements } from "@/components/common/PasswordRequirements";
+import { Button } from "@/components/ui/button";
 
 export function AdminFormModal({
   initialData = null,
@@ -14,11 +18,26 @@ export function AdminFormModal({
   isPending,
 }) {
   const isEditMode = Boolean(initialData && (initialData.id != null || initialData.email || initialData.username));
-  // Predefined roles come from the backend; only Superadmins reach this form and the API re-validates.
   const { data: assignableRoles = [] } = useRoles();
+  const currentUser = useAuthStore((state) => state.user);
+  const currentRole = getUserRole(currentUser);
+
+  // Filter roles: Superadmin cannot be assigned through Admin Access.
+  // Regular Admins can only assign ordinary CMS user roles.
+  const filteredRoles = useMemo(() => {
+    return assignableRoles.filter((r) => {
+      if (r.value === "superadmin") return false;
+      if (currentRole === "admin") {
+        return ORDINARY_CMS_ROLES.includes(r.value);
+      }
+      return true;
+    });
+  }, [assignableRoles, currentRole]);
 
   const [formData, setFormData] = useState({
     username: "",
+    first_name: "",
+    last_name: "",
     email: "",
     password: "",
     role: "",
@@ -30,16 +49,20 @@ export function AdminFormModal({
 
   useEffect(() => {
     if (isOpen) {
+      // Synchronize form values when modal opens or initialData changes
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         username: initialData?.username || "",
+        first_name: initialData?.first_name || "",
+        last_name: initialData?.last_name || "",
         email: initialData?.email || "",
         password: "", // Never pre-fill password
-        role: initialData?.role || "",
+        role: initialData?.role || (currentRole === "admin" ? "cms_user" : "admin"),
       });
       setErrors({});
       setShowPassword(false);
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, currentRole]);
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -76,9 +99,22 @@ export function AdminFormModal({
     }
 
     try {
-      if (onSubmitSuccess) await onSubmitSuccess(result.data);
+      if (onSubmitSuccess) {
+        await onSubmitSuccess(result.data);
+      }
     } catch (err) {
-      console.error(err);
+      const serverErrors = err?.response?.data;
+      if (serverErrors && typeof serverErrors === "object") {
+        const formatted = {};
+        Object.entries(serverErrors).forEach(([key, val]) => {
+          if (Array.isArray(val)) {
+            formatted[key] = val.join(" ");
+          } else if (typeof val === "string") {
+            formatted[key] = val;
+          }
+        });
+        setErrors((prev) => ({ ...prev, ...formatted }));
+      }
     } finally {
       setSubmitType(null);
     }
@@ -86,26 +122,27 @@ export function AdminFormModal({
 
   const footer = (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         disabled={submitType !== null}
         onClick={onCancel}
-        className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-border text-foreground bg-card rounded-lg hover:bg-muted/50 cursor-pointer shadow-2xs transition-colors"
+        className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
       >
         Cancel
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        size="sm"
+        loading={submitType !== null || isPending}
+        loadingText={isEditMode ? "Saving" : "Adding"}
         disabled={submitType !== null || isPending}
         onClick={handleSubmit}
-        className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 transition-colors"
+        className="w-full sm:w-auto order-1 sm:order-2 shadow-2xs"
       >
-        {(submitType === "save" || isPending) ? (
-          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {isEditMode ? "Saving" : "Adding"}</>
-        ) : (
-          isEditMode ? "Save Changes" : "Add Admin"
-        )}
-      </button>
+        {isEditMode ? "Save Changes" : "Add Account"}
+      </Button>
     </div>
   );
 
@@ -113,13 +150,13 @@ export function AdminFormModal({
     <ModalShell
       isOpen={isOpen}
       onClose={onCancel}
-      title={isEditMode ? "Edit Admin" : "Add Admin"}
+      title={isEditMode ? "Edit Account" : currentRole === "admin" ? "Add CMS User" : "Add Admin / CMS User"}
       maxWidthClass="max-w-lg"
       footer={footer}
     >
-      <div className="space-y-5 w-full">
-        {/* Full Name & Role */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+      <div className="space-y-4 w-full">
+        {/* Username & Role */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
           <div className="space-y-1.5">
             <label className="font-semibold text-foreground text-xs">Username *</label>
             <input
@@ -146,11 +183,44 @@ export function AdminFormModal({
               }`}
             >
               <option value="">Select Role</option>
-              {assignableRoles.map((roleObj) => (
+              {filteredRoles.map((roleObj) => (
                 <option key={roleObj.value} value={roleObj.value}>{roleObj.label}</option>
               ))}
             </select>
             {errors.role && <p className="text-destructive text-[11px] font-medium mt-0.5">{errors.role}</p>}
+          </div>
+        </div>
+
+        {/* First Name & Last Name */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          <div className="space-y-1.5">
+            <label className="font-semibold text-foreground text-xs">First Name</label>
+            <input
+              name="first_name"
+              type="text"
+              value={formData.first_name}
+              onChange={handleInputChange}
+              placeholder="e.g., Nisha"
+              className={`w-full h-9 px-3 border rounded-lg bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-all ${
+                errors.first_name ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
+              }`}
+            />
+            {errors.first_name && <p className="text-destructive text-[11px] font-medium mt-0.5">{errors.first_name}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="font-semibold text-foreground text-xs">Last Name</label>
+            <input
+              name="last_name"
+              type="text"
+              value={formData.last_name}
+              onChange={handleInputChange}
+              placeholder="e.g., Tamang"
+              className={`w-full h-9 px-3 border rounded-lg bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-all ${
+                errors.last_name ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
+              }`}
+            />
+            {errors.last_name && <p className="text-destructive text-[11px] font-medium mt-0.5">{errors.last_name}</p>}
           </div>
         </div>
 
@@ -181,7 +251,7 @@ export function AdminFormModal({
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={handleInputChange}
-              placeholder={isEditMode ? "Enter new password to change" : "Min. 8 characters"}
+              placeholder={isEditMode ? "Enter new password to change" : "Min. 8 characters with upper, digit & symbol"}
               className={`w-full h-9 px-3 pr-10 border rounded-lg bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-all ${
                 errors.password ? "border-destructive focus:ring-destructive" : "border-input focus:ring-primary"
               }`}
@@ -194,7 +264,12 @@ export function AdminFormModal({
               {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </button>
           </div>
-          {errors.password && <p className="text-destructive text-[11px] font-medium mt-0.5">{errors.password}</p>}
+          {errors.password && <p className="text-destructive text-[11px] font-medium mt-1 whitespace-pre-line">{errors.password}</p>}
+
+          {/* Live password requirements indicator */}
+          {(!isEditMode || formData.password.length > 0) && (
+            <PasswordRequirements password={formData.password} />
+          )}
         </div>
       </div>
     </ModalShell>

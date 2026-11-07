@@ -12,6 +12,7 @@ import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { SEMESTER_LABELS } from "@/lib/Schema/pastPaperSchema";
 import { PastPaperDeleteDialog } from "./PastPaperDeleteDialog";
 import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
 
 function getDriveEmbedUrl(driveLink) {
   const match = driveLink?.match(/\/file\/d\/([^/]+)/);
@@ -24,19 +25,22 @@ function getSemesterLabel(num) {
 }
 
 const OldCourseTag = () => (
-  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+  <Badge variant="outline" className="text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 shrink-0 select-none">
     Old Course
-  </span>
+  </Badge>
 );
 
 const TypeBadge = ({ modelSet }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-    modelSet
-      ? "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20"
-      : "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20"
-  }`}>
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-bold ${
+      modelSet
+        ? "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20"
+        : "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20"
+    }`}
+  >
     {modelSet ? "MODEL SET" : "BOARD EXAM"}
-  </span>
+  </Badge>
 );
 
 const PaperIcon = () => (
@@ -304,7 +308,7 @@ export function PastPaperTable({
                       href={previewPaper.drive_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-9 px-4 text-xs font-semibold bg-[#0b2574] text-white rounded-lg hover:bg-[#0b2574]/90 flex items-center gap-1.5 cursor-pointer"
+                      className="h-9 px-4 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <ExternalLink className="h-3.5 w-3.5" /> Open in Google Drive
                     </a>

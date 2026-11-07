@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { certificateSchema } from "@/lib/Schema/certificateSchema";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
 export function CertificateFormModal(props) {
   if (!props.isOpen) return null;
@@ -154,26 +155,27 @@ function CertificateFormModalContent({
 
         {/* Footer */}
         <div className="p-4 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs"
+            className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
+            loading={submitType !== null}
+            loadingText={initialData ? "Updating" : "Adding"}
             disabled={submitType !== null}
             onClick={handleSubmit}
-            className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto order-1 sm:order-2 shadow-2xs"
           >
-            {submitType === "save" ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}</>
-            ) : (
-              initialData ? "Save Changes" : "Issue Certificate"
-            )}
-          </button>
+            {initialData ? "Save Changes" : "Issue Certificate"}
+          </Button>
         </div>
       </div>
     </div>

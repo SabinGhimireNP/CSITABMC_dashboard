@@ -35,9 +35,13 @@ export function AlumniPageContent({ initialModalMode = null }) {
 
   useEffect(() => {
     if (initialModalMode?.action === "create") {
+      // Route modal state is synchronized from navigation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAlumniFormMode({ isOpen: true, editData: null });
     } else if (initialModalMode?.action === "edit") {
       if (routeEditAlumni) {
+        // Route data is external state that must populate the edit modal.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setAlumniFormMode({ isOpen: true, editData: routeEditAlumni });
       }
     } else if (!initialModalMode) {
@@ -59,10 +63,10 @@ export function AlumniPageContent({ initialModalMode = null }) {
   const idQuery = searchParams.get("id") || "";
   const orderingQuery = searchParams.get("ordering") || "";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
-  const rowsPerPageParam = searchParams.get("page_size") || "5";
-  const rowsPerPage = [5, 10, 25].includes(parseInt(rowsPerPageParam, 10))
+  const rowsPerPageParam = searchParams.get("page_size") || "10";
+  const rowsPerPage = [10, 25, 50, 100].includes(parseInt(rowsPerPageParam, 10))
     ? parseInt(rowsPerPageParam, 10)
-    : 5;
+    : 10;
 
   const {
     data: alumniData,
@@ -233,7 +237,7 @@ export function AlumniPageContent({ initialModalMode = null }) {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden relative">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
         {/* Indeterminate progress bar shown while filters/pagination update */}
         {(isPending || isFetching) && (
           <div className="progress-bar-track">

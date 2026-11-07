@@ -8,6 +8,7 @@ import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { BlogDeleteDialog } from "./BlogDeleteDialog";
 import { formatDate } from "./blogUtils";
 import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
 
 const STATUS_STYLES = {
   published: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
@@ -15,13 +16,14 @@ const STATUS_STYLES = {
 };
 
 const StatusBadge = ({ status }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-bold ${
       STATUS_STYLES[status] || "bg-muted text-muted-foreground border-border"
     }`}
   >
     {(status || "draft").toUpperCase()}
-  </span>
+  </Badge>
 );
 
 const BlogThumb = ({ blog }) => (

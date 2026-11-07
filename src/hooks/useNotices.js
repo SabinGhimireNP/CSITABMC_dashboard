@@ -30,7 +30,7 @@ const fetchNotices = createThrottle(async (queryParams = {}) => {
   if (id) params.id = id;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/notices", { params });
+  const { data } = await apiClient.get("/notices", { params, signal: queryParams.signal });
 
   const fetchedNotices = (data.results || []).map(mapNoticeFromBackend);
 
@@ -49,7 +49,8 @@ export const useNotices = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["notices", search, status, category, date, id, ordering, page, pageSize],
-    queryFn: () => fetchNotices({ search, status, category, date, id, ordering, page, pageSize }),
+    queryFn: ({ signal }) => fetchNotices({ search, status, category, date, id, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 

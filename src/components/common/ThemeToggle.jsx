@@ -9,6 +9,8 @@ export function ThemeToggle({ className = "" }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Mark client hydration complete before rendering theme-dependent controls.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

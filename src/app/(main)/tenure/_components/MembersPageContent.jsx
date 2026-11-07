@@ -40,7 +40,12 @@ const getPostOrder = (post) => {
 
 export function MembersPageContent({ initialModalMode = null }) {
   const router = useRouter();
-  const { data: tenuresData, isLoading: tenuresLoading, isError: tenuresError } = useTenures();
+  const {
+    data: tenuresData,
+    isLoading: tenuresLoading,
+    isFetching: tenuresFetching,
+    isError: tenuresError,
+  } = useTenures();
 
   const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
   const {
@@ -56,6 +61,8 @@ export function MembersPageContent({ initialModalMode = null }) {
 
   useEffect(() => {
     if (initialModalMode?.action === "create") {
+      // Route modal state is synchronized from navigation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTenureFormMode({ isOpen: true, editData: null });
     } else if (initialModalMode?.action === "edit") {
       if (routeEditTenure) {
@@ -92,7 +99,7 @@ export function MembersPageContent({ initialModalMode = null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("none");
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [tenureToDelete, setTenureToDelete] = useState(null);
   const [isDuplicating, setIsDuplicating] = useState(false);
@@ -376,16 +383,23 @@ export function MembersPageContent({ initialModalMode = null }) {
   if (currentView === "tenures") {
     return (
       <>
-        <TenureListView
-          tenures={liveTenures}
-          members={liveMembers}
-          onOpen={handleOpenTenure}
-          onDuplicate={handleDuplicateTenure}
-          isDuplicating={isDuplicating}
-          onEdit={handleEditTenure}
-          onDelete={(tenure) => setTenureToDelete(tenure)}
-          onCreate={handleCreateTenure}
-        />
+        <div className="relative">
+          {tenuresFetching && !tenuresLoading && (
+            <div className="progress-bar-track" aria-label="Refreshing tenures">
+              <div className="progress-bar-indicator" />
+            </div>
+          )}
+          <TenureListView
+            tenures={liveTenures}
+            members={liveMembers}
+            onOpen={handleOpenTenure}
+            onDuplicate={handleDuplicateTenure}
+            isDuplicating={isDuplicating}
+            onEdit={handleEditTenure}
+            onDelete={(tenure) => setTenureToDelete(tenure)}
+            onCreate={handleCreateTenure}
+          />
+        </div>
 
         <TenureFormModal
           isOpen={tenureFormMode.isOpen}
@@ -437,7 +451,12 @@ export function MembersPageContent({ initialModalMode = null }) {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
+        {tenuresFetching && !tenuresLoading && (
+          <div className="progress-bar-track" aria-label="Refreshing members">
+            <div className="progress-bar-indicator" />
+          </div>
+        )}
         <MemberTable
           members={paginatedMembers}
           onEditMember={handleEditMemberTrigger}

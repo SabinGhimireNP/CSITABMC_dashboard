@@ -138,15 +138,15 @@ export function EventMentorsSelect({
             return (
               <div
                 key={assignment.mentor_id}
-                className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-2.5 transition-all"
+                className="border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-50/50 dark:bg-slate-900/40 space-y-2.5 transition-all"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="h-7 w-7 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">
+                    <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-bold flex items-center justify-center text-xs shrink-0">
                       {mentorName.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 text-xs truncate">
+                      <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate">
                         {mentorName}
                       </p>
                     </div>
@@ -155,7 +155,7 @@ export function EventMentorsSelect({
                   <button
                     type="button"
                     onClick={() => onRemoveMentor(assignment.mentor_id)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                     title="Remove assignment"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -164,7 +164,7 @@ export function EventMentorsSelect({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Event Role *
                     </label>
                     <select
@@ -176,7 +176,7 @@ export function EventMentorsSelect({
                           e.target.value
                         )
                       }
-                      className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                      className="w-full h-8 px-2 text-xs border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                     >
                       {MENTOR_EVENT_ROLES.map((r) => (
                         <option key={r.value} value={r.value}>
@@ -187,7 +187,7 @@ export function EventMentorsSelect({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Responsibility / Track
                     </label>
                     <input
@@ -201,14 +201,14 @@ export function EventMentorsSelect({
                         )
                       }
                       placeholder="e.g., Frontend Lead, AI Mentor"
-                      className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full h-8 px-2 text-xs border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
 
                 {assignment.role === "custom" && (
                   <div className="space-y-1 pt-1">
-                    <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Custom Role Name *
                     </label>
                     <input
@@ -222,7 +222,7 @@ export function EventMentorsSelect({
                         )
                       }
                       placeholder="e.g., Panel Moderator, Guest Evaluator"
-                      className="w-full h-8 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full h-8 px-2 text-xs border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
                 )}

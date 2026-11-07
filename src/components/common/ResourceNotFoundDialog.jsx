@@ -45,7 +45,8 @@ export function ResourceNotFoundDialog({
         <div className="flex justify-center pt-4">
           <Button
             onClick={handleReturn}
-            className="bg-[#0b2574] hover:bg-[#0b2574]/90 text-white font-medium px-5 h-9 text-xs rounded-md shadow-sm"
+            size="sm"
+            className="shadow-2xs"
           >
             Back to {resourceName}s
           </Button>

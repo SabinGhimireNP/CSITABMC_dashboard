@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { pastPaperSchema, SEMESTER_LABELS } from "@/lib/Schema/pastPaperSchema";
-import { Loader2, X, Link } from "lucide-react";
+import { X, Link } from "lucide-react";
 import { SUBJECTS_LIST } from "@/hooks/usePastPapers";
 import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
 export function PastPaperFormModal(props) {
   if (!props.isOpen) return null;
@@ -231,26 +232,27 @@ function PastPaperFormModalContent({
 
         {/* Footer */}
         <div className="p-4 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] shrink-0">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             disabled={submitting}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs"
+            className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="sm"
+            loading={submitting}
+            loadingText={initialData ? "Updating" : "Adding"}
             disabled={submitting}
             onClick={handleSubmit}
-            className="h-9 w-full sm:w-auto px-4 order-1 sm:order-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto order-1 sm:order-2 shadow-2xs"
           >
-            {submitting ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}</>
-            ) : (
-              initialData ? "Save Changes" : "Add Paper"
-            )}
-          </button>
+            {initialData ? "Save Changes" : "Add Paper"}
+          </Button>
         </div>
       </div>
     </div>

@@ -28,7 +28,7 @@ const fetchAnnouncements = createThrottle(async (queryParams = {}) => {
   if (search && search.trim()) params.search = search.trim();
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/announcements/", { params });
+  const { data } = await apiClient.get("/announcements/", { params, signal: queryParams.signal });
 
   const fetched = (data.results || []).map(mapAnnouncementFromBackend);
   const count = data.count || 0;
@@ -46,7 +46,8 @@ export const useAnnouncements = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["announcements", search, ordering, page, pageSize],
-    queryFn: () => fetchAnnouncements({ search, ordering, page, pageSize }),
+    queryFn: ({ signal }) => fetchAnnouncements({ search, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 

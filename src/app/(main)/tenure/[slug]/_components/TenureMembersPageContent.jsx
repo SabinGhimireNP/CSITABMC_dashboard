@@ -149,7 +149,7 @@ export function TenureMembersPageContent() {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden">
         <MemberTable
           members={paginatedMembers}
           onEditMember={handleEditMemberTrigger}

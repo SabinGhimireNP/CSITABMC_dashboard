@@ -32,7 +32,7 @@ export function AnnouncementsPageContent() {
   const orderingQuery = searchParams.get("ordering") || "-created_at";
   const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
   const rowsPerPageParam = searchParams.get("page_size") || "10";
-  const rowsPerPage = [5, 10, 25, 50].includes(parseInt(rowsPerPageParam, 10))
+  const rowsPerPage = [10, 25, 50, 100].includes(parseInt(rowsPerPageParam, 10))
     ? parseInt(rowsPerPageParam, 10)
     : 10;
 
@@ -190,10 +190,11 @@ export function AnnouncementsPageContent() {
 
         {can("announcements.create") && (
           <Button
+            size="sm"
             onClick={() => setModalState({ isOpen: true, item: null })}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 text-xs shadow-sm shadow-indigo-600/20"
+            className="gap-1.5 shadow-2xs text-xs cursor-pointer"
           >
-            <PlusCircle className="w-4 h-4 mr-1.5" />
+            <PlusCircle className="w-4 h-4" />
             New Announcement
           </Button>
         )}

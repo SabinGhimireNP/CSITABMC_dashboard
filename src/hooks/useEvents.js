@@ -89,7 +89,7 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
   if (id) params.id = id;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/events/", { params });
+  const { data } = await apiClient.get("/events/", { params, signal: queryParams.signal });
 
   const rawResults = Array.isArray(data)
     ? data
@@ -113,7 +113,8 @@ export const useEvents = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["events", search, status, category, date, id, ordering, page, pageSize],
-    queryFn: () => fetchEvents({ search, status, category, date, id, ordering, page, pageSize }),
+    queryFn: ({ signal }) => fetchEvents({ search, status, category, date, id, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 

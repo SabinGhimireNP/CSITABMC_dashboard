@@ -6,6 +6,7 @@ import { Pagination } from "@/components/common/pagination";
 import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { TenureMembershipDeleteDialog } from "./TenureMembershipDeleteDialog";
+import { Badge } from "@/components/ui/badge";
 
 const getStatusStyle = (status) => {
   switch (status?.toLowerCase()) {
@@ -16,9 +17,9 @@ const getStatusStyle = (status) => {
 };
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusStyle(status)}`}>
+  <Badge variant="outline" className={`text-[10px] font-bold ${getStatusStyle(status)}`}>
     {(status || "DRAFT").toUpperCase()}
-  </span>
+  </Badge>
 );
 
 const MemberPhoto = ({ member }) =>

@@ -43,6 +43,11 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full space-y-6">
+      {isFetching && !isLoading && (
+        <div className="progress-bar-track" aria-label="Refreshing dashboard">
+          <div className="progress-bar-indicator" />
+        </div>
+      )}
       <DashboardWelcome name={displayName} roleLabel={roleLabel} />
 
       {isError ? (

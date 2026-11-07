@@ -118,7 +118,7 @@ export function AnnouncementTable({
       />
 
       {/* Desktop Table */}
-      <div className="hidden md:block w-full overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs">
+      <div className="hidden md:block w-full overflow-hidden bg-card border border-slate-200/90 dark:border-border rounded-sm shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -205,7 +205,7 @@ export function AnnouncementTable({
         </div>
 
         {totalRows > 0 && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="border-t border-border bg-muted/20">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
@@ -213,6 +213,7 @@ export function AnnouncementTable({
               rowsPerPage={rowsPerPage}
               onPageChange={onPageChange}
               onRowsPerPageChange={onRowsPerPageChange}
+              isEmbedded={true}
             />
           </div>
         )}

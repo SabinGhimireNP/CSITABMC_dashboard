@@ -7,6 +7,8 @@ import { createThrottle } from "@/lib/throttle";
 export const mapAdminFromBackend = (admin) => ({
   id: admin.id,
   username: admin.username,
+  first_name: admin.first_name || "",
+  last_name: admin.last_name || "",
   email: admin.email,
   role: admin.role,
   role_label: admin.role_label || admin.role,
@@ -17,8 +19,11 @@ export const mapAdminFromBackend = (admin) => ({
 
 // The Admin accounts table paginates, searches and sorts in the browser, so
 // the full account list is fetched once and cached under a single key.
-const fetchAdmins = createThrottle(async () => {
-  const { data } = await apiClient.get("/users/accounts/", { params: { _: Date.now() } });
+const fetchAdmins = createThrottle(async (queryParams = {}) => {
+  const { data } = await apiClient.get("/users/accounts/", {
+    params: { _: Date.now() },
+    signal: queryParams.signal,
+  });
 
   const admins = (Array.isArray(data) ? data : data.results || []).map(mapAdminFromBackend);
 
@@ -40,7 +45,7 @@ export const useRoles = () => {
 export const useAdmins = () => {
   return useQuery({
     queryKey: ["admins"],
-    queryFn: () => fetchAdmins(),
+    queryFn: ({ signal }) => fetchAdmins({ signal }),
   });
 };
 

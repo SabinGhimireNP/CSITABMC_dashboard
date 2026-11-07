@@ -40,7 +40,11 @@ function LoginForm() {
 
     try {
       await loginMutation.mutateAsync(formData);
-      router.replace(returnUrl.startsWith("/") ? returnUrl : "/dashboard");
+      const isSafeRedirect =
+        returnUrl.startsWith("/") &&
+        !returnUrl.startsWith("//") &&
+        !returnUrl.includes("\\");
+      router.replace(isSafeRedirect ? returnUrl : "/dashboard");
     } catch (err) {
       const message = parseServerError(
         err,

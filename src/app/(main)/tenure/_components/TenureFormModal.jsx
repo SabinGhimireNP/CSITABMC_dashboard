@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2, Upload } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { tenureFormSchema } from "@/lib/Schema/memberSchema";
 import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
 function TenureFormModalContent({ initialData, onSubmitSuccess, onCancel }) {
   const [formData, setFormData] = useState({
@@ -223,16 +224,16 @@ function TenureFormModalContent({ initialData, onSubmitSuccess, onCancel }) {
 
           {/* Footer */}
           <div className="flex items-center justify-end gap-2.5 p-4 border-t border-border/80 dark:border-white/10 bg-muted/40 dark:bg-[#16181e] shrink-0">
-            <button type="button" disabled={submitting} onClick={onCancel}
-              className="h-9 px-4 text-xs font-semibold border border-border text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 transition-all cursor-pointer shadow-2xs"
+            <Button type="button" variant="outline" size="sm" disabled={submitting} onClick={onCancel}
+              className="shadow-2xs"
             >
               Cancel
-            </button>
-            <button type="submit" disabled={submitting}
-              className="h-9 px-4 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
+            </Button>
+            <Button type="submit" size="sm" loading={submitting} loadingText={initialData ? "Updating" : "Adding"}
+              className="shadow-2xs"
             >
-              {submitting ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {initialData ? "Updating" : "Adding"}</> : (initialData ? "Update Tenure" : "Create Tenure")}
-            </button>
+              {initialData ? "Update Tenure" : "Create Tenure"}
+            </Button>
           </div>
         </form>
       </div>

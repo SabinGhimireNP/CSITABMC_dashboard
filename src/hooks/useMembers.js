@@ -4,8 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/axios";
 import { createThrottle } from "@/lib/throttle";
 
-const fetchTenures = createThrottle(async () => {
-  const { data } = await apiClient.get("/tenures/", { params: { _: Date.now() } });
+const fetchTenures = createThrottle(async (queryParams = {}) => {
+  const { data } = await apiClient.get("/tenures/", {
+    params: { _: Date.now() },
+    signal: queryParams.signal,
+  });
 
   // Primary: assumes backend returns { count, next, previous, results }
   const results = Array.isArray(data)
@@ -53,7 +56,7 @@ const fetchTenures = createThrottle(async () => {
 export const useTenures = () => {
   return useQuery({
     queryKey: ["tenures"],
-    queryFn: fetchTenures,
+    queryFn: ({ signal }) => fetchTenures({ signal }),
   });
 };
 
@@ -219,7 +222,7 @@ const fetchMembersList = createThrottle(async (queryParams = {}) => {
   if (status) params.status = status;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/members/", { params });
+  const { data } = await apiClient.get("/members/", { params, signal: queryParams.signal });
   const isPaginated = !Array.isArray(data) && Array.isArray(data?.results);
   const results = isPaginated ? data.results : Array.isArray(data) ? data : [];
 
@@ -260,7 +263,8 @@ export const useMembers = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["members", search, status, ordering, page, pageSize, all],
-    queryFn: () => fetchMembersList({ search, status, ordering, page, pageSize, all }),
+    queryFn: ({ signal }) => fetchMembersList({ search, status, ordering, page, pageSize, all, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 

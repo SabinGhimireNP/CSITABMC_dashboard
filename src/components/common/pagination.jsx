@@ -4,10 +4,10 @@ import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function Pagination({
-  currentPage,
-  totalPages,
-  totalRows,
-  rowsPerPage,
+  currentPage = 1,
+  totalPages = 1,
+  totalRows = 0,
+  rowsPerPage = 10,
   onPageChange,
   onRowsPerPageChange,
   isEmbedded = false
@@ -51,9 +51,10 @@ export function Pagination({
             onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
             className="bg-card border border-input text-foreground text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer shadow-2xs hover:bg-muted"
           >
-            <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
           </select>
         </div>
       </div>

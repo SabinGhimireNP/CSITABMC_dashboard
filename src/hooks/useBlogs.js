@@ -94,6 +94,7 @@ export const useBlogs = (queryParams = {}) => {
   return useQuery({
     queryKey: ["blogs", search, status, ordering, page, pageSize],
     queryFn: ({ signal }) => fetchBlogs({ search, status, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -183,4 +184,3 @@ export const deleteBlogImage = async ({ url, publicId, excludeBlogId } = {}) => 
   });
   return data;
 };
-

@@ -11,6 +11,8 @@ import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDial
 import AdminsSkeleton from "./AdminsSkeleton";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
+import { useAuthStore } from "@/lib/store/authStore";
+import { getUserRole, ORDINARY_CMS_ROLES } from "@/lib/roles";
 
 export function AdminsPageContent({ initialModalMode = null }) {
   const router = useRouter();
@@ -18,7 +20,7 @@ export function AdminsPageContent({ initialModalMode = null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("none");
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
   const editId = initialModalMode?.action === "edit" ? initialModalMode.id : null;
@@ -35,9 +37,13 @@ export function AdminsPageContent({ initialModalMode = null }) {
 
   useEffect(() => {
     if (initialModalMode?.action === "create") {
+      // Route modal state is synchronized from navigation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormMode({ isOpen: true, editData: null });
     } else if (initialModalMode?.action === "edit") {
       if (routeEditAdmin) {
+        // Route data is external state that must populate the edit modal.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormMode({ isOpen: true, editData: routeEditAdmin });
       }
     } else if (!initialModalMode) {
@@ -53,7 +59,7 @@ export function AdminsPageContent({ initialModalMode = null }) {
   }, [initialModalMode, router]);
 
   // One request for the full list; paging, search and sorting never refetch.
-  const { data: queryData, isLoading, isError, error } = useAdmins();
+  const { data: queryData, isLoading, isFetching, isError, error } = useAdmins();
 
   const createMutation = useCreateAdmin();
   const updateMutation = useUpdateAdmin();
@@ -113,32 +119,59 @@ export function AdminsPageContent({ initialModalMode = null }) {
     const isEdit = Boolean(formMode.editData && (formMode.editData.id != null || formMode.editData.email));
     const targetId = formMode.editData?.id;
 
+    const extractErrorMsg = (err, fallback) => {
+      const data = err?.response?.data;
+      if (data?.detail) return data.detail;
+      if (data && typeof data === "object") {
+        for (const key of ["role", "password", "email", "username"]) {
+          if (data[key]) {
+            return Array.isArray(data[key]) ? data[key][0] : data[key];
+          }
+        }
+      }
+      return fallback;
+    };
+
     if (isEdit && targetId) {
-      return toast.promise(updateMutation.mutateAsync({ id: targetId, formData }), {
+      const promise = updateMutation.mutateAsync({ id: targetId, formData });
+      toast.promise(promise, {
         id: "admin-mutation",
-        loading: "Updating admin access",
+        loading: "Updating account access",
         success: () => {
           handleCloseModal();
-          return "Admin access updated successfully.";
+          return "Account access updated successfully.";
         },
-        error: "Failed to update admin access.",
+        error: (err) => extractErrorMsg(err, "Failed to update account access."),
       });
+      return promise;
     } else {
-      return toast.promise(createMutation.mutateAsync(formData), {
+      const promise = createMutation.mutateAsync(formData);
+      toast.promise(promise, {
         id: "admin-mutation",
-        loading: "Adding admin access",
+        loading: "Adding account access",
         success: () => {
           handleCloseModal();
           setCurrentPage(1);
-          return "Admin access added successfully.";
+          return "Account access added successfully.";
         },
-        error: "Failed to add admin access.",
+        error: (err) => extractErrorMsg(err, "Failed to add account access."),
       });
+      return promise;
     }
   };
 
+  const currentUser = useAuthStore((state) => state.user);
+  const currentRole = getUserRole(currentUser);
+
   const processedAdmins = useMemo(() => {
     let dataset = [...liveAdmins];
+
+    // Defense-in-depth: Never expose Superadmins or self in Admin Access list
+    if (currentRole === "superadmin") {
+      dataset = dataset.filter((a) => String(a.id) !== String(currentUser?.id) && a.role !== "superadmin");
+    } else if (currentRole === "admin") {
+      dataset = dataset.filter((a) => ORDINARY_CMS_ROLES.includes(a.role) && String(a.id) !== String(currentUser?.id));
+    }
 
     // Tab filtering by role
     if (activeTab !== "all") {
@@ -148,7 +181,7 @@ export function AdminsPageContent({ initialModalMode = null }) {
     const query = searchQuery.trim().toLowerCase();
     if (query) {
       dataset = dataset.filter((a) =>
-        [a.username, a.email, a.role].some((v) => v?.toLowerCase().includes(query))
+        [a.username, a.first_name, a.last_name, a.email, a.role].some((v) => v?.toLowerCase().includes(query))
       );
     }
 
@@ -212,7 +245,12 @@ export function AdminsPageContent({ initialModalMode = null }) {
         />
       </div>
 
-      <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
+        {isFetching && !isLoading && (
+          <div className="progress-bar-track" aria-label="Refreshing administrators">
+            <div className="progress-bar-indicator" />
+          </div>
+        )}
         {isError ? (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import { tenureAssignmentSchema } from "@/lib/Schema/memberSchema";
 import {
@@ -17,6 +17,7 @@ import {
   ADVISOR_POSTS,
 } from "./DesignationSelectPortal";
 import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
 function TenureAssignmentModalContent({
   initialData = null,
@@ -253,41 +254,38 @@ function TenureAssignmentModalContent({
 
           {/* Footer */}
           <div className="px-6 py-4 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={isSubmitting}
               onClick={onCancel}
-              className="h-9 w-full sm:w-auto px-4 order-2 sm:order-1 text-xs font-semibold border border-border text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 cursor-pointer shadow-2xs transition-all"
+              className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
             >
               Cancel
-            </button>
+            </Button>
 
             <div className="grid grid-cols-2 gap-2.5 w-full order-1 sm:order-2 sm:flex sm:w-auto sm:items-center sm:justify-end">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 disabled={isSubmitting}
                 onClick={() => handleSubmitWithStatus("draft")}
-                className="h-9 w-full sm:w-auto px-2 sm:px-4 text-xs font-semibold border border-border text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 cursor-pointer shadow-2xs transition-all text-center flex items-center justify-center"
+                className="w-full sm:w-auto shadow-2xs"
               >
                 Save as Draft
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="h-9 w-full sm:w-auto px-2 sm:px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-all flex items-center justify-center text-center gap-1.5"
+                loading={isSubmitting}
+                loadingText={initialData ? "Updating..." : "Assigning..."}
+                className="w-full sm:w-auto shadow-2xs"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-                    <span>{initialData ? "Updating..." : "Assigning..."}</span>
-                  </>
-                ) : initialData ? (
-                  initialData.status === "draft" ? "Publish Assignment" : "Update Assignment"
-                ) : (
-                  "Assign Member"
-                )}
-              </button>
+                {initialData
+                  ? initialData.status === "draft" ? "Publish Assignment" : "Update Assignment"
+                  : "Assign Member"}
+              </Button>
             </div>
           </div>
         </form>

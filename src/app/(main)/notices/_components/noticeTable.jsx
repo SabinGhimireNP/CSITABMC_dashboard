@@ -7,6 +7,7 @@ import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { NoticeDeleteDialog } from "./NoticeDeleteDialog";
 import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
 
 const getStatusStyle = (status) => {
   switch (status?.toLowerCase()) {
@@ -21,9 +22,9 @@ const getStatusStyle = (status) => {
 };
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusStyle(status)}`}>
+  <Badge variant="outline" className={`text-[10px] font-bold ${getStatusStyle(status)}`}>
     {(status || "DRAFT").toUpperCase()}
-  </span>
+  </Badge>
 );
 
 const NoticeThumb = ({ notice }) =>

@@ -330,6 +330,7 @@ export function MarkdownEditor({
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeRaw]}
+                disallowedElements={["iframe", "script", "object", "embed", "style", "form"]}
               >
                 {value}
               </ReactMarkdown>

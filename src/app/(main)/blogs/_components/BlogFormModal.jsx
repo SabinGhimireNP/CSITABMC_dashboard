@@ -14,6 +14,8 @@ import { parseServerError } from "@/lib/errorUtils";
 import { BlogConfirmDialog } from "./BlogDeleteDialog";
 import { slugifyText, formatDate } from "./blogUtils";
 import { MODAL_OVERLAY_CLASS, MODAL_BACKDROP_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 // API field name → form field name, for mapping server validation errors
 const SERVER_FIELD_MAP = {
@@ -41,8 +43,8 @@ const EMPTY_FORM = {
 };
 
 const inputBase =
-  "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-white shadow-2xs";
-const inputNormal = `${inputBase} border-slate-200 focus:ring-indigo-500`;
+  "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-white dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 shadow-2xs";
+const inputNormal = `${inputBase} border-slate-200 dark:border-slate-800 focus:ring-indigo-500`;
 const inputError = `${inputBase} border-rose-400 focus:ring-rose-500`;
 
 function FieldError({ message }) {
@@ -237,70 +239,81 @@ function BlogFormContent({ initialData, onClose, onSaved }) {
   const spinner = (action) => submitAction === action && <Loader2 className="h-3.5 w-3.5 animate-spin" />;
 
   const statusBadge = (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+    <Badge
+      variant="outline"
+      className={`text-[10px] font-bold ${
         isCurrentlyPublished
-          ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-          : "bg-amber-50 text-amber-700 border-amber-200/60"
+          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
       }`}
     >
       {isCurrentlyPublished ? "PUBLISHED" : "DRAFT"}
-    </span>
+    </Badge>
   );
 
   const footer = (
     <div className="px-4 py-3 sm:p-5 sm:px-8 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
-      <button
+      <Button
         type="button"
+        variant="outline"
         disabled={busy}
         onClick={requestClose}
-        className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors"
+        className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
       >
         Cancel
-      </button>
+      </Button>
 
       <div className="grid grid-cols-2 gap-3 w-full order-1 sm:order-2 sm:flex sm:w-auto sm:items-center sm:justify-end">
         {isCurrentlyPublished ? (
           <>
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={busy}
+              loading={submitAction === "unpublish"}
+              loadingText="Unpublishing..."
               onClick={requestUnpublish}
-              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] hover:bg-muted/50 dark:hover:bg-white/10 rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {spinner("unpublish") || <EyeOff className="h-3.5 w-3.5" />}
+              <EyeOff className="h-3.5 w-3.5" />
               Unpublish
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={busy}
+              loading={submitAction === "save-published"}
+              loadingText="Saving..."
               onClick={() => submit("save-published")}
-              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {spinner("save-published") || <CheckCircle2 className="h-3.5 w-3.5" />}
+              <CheckCircle2 className="h-3.5 w-3.5" />
               Save Changes
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={busy}
+              loading={submitAction === "draft"}
+              loadingText="Saving..."
               onClick={() => submit("draft")}
-              className="h-10 w-full sm:w-auto px-4 sm:px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] hover:bg-muted/50 dark:hover:bg-white/10 rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {spinner("draft")}
               Save Draft
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={busy}
+              loading={submitAction === "publish"}
+              loadingText="Publishing..."
               onClick={() => submit("publish")}
-              className="h-10 w-full sm:w-auto px-5 sm:px-6 text-xs font-semibold bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {spinner("publish") || <CheckCircle2 className="h-3.5 w-3.5" />}
+              <CheckCircle2 className="h-3.5 w-3.5" />
               Publish
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -523,20 +536,23 @@ function BlogEditLoader({ blogId, onClose, onSaved }) {
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-rose-500 font-medium">Failed to load this article.</p>
             <div className="flex items-center gap-2 mt-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => refetch()}
-                className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+                className="shadow-2xs"
               >
                 Try again
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                size="sm"
                 onClick={onClose}
-                className="h-9 px-4 text-xs font-semibold bg-[#0b2574] text-white rounded-lg hover:bg-[#0b2574]/90 cursor-pointer shadow-2xs"
+                className="shadow-2xs"
               >
                 Back to Blogs
-              </button>
+              </Button>
             </div>
           </div>
         )}

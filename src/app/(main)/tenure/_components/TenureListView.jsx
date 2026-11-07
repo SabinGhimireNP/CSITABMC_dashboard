@@ -4,24 +4,11 @@ import React from "react";
 import { Plus } from "lucide-react";
 import { TenureCard } from "./TenureCard";
 import { Button } from "@/components/ui/button";
-import { Pagination } from "@/components/common/pagination";
 
 export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplicating, onEdit, onDelete, onCreate }) {
-  const [rowsPerPage, setRowsPerPage] = React.useState(6);
-  const [currentPage, setCurrentPage] = React.useState(1);
-
   const getMemberCount = (tenureId) => {
     return members.filter((m) => m.tenureId === tenureId).length;
   };
-
-  const totalRows = tenures.length;
-  const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-
-  const paginatedTenures = React.useMemo(() => {
-    const startOffset = (safeCurrentPage - 1) * rowsPerPage;
-    return tenures.slice(startOffset, startOffset + rowsPerPage);
-  }, [tenures, safeCurrentPage, rowsPerPage]);
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">
@@ -37,7 +24,7 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplic
           <Button
             size="sm"
             onClick={onCreate}
-            className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+            className="gap-1.5 shadow-2xs w-full sm:w-auto cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Create Tenure
@@ -47,14 +34,14 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplic
 
       {/* Tenure Cards Grid */}
       {tenures.length === 0 ? (
-        <div className="w-full bg-card rounded-sm border border-slate-200/90 shadow-sm overflow-hidden py-16 text-center">
-          <div className="text-slate-400 font-medium text-sm">
+        <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden py-16 text-center">
+          <div className="text-muted-foreground font-medium text-sm">
             No tenures yet. Create one to get started.
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {paginatedTenures.map((tenure) => (
+          {tenures.map((tenure) => (
             <TenureCard
               key={tenure.id}
               tenure={tenure}
@@ -66,23 +53,6 @@ export function TenureListView({ tenures, members, onOpen, onDuplicate, isDuplic
               onDelete={onDelete}
             />
           ))}
-        </div>
-      )}
-
-      {tenures.length > 0 && (
-        <div className="border border-slate-200/90 rounded-sm bg-slate-50/30">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalRows={totalRows}
-            rowsPerPage={rowsPerPage}
-            onPageChange={setCurrentPage}
-            onRowsPerPageChange={(value) => {
-              setRowsPerPage(value);
-              setCurrentPage(1);
-            }}
-            isEmbedded={true}
-          />
         </div>
       )}
     </div>

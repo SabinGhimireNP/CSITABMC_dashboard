@@ -7,8 +7,9 @@ import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useAuthStore } from "@/lib/store/authStore";
-import { canDeleteAccount, isSuperadminUser } from "@/lib/roles";
+import { canDeleteAccount, canManageAccount } from "@/lib/roles";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 const getRoleStyle = (role) => {
   switch (role) {
@@ -24,9 +25,9 @@ const getRoleStyle = (role) => {
 };
 
 const RoleBadge = ({ role, label }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getRoleStyle(role)}`}>
+  <Badge variant="outline" className={`text-[10px] font-bold ${getRoleStyle(role)}`}>
     {label || role || "—"}
-  </span>
+  </Badge>
 );
 
 export function AdminTable({
@@ -62,8 +63,8 @@ export function AdminTable({
     }
   };
 
-  // Account management is Superadmin-only; the backend enforces the same rule.
-  const canManageAdmin = () => isSuperadminUser(user);
+  // Check permission hierarchy for action visibility
+  const canManageAdmin = (admin) => canManageAccount(user, admin);
 
   const renderSortIndicator = (field) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
@@ -93,17 +94,19 @@ export function AdminTable({
 
   const renderStatusToggle = (admin) => {
     const self = isSelf(admin);
+    const canManage = canManageAccount(user, admin);
+    const isDisabled = self || !canManage;
     return (
       <button
         type="button"
-        disabled={self}
+        disabled={isDisabled}
         onClick={() => onToggleActive && onToggleActive(admin)}
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
           admin.is_active
             ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
             : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-        } ${self ? "opacity-60 cursor-not-allowed" : ""}`}
-        title={self ? "You cannot deactivate your own account" : admin.is_active ? "Click to deactivate" : "Click to activate"}
+        } ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+        title={self ? "You cannot deactivate your own account" : !canManage ? "You do not have permission to change status" : admin.is_active ? "Click to deactivate" : "Click to activate"}
       >
         <span className={`h-1.5 w-1.5 rounded-full ${admin.is_active ? "bg-emerald-500" : "bg-muted-foreground"}`} />
         {admin.is_active ? "Active" : "Inactive"}

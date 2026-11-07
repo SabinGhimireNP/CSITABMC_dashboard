@@ -42,7 +42,7 @@ const fetchMentors = createThrottle(async (queryParams = {}) => {
   if (id) params.id = id;
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/mentors/", { params });
+  const { data } = await apiClient.get("/mentors/", { params, signal: queryParams.signal });
 
   const rawResults = Array.isArray(data) ? data : (data.results || []);
   const fetchedMentors = rawResults.map(mapMentorFromBackend);
@@ -62,7 +62,8 @@ export const useMentors = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["mentors", search, status, id, ordering, page, pageSize],
-    queryFn: () => fetchMentors({ search, status, id, ordering, page, pageSize }),
+    queryFn: ({ signal }) => fetchMentors({ search, status, id, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 

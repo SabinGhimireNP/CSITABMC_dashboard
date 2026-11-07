@@ -7,20 +7,22 @@ import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { CertificateDeleteDialog } from "./CertificateDeleteDialog";
 import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
 
 const CHECKBOX_CLASS =
   "rounded border-input text-primary focus:ring-primary w-4 h-4 cursor-pointer bg-background";
 
 const ProjectBadge = ({ complete }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-bold ${
       complete
         ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
         : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
     }`}
   >
     {complete ? "COMPLETE" : "INCOMPLETE"}
-  </span>
+  </Badge>
 );
 
 const CopyIdButton = ({ id }) => (

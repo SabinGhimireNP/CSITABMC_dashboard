@@ -8,17 +8,19 @@ import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { MemberDeleteDialog } from "./MemberDeleteDialog";
 import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
 
 const StatusBadge = ({ status }) => (
-  <span
-    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-semibold ${
       status === "draft"
         ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
         : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
     }`}
   >
     {status === "draft" ? "Draft" : "Published"}
-  </span>
+  </Badge>
 );
 
 const MemberAvatar = ({ member }) => (
@@ -112,7 +114,7 @@ export function MembersTable({
 
   return (
     <>
-      <div className="w-full bg-card rounded-sm border border-border shadow-2xs overflow-hidden">
+      <div className="w-full bg-card rounded-sm border border-slate-200/90 dark:border-border shadow-sm overflow-hidden relative">
         {/* Mobile: record cards */}
         <ResponsiveRecordList
           className="md:hidden"
@@ -193,7 +195,7 @@ export function MembersTable({
         </div>
 
         {totalRows > 0 && (
-          <div className="border-t border-border px-4 py-3 bg-muted/20">
+          <div className="border-t border-border bg-muted/20">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
@@ -201,6 +203,7 @@ export function MembersTable({
               rowsPerPage={rowsPerPage}
               onPageChange={onPageChange}
               onRowsPerPageChange={onRowsPerPageChange}
+              isEmbedded={true}
             />
           </div>
         )}

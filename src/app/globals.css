@@ -115,7 +115,10 @@
   
   /* Brand mapping (Dark Theme adjustments for contrast) */
   --primary: oklch(0.52 0.14 260);
-  --primary-foreground: oklch(0.145 0 0);
+  /* FIXED: was oklch(0.145 0 0) (near-black, ~2.5:1 contrast on brand-blue — fails WCAG AA).
+     Near-white gives ~7:1 contrast (passes AAA). Sidebar uses its own
+     --sidebar-primary-foreground and is unaffected by this change. */
+  --primary-foreground: oklch(0.985 0 0);
   
   --secondary-brand: oklch(0.62 0.13 250);
   --secondary: oklch(0.274 0.006 286.033);

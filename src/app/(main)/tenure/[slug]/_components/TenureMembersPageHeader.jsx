@@ -24,13 +24,15 @@ export function TenureMembersPageHeader({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div className="space-y-1">
         <div className="flex items-center gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={onBack}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            className="cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary break-words">{title}</h1>
             <p className="text-sm text-muted-foreground font-normal flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -49,7 +51,7 @@ export function TenureMembersPageHeader({
         <Button
           size="sm"
           onClick={onAddMember}
-          className="bg-[#0b2574] text-white hover:bg-[#0b2574]/90 gap-1.5 text-xs font-medium h-9 px-4 shadow-sm w-full sm:w-auto cursor-pointer"
+          className="gap-1.5 shadow-2xs w-full sm:w-auto cursor-pointer"
         >
           <UserPlus className="h-4 w-4" />
           Add Member

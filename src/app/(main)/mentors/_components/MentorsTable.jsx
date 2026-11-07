@@ -6,6 +6,7 @@ import { Pagination } from "@/components/common/pagination";
 import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { MentorDeleteDialog } from "./MentorDeleteDialog";
+import { Badge } from "@/components/ui/badge";
 
 // Event-specific roles come from the mentor's assignments, e.g. "Hackathon (Main Mentor)".
 const getEventNames = (assignments = []) => {
@@ -16,9 +17,16 @@ const getEventNames = (assignments = []) => {
 };
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${status === "published" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"}`}>
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-bold ${
+      status === "published"
+        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+        : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+    }`}
+  >
     {(status && status.toUpperCase()) || "—"}
-  </span>
+  </Badge>
 );
 
 const MentorPhoto = ({ mentor }) =>

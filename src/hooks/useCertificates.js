@@ -26,7 +26,7 @@ const fetchCertificates = createThrottle(async (queryParams = {}) => {
   if (search && search.trim()) params.search = search.trim();
   if (ordering) params.ordering = ordering;
 
-  const { data } = await apiClient.get("/certificates/", { params });
+  const { data } = await apiClient.get("/certificates/", { params, signal: queryParams.signal });
 
   // Primary: assumes backend returns { count, next, previous, results }
   const rawResults = Array.isArray(data) ? data : (data.results || []);
@@ -48,7 +48,8 @@ export const useCertificates = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["certificates", search, ordering, page, pageSize],
-    queryFn: () => fetchCertificates({ search, ordering, page, pageSize }),
+    queryFn: ({ signal }) => fetchCertificates({ search, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 

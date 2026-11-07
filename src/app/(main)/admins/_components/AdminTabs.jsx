@@ -1,19 +1,33 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Search } from "lucide-react";
+import { useAuthStore } from "@/lib/store/authStore";
+import { getUserRole } from "@/lib/roles";
 
 export function AdminTabs({ activeTab, onTabChange, searchQuery, onSearchChange }) {
-  const tabs = [
-    { id: "all", label: "All Accounts" },
-    { id: "superadmin", label: "Superadmin" },
-    { id: "admin", label: "Admin" },
-    { id: "cms_user", label: "CMS User" },
-    { id: "operations", label: "Operations" },
-    { id: "papers", label: "Papers" },
-    { id: "notice", label: "Notice" },
-    { id: "blog", label: "Blog" },
-  ];
+  const currentUser = useAuthStore((state) => state.user);
+  const currentRole = getUserRole(currentUser);
+
+  const tabs = useMemo(() => {
+    const list = [{ id: "all", label: "All Accounts" }];
+
+    // Superadmin accounts are never managed through Admin Access.
+    // Regular Admins only see ordinary CMS user roles.
+    if (currentRole === "superadmin") {
+      list.push({ id: "admin", label: "Admin" });
+    }
+
+    list.push(
+      { id: "cms_user", label: "CMS User" },
+      { id: "operations", label: "Operations" },
+      { id: "papers", label: "Papers" },
+      { id: "notice", label: "Notice" },
+      { id: "blog", label: "Blog" }
+    );
+
+    return list;
+  }, [currentRole]);
 
   return (
     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 w-full min-w-0">
@@ -43,7 +57,7 @@ export function AdminTabs({ activeTab, onTabChange, searchQuery, onSearchChange 
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search admins..."
+          placeholder={currentRole === "admin" ? "Search CMS users..." : "Search accounts..."}
           className="w-full h-9 pl-9 pr-4 bg-background border border-input rounded-xl text-xs placeholder:text-muted-foreground text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-2xs"
         />
       </div>

@@ -84,6 +84,8 @@ export const useTokenRefresh = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      // Initialize auth refresh state from the external auth store.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsInitializing(false);
       return;
     }
@@ -126,23 +128,6 @@ export const useTokenRefresh = () => {
   return { isInitializing };
 };
 
-export const useRequestPasswordReset = () => {
-  return useMutation({
-    mutationFn: async (payload) => {
-      const { data } = await apiClient.post("/users/password-reset/", payload);
-      return data;
-    },
-  });
-};
-
-export const useConfirmPasswordReset = () => {
-  return useMutation({
-    mutationFn: async (payload) => {
-      const { data } = await apiClient.post("/users/password-reset-confirm/", payload);
-      return data;
-    },
-  });
-};
 
 export const useChangePassword = () => {
   const setAccessTokenExpiry = useAuthStore((state) => state.setAccessTokenExpiry);

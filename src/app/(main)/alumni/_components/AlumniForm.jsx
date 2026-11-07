@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Loader2, X, User } from "lucide-react";
+import { X, User } from "lucide-react";
 import { alumniFormSchema } from "@/lib/Schema/alumniSchema";
 import { useMembersList } from "@/hooks/useMembers";
 import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
 function AlumniFormModalContent({
   initialData = null,
@@ -191,31 +192,28 @@ function AlumniFormModalContent({
 
         {/* Footer */}
         <div className="p-4 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] shrink-0">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-sm"
+            className="w-full sm:w-auto order-3 sm:order-1 shadow-sm"
           >
             Cancel
-          </button>
+          </Button>
           <div className="flex items-center gap-2.5 w-full sm:w-auto order-1 sm:order-2 flex-col sm:flex-row">
-            <button
+            <Button
               type="button"
+              size="sm"
+              loading={submitType !== null}
+              loadingText="Saving..."
               disabled={submitType !== null}
               onClick={handleActionClick}
-              className="h-9 w-full sm:w-auto px-4 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto shadow-sm"
             >
-              {submitType === "active" ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
-                </>
-              ) : initialData ? (
-                "Update Alumni"
-              ) : (
-                "Add Alumni"
-              )}
-            </button>
+              {initialData ? "Update Alumni" : "Add Alumni"}
+            </Button>
           </div>
         </div>
       </div>

@@ -2,13 +2,14 @@
 
 import React, { useEffect } from "react";
 import { EVENT_CATEGORIES } from "@/lib/Schema/eventSchema";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { MarkdownEditor } from "@/components/common/MarkdownEditor";
 import { FormSection } from "@/components/common/FormSection";
 import { useEventForm } from "./useEventForm";
 import { EventMediaUpload } from "./EventMediaUpload";
 import { EventMentorsSelect } from "./EventMentorsSelect";
 import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
 export function EventFormModal(props) {
   if (!props.isOpen) return null;
@@ -444,54 +445,45 @@ function EventFormModalContent({
 
         {/* Footer with Ergonomic Responsive Layout */}
         <div className="px-4 py-3 sm:p-5 sm:px-8 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
-          <button
+          <Button
             type="button"
+            variant="outline"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-10 w-full sm:w-auto px-5 order-2 sm:order-1 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs transition-colors"
+            className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
           >
             Cancel
-          </button>
+          </Button>
 
           <div className="grid grid-cols-2 gap-3 w-full order-1 sm:order-2 sm:flex sm:w-auto sm:items-center">
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={submitType !== null}
+              loading={submitType === "draft"}
+              loadingText="Saving..."
               onClick={(e) => {
                 e.preventDefault();
                 handleSubmit("draft", onSubmitSuccess);
               }}
-              className="h-10 w-full sm:w-auto px-5 text-xs font-semibold border border-border/80 dark:border-white/12 text-foreground bg-card dark:bg-[#1f232b] rounded-lg hover:bg-muted/50 dark:hover:bg-white/10 cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {submitType === "draft" ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
-                </>
-              ) : (
-                "Save as Draft"
-              )}
-            </button>
+              Save as Draft
+            </Button>
 
-            <button
+            <Button
               type="button"
               disabled={submitType !== null}
+              loading={submitType === "published"}
+              loadingText={initialData ? "Saving..." : "Publishing..."}
               onClick={(e) => {
                 e.preventDefault();
                 handleSubmit("published", onSubmitSuccess);
               }}
-              className="h-10 w-full sm:w-auto px-6 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {submitType === "published" ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
-                  {initialData ? "Saving..." : "Publishing..."}
-                </>
-              ) : initialData ? (
-                "Save Changes"
-              ) : (
-                "Publish Event"
-              )}
-            </button>
+              {initialData ? "Save Changes" : "Publish Event"}
+            </Button>
           </div>
         </div>
       </div>

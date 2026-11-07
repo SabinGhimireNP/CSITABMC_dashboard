@@ -52,7 +52,7 @@ const fetchPastPapers = createThrottle(async (queryParams = {}) => {
   if (model_set !== "") params.model_set = model_set;
   if (is_old_course !== "") params.is_old_course = is_old_course;
 
-  const { data } = await apiClient.get("/past-papers/", { params });
+  const { data } = await apiClient.get("/past-papers/", { params, signal: queryParams.signal });
 
   const rawResults = Array.isArray(data) ? data : (data.results || []);
   const fetchedPastPapers = rawResults.map(mapPastPaperFromBackend);
@@ -79,8 +79,9 @@ export const usePastPapers = (queryParams = {}) => {
 
   return useQuery({
     queryKey: ["pastPapers", search, ordering, page, pageSize, model_set, is_old_course],
-    queryFn: () =>
-      fetchPastPapers({ search, ordering, page, pageSize, model_set, is_old_course }),
+    queryFn: ({ signal }) =>
+      fetchPastPapers({ search, ordering, page, pageSize, model_set, is_old_course, signal }),
+    placeholderData: (previousData) => previousData,
   });
 };
 
