@@ -8,15 +8,19 @@ import { Globe } from "lucide-react";
 
 import ProfileSheet from "./ProfileSheet";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationBell } from "./NotificationBell";
+import { usePermission } from "@/hooks/usePermission";
 
 const Header = () => {
+  const { can } = usePermission();
+
   return (
     <header className="h-16 flex items-center sticky top-0 justify-between px-4 md:px-6 border-b bg-background z-50">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="h-8 w-8 border bg-slate-200 dark:bg-slate-800 text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700" />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <ThemeToggle />
 
         <Link
@@ -27,6 +31,8 @@ const Header = () => {
         >
           <Globe size={20} />
         </Link>
+
+        {can("notifications.view") && <NotificationBell />}
 
         <ProfileSheet />
       </div>

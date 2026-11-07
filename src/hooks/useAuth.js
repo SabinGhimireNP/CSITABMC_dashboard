@@ -103,18 +103,19 @@ export const useTokenRefresh = () => {
 
       if (msUntilRefresh <= 0) {
         // Token is already within the buffer window (or expired) — refresh now.
-        const ok = await refreshSession();
-        if (!ok) {
-          clearAuth();
+        const res = await refreshSession();
+        if (!res.success && res.reason !== "network_error") {
+          clearAuth(res.reason);
         } else {
           setIsInitializing(false);
         }
       } else {
         setIsInitializing(false);
-        timerRef.current = setTimeout(() => {
-          refreshSession().then((ok) => {
-            if (!ok) clearAuth();
-          });
+        timerRef.current = setTimeout(async () => {
+          const res = await refreshSession();
+          if (!res.success && res.reason !== "network_error") {
+            clearAuth(res.reason);
+          }
         }, msUntilRefresh);
       }
     };
