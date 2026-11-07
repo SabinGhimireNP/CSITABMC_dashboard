@@ -38,7 +38,7 @@ let refreshPromise = null;
 let lastRefreshAt = 0;
 
 // Clear the persisted auth state so the app redirects to login.
-export function clearAuth() {
+export function clearAuth(reason = null) {
   if (typeof window !== "undefined") {
     try {
       localStorage.removeItem("auth-storage");
@@ -48,15 +48,16 @@ export function clearAuth() {
     const publicPaths = ["/login"];
     const isPublic = publicPaths.some((p) => window.location.pathname.startsWith(p));
     if (!isPublic) {
-      window.location.href = "/login";
+      const url = reason ? `/login?error=${encodeURIComponent(reason)}` : "/login";
+      window.location.href = url;
     }
   }
 }
 
 /**
  * Refresh the session once, sharing the in-flight request with every caller.
- * Resolves true on success, false on failure (the backend has then cleared
- * the session cookies).
+ * Resolves { success: true } on success, or { success: false, reason: string } on failure.
+ * Distinguishes 401 token invalidation, missing cookies, and temporary network/server errors.
  */
 export function refreshSession() {
   if (!refreshPromise) {
@@ -66,9 +67,18 @@ export function refreshSession() {
         lastRefreshAt = Date.now();
         const { useAuthStore } = await import("@/lib/store/authStore");
         useAuthStore.getState().setAccessTokenExpiry(Date.now() + ACCESS_TOKEN_TTL_MS);
-        return true;
-      } catch {
-        return false;
+        return { success: true };
+      } catch (err) {
+        const status = err?.response?.status;
+        const errDetail = err?.response?.data?.error;
+        if (status === 401 || status === 403) {
+          if (errDetail === "Refresh token not found") {
+            return { success: false, reason: "cookies_blocked" };
+          }
+          return { success: false, reason: "session_expired" };
+        }
+        // Network error, timeout, or 5xx server error: do not wipe stored credentials.
+        return { success: false, reason: "network_error", error: err };
       } finally {
         refreshPromise = null;
       }
@@ -108,9 +118,11 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     }
 
-    const refreshed = await refreshSession();
-    if (!refreshed) {
-      clearAuth();
+    const refreshResult = await refreshSession();
+    if (!refreshResult.success) {
+      if (refreshResult.reason !== "network_error") {
+        clearAuth(refreshResult.reason);
+      }
       return Promise.reject(error);
     }
     return apiClient(originalRequest);

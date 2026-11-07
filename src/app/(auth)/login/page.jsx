@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,16 +14,31 @@ function LoginForm() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
+  const [dismissedQueryError, setDismissedQueryError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("returnUrl") || "/dashboard";
+  const errorParam = searchParams.get("error");
+
+  const queryErrorMessage = useMemo(() => {
+    if (errorParam === "cookies_blocked") {
+      return "Your browser blocked authentication cookies (common in Incognito mode). Please allow cross-site cookies for this site or open in a standard browser window.";
+    }
+    if (errorParam === "session_expired") {
+      return "Your session has expired. Please sign in again.";
+    }
+    return null;
+  }, [errorParam]);
+
+  const activeError = serverError || (!dismissedQueryError ? queryErrorMessage : null);
 
   const loginMutation = useLogin();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError("");
+    setDismissedQueryError(true);
     setErrors({});
 
     // Client-side validation
@@ -66,6 +81,7 @@ function LoginForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
     if (serverError) setServerError("");
+    if (!dismissedQueryError) setDismissedQueryError(true);
   };
 
   const isPending = loginMutation.isPending;
@@ -88,14 +104,14 @@ function LoginForm() {
       {/* Login Card */}
       <div className="bg-card text-card-foreground rounded-2xl shadow-xl border border-border p-6 sm:p-8">
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          {/* Server Error Banner */}
-          {serverError && (
+          {/* Error Banner */}
+          {activeError && (
             <div
               role="alert"
               className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-2.5 animate-in fade-in"
             >
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span className="leading-snug">{serverError}</span>
+              <span className="leading-snug">{activeError}</span>
             </div>
           )}
 

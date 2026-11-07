@@ -1,21 +1,20 @@
 "use client";
 
 import React from "react";
-import { Eye, RefreshCw } from "lucide-react";
+import { Eye, Check, CheckCheck, Users } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { Button } from "@/components/ui/button";
-import { usePermission } from "@/hooks/usePermission";
 import {
   getNotificationProfile,
-  getDeliveryStatusBadge,
+  getReadStatusBadge,
 } from "../_lib/profileUtils";
 
 export function NotificationTable({
   notifications = [],
   onViewDetails,
-  onRetry,
-  retryingId = null,
+  onToggleRead,
+  isSentView = false,
   currentPage,
   totalPages,
   totalRows,
@@ -23,59 +22,85 @@ export function NotificationTable({
   onPageChange,
   onRowsPerPageChange,
 }) {
-  const { can } = usePermission();
-  const canRetry = can("notifications.retry");
-
   return (
     <div className="w-full flex flex-col">
-      {/* Mobile: record cards */}
+      {/* Mobile: responsive record cards */}
       <ResponsiveRecordList
         className="md:hidden"
         items={notifications}
         getKey={(n) => n.id}
-        emptyText="No notification records discovered."
+        emptyText={isSentView ? "No sent notifications found." : "No received notifications found."}
         renderCard={(item) => {
           const profile = getNotificationProfile(item.sourceModule);
-          const ProfileIcon = profile.icon;
+          const formattedDate = item.sentAt || item.createdAt
+            ? new Date(item.sentAt || item.createdAt).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "";
 
           return (
             <div className={`p-4 space-y-3 border-l-4 ${profile.accentBorder}`}>
               <div className="flex items-start justify-between gap-3">
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${
-                    profile.type === "announcement"
-                      ? "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200/80 dark:border-purple-800/50"
-                      : "bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/50"
-                  }`}
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${profile.badgeClasses}`}
                 >
                   {profile.label}
                 </span>
-                {getDeliveryStatusBadge(item.status)}
+
+                {!isSentView ? (
+                  getReadStatusBadge(item.isRead)
+                ) : (
+                  <span className="text-[11px] font-medium text-muted-foreground inline-flex items-center gap-1">
+                    <Users className="w-3 h-3" /> {item.recipientCount} recipient(s)
+                  </span>
+                )}
               </div>
 
               <div>
                 <h4 className="font-semibold text-sm text-foreground break-words">
-                  {item.title || item.sourceTitle}
+                  {item.title}
                 </h4>
-                {item.body && (
+                {item.message && (
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                    {item.body}
+                    {item.message}
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-border">
                 <span>
-                  Accepted:{" "}
-                  <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                    {item.acceptedCount}
-                  </strong>{" "}
-                  / {item.totalDevices}
+                  {!isSentView ? (
+                    <>From: <strong className="font-medium text-foreground">{item.sender ? item.sender.name : "System"}</strong></>
+                  ) : (
+                    <>Sent by you</>
+                  )}
                 </span>
-                <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                <span>{formattedDate}</span>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-1">
+                {!isSentView && onToggleRead && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onToggleRead(item)}
+                    className="text-xs h-7 px-2 cursor-pointer"
+                  >
+                    {item.isRead ? (
+                      <>
+                        <Check className="w-3 h-3 mr-1 text-muted-foreground" /> Unread
+                      </>
+                    ) : (
+                      <>
+                        <CheckCheck className="w-3 h-3 mr-1 text-primary" /> Mark read
+                      </>
+                    )}
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -84,21 +109,6 @@ export function NotificationTable({
                 >
                   <Eye className="w-3 h-3 mr-1" /> Details
                 </Button>
-                {canRetry && item.failedCount > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => onRetry(item.id)}
-                    disabled={retryingId === item.id}
-                    className="text-xs h-7 px-2.5 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
-                  >
-                    <RefreshCw
-                      className={`w-3 h-3 mr-1 ${
-                        retryingId === item.id ? "animate-spin" : ""
-                      }`}
-                    />
-                    Retry
-                  </Button>
-                )}
               </div>
             </div>
           );
@@ -110,12 +120,11 @@ export function NotificationTable({
         <table className="w-full text-left border-collapse min-w-[750px] table-fixed">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-muted-foreground font-semibold text-xs select-none">
-              <th className="py-3 px-4 w-[16%]">Type</th>
+              <th className="py-3 px-4 w-[14%]">Type</th>
               <th className="py-3 px-4 w-[38%]">Notification Content</th>
-              <th className="py-3 px-4 w-[14%]">Delivery Status</th>
-              <th className="py-3 px-4 w-[16%]">Accepted / Targeted</th>
-              <th className="py-3 px-4 w-[16%]">Sent Date</th>
-              <th className="py-3 px-4 text-right pr-6 w-[10%] sticky right-0 bg-muted/95 border-b border-border">
+              <th className="py-3 px-4 w-[14%]">{!isSentView ? "Status" : "Recipients"}</th>
+              <th className="py-3 px-4 w-[18%]">{!isSentView ? "Sender" : "Date"}</th>
+              <th className="py-3 px-4 text-right pr-6 w-[16%] sticky right-0 bg-muted/95 border-b border-border">
                 Actions
               </th>
             </tr>
@@ -124,29 +133,35 @@ export function NotificationTable({
             {notifications.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={5}
                   className="py-12 text-center text-muted-foreground font-medium bg-card"
                 >
-                  No matching notification records discovered.
+                  {isSentView ? "No sent notifications found." : "No notifications in your inbox."}
                 </td>
               </tr>
             ) : (
               notifications.map((item) => {
                 const profile = getNotificationProfile(item.sourceModule);
+                const formattedDate = item.sentAt || item.createdAt
+                  ? new Date(item.sentAt || item.createdAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "";
 
                 return (
                   <tr
                     key={item.id}
-                    className="hover:bg-muted/40 transition-colors group h-14 bg-card"
+                    className={`hover:bg-muted/40 transition-colors group h-14 bg-card ${
+                      !isSentView && !item.isRead ? "bg-primary/[0.02]" : ""
+                    }`}
                   >
-                    {/* Type / Profile */}
+                    {/* Type */}
                     <td className="py-2.5 px-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${
-                          profile.type === "announcement"
-                            ? "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200/80 dark:border-purple-800/50"
-                            : "bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/50"
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${profile.badgeClasses}`}
                       >
                         {profile.label}
                       </span>
@@ -154,82 +169,80 @@ export function NotificationTable({
 
                     {/* Content */}
                     <td className="py-2.5 px-4 truncate">
-                      <div
-                        className="font-semibold text-foreground truncate group-hover:text-primary transition-colors"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </div>
-                      <div
-                        className="text-[11px] text-muted-foreground truncate mt-0.5"
-                        title={item.body}
-                      >
-                        {item.body}
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-2.5 px-4 whitespace-nowrap">
-                      {getDeliveryStatusBadge(item.status)}
-                    </td>
-
-                    {/* Delivery Rate */}
-                    <td className="py-2.5 px-4 whitespace-nowrap font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                          {item.acceptedCount}
-                        </span>
-                        <span className="text-muted-foreground">/</span>
-                        <span className="text-muted-foreground">
-                          {item.totalDevices} devices
-                        </span>
-                      </div>
-                      {item.failedCount > 0 && (
-                        <div className="text-[10px] text-rose-500 font-semibold mt-0.5">
-                          {item.failedCount} failed
-                          {item.retryCount > 0 && ` (${item.retryCount} retries)`}
+                      <div className="flex items-center gap-2">
+                        {!isSentView && !item.isRead && (
+                          <span className="w-2 h-2 rounded-full bg-primary shrink-0 ring-2 ring-primary/20" />
+                        )}
+                        <div
+                          className={`truncate group-hover:text-primary transition-colors ${
+                            !isSentView && !item.isRead ? "font-bold text-foreground" : "font-medium text-foreground"
+                          }`}
+                          title={item.title}
+                        >
+                          {item.title}
                         </div>
+                      </div>
+                      <div
+                        className="text-[11px] text-muted-foreground truncate mt-0.5 pl-4"
+                        title={item.message}
+                      >
+                        {item.message}
+                      </div>
+                    </td>
+
+                    {/* Status or Recipient Count */}
+                    <td className="py-2.5 px-4 whitespace-nowrap">
+                      {!isSentView ? (
+                        getReadStatusBadge(item.isRead)
+                      ) : (
+                        <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>{item.recipientCount} user(s)</span>
+                        </span>
                       )}
                     </td>
 
-                    {/* Sent Date */}
-                    <td className="py-2.5 px-4 whitespace-nowrap text-muted-foreground tabular-nums">
-                      {new Date(item.createdAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    {/* Sender or Date */}
+                    <td className="py-2.5 px-4 whitespace-nowrap text-muted-foreground">
+                      {!isSentView ? (
+                        <div>
+                          <p className="font-medium text-foreground text-xs">
+                            {item.sender ? item.sender.name : "System"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">{formattedDate}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs">{formattedDate}</span>
+                      )}
                     </td>
 
                     {/* Actions */}
-                    <td className="py-2.5 px-4 text-right pr-6 sticky right-0 bg-card group-hover:bg-muted/40 transition-colors whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onViewDetails(item)}
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
-                          title="View Details"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </Button>
-                        {canRetry && item.failedCount > 0 && (
+                    <td className="py-2.5 px-4 text-right pr-6 whitespace-nowrap sticky right-0 bg-card group-hover:bg-muted/40 transition-colors">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {!isSentView && onToggleRead && (
                           <Button
                             variant="ghost"
-                            size="icon"
-                            onClick={() => onRetry(item.id)}
-                            disabled={retryingId === item.id}
-                            className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer"
-                            title="Retry failed recipients"
+                            size="sm"
+                            onClick={() => onToggleRead(item)}
+                            title={item.isRead ? "Mark as unread" : "Mark as read"}
+                            className="text-xs h-7 px-2 cursor-pointer"
                           >
-                            <RefreshCw
-                              className={`w-3.5 h-3.5 ${
-                                retryingId === item.id ? "animate-spin" : ""
-                              }`}
-                            />
+                            {item.isRead ? (
+                              <Check className="w-3.5 h-3.5 text-muted-foreground" />
+                            ) : (
+                              <CheckCheck className="w-3.5 h-3.5 text-primary" />
+                            )}
                           </Button>
                         )}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onViewDetails(item)}
+                          className="text-xs h-7 px-2.5 cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3 mr-1" /> View
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -240,18 +253,15 @@ export function NotificationTable({
         </table>
       </div>
 
-      {/* Embedded Pagination */}
-      <div className="border-t border-border bg-muted/20">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalRows={totalRows}
-          rowsPerPage={rowsPerPage}
-          onPageChange={onPageChange}
-          onRowsPerPageChange={onRowsPerPageChange}
-          isEmbedded={true}
-        />
-      </div>
+      {/* Pagination Footer */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalRows={totalRows}
+        rowsPerPage={rowsPerPage}
+        onPageChange={onPageChange}
+        onRowsPerPageChange={onRowsPerPageChange}
+      />
     </div>
   );
 }
