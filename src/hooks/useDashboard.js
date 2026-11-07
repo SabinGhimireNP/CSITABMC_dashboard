@@ -30,6 +30,26 @@ export const useDashboardOverview = () => {
   });
 };
 
+function hasUserChanged(current, incoming) {
+  if (!current || !incoming) return false;
+  if (current.id !== incoming.id) return true;
+  if (current.role !== incoming.role) return true;
+  if (current.email !== incoming.email) return true;
+  if (current.name !== incoming.name) return true;
+  if (current.first_name !== incoming.first_name) return true;
+  if (current.last_name !== incoming.last_name) return true;
+  if (current.username !== incoming.username) return true;
+  if (current.role_label !== incoming.role_label) return true;
+
+  const currPerms = Array.isArray(current.permissions) ? current.permissions : [];
+  const nextPerms = Array.isArray(incoming.permissions) ? incoming.permissions : [];
+  if (currPerms.length !== nextPerms.length) return true;
+  for (let i = 0; i < currPerms.length; i++) {
+    if (currPerms[i] !== nextPerms[i]) return true;
+  }
+  return false;
+}
+
 /** Authenticated user's own profile (display name etc.). */
 export const useCurrentUser = () => {
   const user = useAuthStore((state) => state.user);
@@ -38,6 +58,10 @@ export const useCurrentUser = () => {
     queryKey: ["users", "me", user?.id],
     queryFn: async () => {
       const { data } = await apiClient.get("/users/me/");
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser && hasUserChanged(currentUser, data)) {
+        useAuthStore.getState().updateUser(data);
+      }
       return data;
     },
     enabled: !!user,

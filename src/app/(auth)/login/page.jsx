@@ -46,11 +46,18 @@ function LoginForm() {
         !returnUrl.includes("\\");
       router.replace(isSafeRedirect ? returnUrl : "/dashboard");
     } catch (err) {
-      const message = parseServerError(
-        err,
-        "Invalid email or password. Please try again."
-      );
-      setServerError(message);
+      if (err?.response?.status === 429) {
+        const retryAfter = err.response.headers?.["retry-after"] || err.response.headers?.["Retry-After"];
+        const serverDetail = err.response.data?.detail;
+        const msg = serverDetail || (retryAfter ? `Too many failed login attempts. Please try again in ${retryAfter} seconds.` : "Too many requests. Please wait before trying again.");
+        setServerError(msg);
+      } else {
+        const message = parseServerError(
+          err,
+          "Invalid email or password. Please try again."
+        );
+        setServerError(message);
+      }
     }
   };
 

@@ -46,8 +46,9 @@ export function normalizePermission(permission) {
 
 /** Exact permission check against the backend-provided list. */
 export function hasPermission(user, permission) {
-  if (!permission || permission === "*") return Boolean(user);
+  if (!permission) return false;
   if (!user) return false;
+  if (permission === "*") return true;
 
   // Superadmin has full access to all permissions and modules
   const role = typeof user === "string" ? user : getUserRole(user);
@@ -60,14 +61,19 @@ export function hasPermission(user, permission) {
 }
 
 export function requiredPermissionForPath(path) {
+  if (!path) return null;
   for (const [prefix, permission] of Object.entries(ROUTE_PERMISSIONS)) {
     if (path === prefix || path?.startsWith(prefix + "/")) return permission;
   }
-  return "*";
+  return null;
 }
 
 export function canAccessRoute(user, path) {
-  return hasPermission(user, requiredPermissionForPath(path));
+  if (!user) return false;
+  const permission = requiredPermissionForPath(path);
+  // Default deny: if path has no mapped permission, deny access
+  if (!permission) return false;
+  return hasPermission(user, permission);
 }
 
 

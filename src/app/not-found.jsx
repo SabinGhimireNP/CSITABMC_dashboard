@@ -2,8 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, LayoutDashboard, FileQuestion } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, Compass } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 export default function NotFound() {
@@ -18,81 +20,88 @@ export default function NotFound() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between p-4 sm:p-8 transition-colors duration-200">
-      {/* Top Header / Branding & Theme Toggle */}
-      <header className="max-w-5xl mx-auto w-full flex items-center justify-between py-2">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="h-10 w-10 rounded-xl overflow-hidden border border-border shadow-xs bg-card p-0.5 group-hover:border-primary/50 transition-colors">
-            <img
-              src="/logo.jpg"
-              alt="CSITABMC"
-              className="size-full rounded-lg object-cover"
-            />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-foreground tracking-tight group-hover:text-primary transition-colors">
-              CSIT Association of BMC
-            </h1>
-            <p className="text-[11px] font-medium text-muted-foreground">
-              Management Portal
-            </p>
-          </div>
-        </Link>
-        <ThemeToggle />
+    <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors duration-200">
+      {/* Top Header */}
+      <header className="w-full border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-8 h-16">
+          <Link href="/dashboard" className="flex items-center gap-3 group">
+            <div className="size-9 rounded-xl overflow-hidden border border-border shadow-2xs bg-card p-0.5 group-hover:border-primary/50 transition-colors">
+              <Image
+                src="/logo.jpg"
+                alt="CSITABMC"
+                width={36}
+                height={36}
+                className="size-full rounded-lg object-cover"
+                priority
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
+                CSIT Association of BMC
+              </span>
+              <span className="text-[11px] font-medium text-muted-foreground">
+                Management Portal
+              </span>
+            </div>
+          </Link>
+          <ThemeToggle />
+        </div>
       </header>
 
-      {/* Main 404 Hero Card */}
-      <main className="max-w-md mx-auto w-full my-auto py-12 px-2 text-center">
-        <div className="relative rounded-2xl border border-border bg-card p-8 sm:p-10 shadow-xl text-card-foreground">
-          {/* Subtle decorative glow */}
-          <div
-            className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none"
-            aria-hidden="true"
-          />
-
-          {/* Icon Badge */}
-          <div className="relative inline-flex items-center justify-center mb-6">
-            <div className="h-20 w-20 rounded-2xl bg-muted/60 border border-border flex items-center justify-center shadow-inner">
-              <FileQuestion className="h-10 w-10 text-primary" strokeWidth={1.75} />
+      {/* Main Content Area */}
+      <main className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-xl mx-auto text-center">
+          {/* Main Card */}
+          <div className="rounded-2xl border border-border/60 bg-card/60 dark:bg-card/40 backdrop-blur-md p-8 sm:p-10 shadow-lg shadow-black/5 dark:shadow-none space-y-6">
+            {/* Top Indicator */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+                <Compass className="size-7 stroke-[1.75]" />
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 border border-border text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-destructive animate-pulse" />
+                Error 404
+              </div>
             </div>
-          </div>
 
-          {/* 404 Tag */}
-          <div className="inline-flex items-center px-3 py-1 mb-3 text-xs font-semibold tracking-wider uppercase rounded-full bg-primary/10 text-primary border border-primary/20">
-            Error 404
-          </div>
+            {/* Typography */}
+            <div className="space-y-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                Route Not Found
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
+                The requested URL doesn&apos;t exist, has been relocated, or you may have followed an outdated link.
+              </p>
+            </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground mb-3">
-            Page Not Found
-          </h2>
-
-          <p className="text-sm text-muted-foreground mb-8 leading-relaxed max-w-sm mx-auto">
-            The page you are looking for doesn’t exist or has been moved to another location.
-          </p>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleGoBack}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-sm font-medium shadow-xs transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Go Back
-            </button>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shadow-sm transition-colors"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Back to Dashboard
-            </Link>
+            {/* Primary / Secondary Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleGoBack}
+                className="w-full sm:w-auto rounded-xl px-5 gap-2 cursor-pointer"
+              >
+                <ArrowLeft className="size-4" />
+                Go Back
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                className="w-full sm:w-auto rounded-xl px-5 gap-2 shadow-xs"
+              >
+                <Link href="/dashboard">
+                  <LayoutDashboard className="size-4" />
+                  Go to Dashboard
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="text-center py-4 text-xs text-muted-foreground">
+      <footer className="w-full border-t border-border/30 py-4 text-center text-xs text-muted-foreground">
         &copy; {new Date().getFullYear()} CSIT Association of BMC. All rights reserved.
       </footer>
     </div>

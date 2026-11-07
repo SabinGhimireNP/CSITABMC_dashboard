@@ -25,9 +25,16 @@ const getRoleStyle = (role) => {
 };
 
 const RoleBadge = ({ role, label }) => (
-  <Badge variant="outline" className={`text-[10px] font-bold ${getRoleStyle(role)}`}>
-    {label || role || "—"}
-  </Badge>
+  <div className="flex items-center gap-1.5 flex-wrap">
+    <Badge variant="outline" className={`text-[10px] font-bold ${getRoleStyle(role)}`}>
+      {label || role || "—"}
+    </Badge>
+    {role === "superadmin" && (
+      <Badge variant="secondary" className="text-[9px] font-semibold text-muted-foreground bg-muted border border-border px-1.5 py-0">
+        Read-only
+      </Badge>
+    )}
+  </div>
 );
 
 export function AdminTable({
