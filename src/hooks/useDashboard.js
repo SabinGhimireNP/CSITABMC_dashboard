@@ -1,174 +1,70 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import apiClient from "@/lib/axios";
+import { useAuthStore } from "@/lib/store/authStore";
+import { getUserRole } from "@/lib/roles";
 
-const API_URL = process.env.NEXT_PUBLIC_URL;
+/**
+ * Role-aware dashboard overview.
+ *
+ * The backend aggregates statistics and the latest records for every module the
+ * authenticated user can view and omits the rest, so the response shape is
+ * `{ role, modules: { [key]: { stats, recent } | { error: true } } }`.
+ *
+ * The query key keeps the "dashboard" prefix so existing
+ * `invalidateQueries({ queryKey: ["dashboard"] })` calls still refresh it.
+ */
+export const useDashboardOverview = () => {
+  const user = useAuthStore((state) => state.user);
+  const role = getUserRole(user);
 
-const getDashboardStats = async () => {
-  try {
-    const [noticesRes, eventsRes, mentorsRes, certificatesRes] =
-      await Promise.allSettled([
-        fetch(`${API_URL}/notices`),
-        fetch(`${API_URL}/events`),
-        fetch(`${API_URL}/mentors`),
-        fetch(`${API_URL}/certificates`),
-      ]);
+  return useQuery({
+    queryKey: ["dashboard", "overview", role],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/dashboard/overview/");
+      return data;
+    },
+    enabled: !!role,
+    staleTime: 60 * 1000,
+  });
+};
 
-    const parseResult = async (res, defaultValue) => {
-      if (res.status === "fulfilled" && res.value.ok) {
-        return res.value.json();
+function hasUserChanged(current, incoming) {
+  if (!current || !incoming) return false;
+  if (current.id !== incoming.id) return true;
+  if (current.role !== incoming.role) return true;
+  if (current.email !== incoming.email) return true;
+  if (current.name !== incoming.name) return true;
+  if (current.first_name !== incoming.first_name) return true;
+  if (current.last_name !== incoming.last_name) return true;
+  if (current.username !== incoming.username) return true;
+  if (current.role_label !== incoming.role_label) return true;
+
+  const currPerms = Array.isArray(current.permissions) ? current.permissions : [];
+  const nextPerms = Array.isArray(incoming.permissions) ? incoming.permissions : [];
+  if (currPerms.length !== nextPerms.length) return true;
+  for (let i = 0; i < currPerms.length; i++) {
+    if (currPerms[i] !== nextPerms[i]) return true;
+  }
+  return false;
+}
+
+/** Authenticated user's own profile (display name etc.). */
+export const useCurrentUser = () => {
+  const user = useAuthStore((state) => state.user);
+
+  return useQuery({
+    queryKey: ["users", "me", user?.id],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/users/me/");
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser && hasUserChanged(currentUser, data)) {
+        useAuthStore.getState().updateUser(data);
       }
-      return defaultValue;
-    };
-
-    const notices = await parseResult(noticesRes, { count: 0, results: [] });
-    const events = await parseResult(eventsRes, { count: 0, results: [] });
-    const mentors = await parseResult(mentorsRes, []);
-    const certificates = await parseResult(certificatesRes, []);
-
-    const publishedNotices = (notices.results || []).filter(
-      (n) => n.status === "published" || n.status === "Published"
-    );
-    const openEvents = (events.results || []).filter(
-      (e) =>
-        e.status === "open" || e.status === "Open" || e.registration_link
-    );
-    const completedCertificates = Array.isArray(certificates)
-      ? certificates.filter(
-          (c) => c.is_project_complete || c.isProjectComplete
-        )
-      : [];
-
-    return {
-      publishedNoticesCount: publishedNotices.length,
-      openEventsCount: openEvents.length,
-      totalMentorsCount: Array.isArray(mentors)
-        ? mentors.length
-        : mentors.count || 0,
-      certificatesIssuedCount: completedCertificates.length,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
-    return {
-      publishedNoticesCount: 0,
-      openEventsCount: 0,
-      totalMentorsCount: 0,
-      certificatesIssuedCount: 0,
-    };
-  }
-};
-
-const getRecentNotices = async () => {
-  try {
-    const response = await fetch(`${API_URL}/notices`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    const results = data.results || [];
-
-    const published = results.filter(
-      (n) => n.status === "published" || n.status === "Published"
-    );
-
-    return published
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at) -
-          new Date(a.updated_at || a.created_at)
-      )
-      .slice(0, 5)
-      .map((notice) => ({
-        id: notice.id,
-        title: notice.title,
-        category: notice.category,
-        status: notice.status,
-        date: notice.updated_at || notice.created_at,
-      }));
-  } catch (error) {
-    console.error("Error fetching recent notices:", error);
-    return [];
-  }
-};
-
-const getRecentEvents = async () => {
-  try {
-    const response = await fetch(`${API_URL}/events`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    const results = data.results || [];
-
-    return results
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at) -
-          new Date(a.updated_at || a.created_at)
-      )
-      .slice(0, 5)
-      .map((event) => ({
-        id: event.id,
-        title: event.title,
-        location: event.location || "TBD",
-        registrationOpen: !!(
-          event.registration_link || event.status === "open"
-        ),
-        startDate: event.start_date || event.startDate,
-      }));
-  } catch (error) {
-    console.error("Error fetching recent events:", error);
-    return [];
-  }
-};
-
-const getRecentCertificates = async () => {
-  try {
-    const response = await fetch(`${API_URL}/certificates`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    const results = Array.isArray(data) ? data : data.results || [];
-
-    return results
-      .sort(
-        (a, b) =>
-          new Date(b.issued_at || b.created_at) -
-          new Date(a.issued_at || a.created_at)
-      )
-      .slice(0, 5)
-      .map((cert) => ({
-        id: cert.certificate_id || cert.id,
-        fullName: cert.full_name || cert.fullName,
-        createdAt: cert.issued_at || cert.created_at,
-        isProjectComplete:
-          cert.is_project_complete || cert.isProjectComplete || false,
-      }));
-  } catch (error) {
-    console.error("Error fetching recent certificates:", error);
-    return [];
-  }
-};
-
-export const useDashboardStats = () => {
-  return useQuery({
-    queryKey: ["dashboard", "stats"],
-    queryFn: getDashboardStats,
-  });
-};
-
-export const useRecentNotices = () => {
-  return useQuery({
-    queryKey: ["dashboard", "recentNotices"],
-    queryFn: getRecentNotices,
-  });
-};
-
-export const useRecentEvents = () => {
-  return useQuery({
-    queryKey: ["dashboard", "recentEvents"],
-    queryFn: getRecentEvents,
-  });
-};
-
-export const useRecentCertificates = () => {
-  return useQuery({
-    queryKey: ["dashboard", "recentCertificates"],
-    queryFn: getRecentCertificates,
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
 };

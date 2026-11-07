@@ -1,59 +1,91 @@
 import { z } from "zod";
 
-export const memberFormSchema = z.object({
-  fullName: z
+// Schema for Master Member records (managed on /members)
+export const masterMemberSchema = z.object({
+  name: z
     .string()
     .trim()
     .min(1, { message: "Full name is required." }),
-  post: z
-    .string()
-    .min(1, { message: "Please select a post." }),
   email: z
     .string()
     .trim()
     .min(1, { message: "Email is required." })
     .email({ message: "Enter a valid email address." }),
-  facebookLink: z.string().optional(),
-  linkedinLink: z.string().optional(),
-  githubLink: z.string().optional(),
-  
-  // Tags must have at least 1 item
-  tags: z
-    .array(z.string())
-    .min(1, { message: "At least one tag is required." }),
-    
-  // Description cannot be empty string
-  description: z
+  image: z.any().optional(),
+  fb_link: z
     .string()
     .trim()
-    .min(1, { message: "Description is required." }),
-    
-  // Image must be provided (File object or existing image string URL from initialData)
-  image: z
-    .any()
-    .refine((file) => file !== undefined && file !== null && file !== "", {
-      message: "Profile image asset is required.",
-    }),
-
-  // Tenure ID — required, will be auto-set
-  tenureId: z
-    .number({ message: "Tenure is required." }),
+    .url({ message: "Enter a valid Facebook URL." })
+    .or(z.literal(""))
+    .optional(),
+  linkedin_link: z
+    .string()
+    .trim()
+    .url({ message: "Enter a valid LinkedIn URL." })
+    .or(z.literal(""))
+    .optional(),
+  github_link: z
+    .string()
+    .trim()
+    .url({ message: "Enter a valid GitHub URL." })
+    .or(z.literal(""))
+    .optional(),
+  description: z.string().optional().default(""),
+  skills: z
+    .array(z.string())
+    .optional()
+    .default([]),
+  status: z.enum(["published", "draft"]).default("published"),
 });
 
-export const tenureFormSchema = z.object({
-  name: z
+// Backwards-compatible alias for existing imports during refactor
+export const memberFormSchema = masterMemberSchema;
+
+// Schema for assigning an existing Member to a Tenure (TenureMembership)
+export const tenureAssignmentSchema = z.object({
+  memberId: z
+    .coerce
+    .number({ message: "Please select an existing member." })
+    .positive({ message: "Please select an existing member." }),
+  role_type: z
+    .enum(["EXECUTIVE", "ADVISOR"], {
+      message: "Please select a valid role type (Executive Board or Advisor).",
+    })
+    .default("EXECUTIVE"),
+  designation: z
     .string()
     .trim()
-    .min(1, { message: "Tenure name is required." }),
-  startDate: z
-    .string()
-    .min(1, { message: "Start date is required." }),
-  endDate: z
-    .string()
-    .min(1, { message: "End date is required." }),
-}).refine((data) => {
-  if (data.startDate && data.endDate) {
-    return new Date(data.endDate) >= new Date(data.startDate);
-  }
-  return true;
-}, { message: "End date must be on or after start date.", path: ["endDate"] });
+    .min(1, { message: "Designation/post is required." }),
+  order: z
+    .coerce
+    .number()
+    .int()
+    .min(1, { message: "Hierarchy order must be 1 or greater." })
+    .default(99),
+  status: z.enum(["published", "draft"]).default("published"),
+});
+
+// Schema for creating and updating a Tenure
+export const tenureFormSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, { message: "Tenure name is required." }),
+    startDate: z
+      .string()
+      .min(1, { message: "Start date is required." }),
+    endDate: z
+      .string()
+      .min(1, { message: "End date is required." }),
+    signature: z.any().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+      }
+      return true;
+    },
+    { message: "End date must be on or after start date.", path: ["endDate"] }
+  );

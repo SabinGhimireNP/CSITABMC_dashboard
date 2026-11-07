@@ -1,17 +1,41 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
-import {
-  ArrowUpDown,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  AlertTriangle,
-  X,
-  Copy,
-} from "lucide-react";
+import React, { useState } from "react";
+import { ArrowUpDown, Pencil, Trash2, Copy } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { RowActionsMenu } from "@/components/common/RowActionsMenu";
+import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
+import { CertificateDeleteDialog } from "./CertificateDeleteDialog";
+import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
+
+const CHECKBOX_CLASS =
+  "rounded border-input text-primary focus:ring-primary w-4 h-4 cursor-pointer bg-background";
+
+const ProjectBadge = ({ complete }) => (
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-bold ${
+      complete
+        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+        : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+    }`}
+  >
+    {complete ? "COMPLETE" : "INCOMPLETE"}
+  </Badge>
+);
+
+const CopyIdButton = ({ id }) => (
+  <button
+    type="button"
+    onClick={() => navigator.clipboard.writeText(id)}
+    className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+    title="Copy ID"
+    aria-label="Copy certificate ID"
+  >
+    <Copy size={14} />
+  </button>
+);
 
 export function CertificateTable({
   certificates = [],
@@ -28,44 +52,15 @@ export function CertificateTable({
   rowsPerPage,
   onPageChange,
   onRowsPerPageChange,
+  selectedIds = [],
+  onSelectionChange,
 }) {
-  const [activeMenuId, setActiveMenuId] = useState(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const { can } = usePermission();
+  const canEdit = can("certificates.edit");
+  const canDelete = can("certificates.delete");
+  const canCreate = can("certificates.create");
+
   const [certToDelete, setCertToDelete] = useState(null);
-  const buttonRefs = useRef({});
-
-  useEffect(() => {
-    if (!activeMenuId) return;
-    function handleClose() {
-      setActiveMenuId(null);
-    }
-    document.addEventListener("mousedown", handleClose);
-    document.addEventListener("scroll", handleClose, true);
-    return () => {
-      document.removeEventListener("mousedown", handleClose);
-      document.removeEventListener("scroll", handleClose, true);
-    };
-  }, [activeMenuId]);
-
-  const handleMenuToggle = useCallback(
-    (e, certId) => {
-      e.stopPropagation();
-      if (activeMenuId === certId) {
-        setActiveMenuId(null);
-        return;
-      }
-      const btn = buttonRefs.current[certId];
-      if (btn) {
-        const rect = btn.getBoundingClientRect();
-        setMenuPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.right + window.scrollX - 128,
-        });
-      }
-      setActiveMenuId(certId);
-    },
-    [activeMenuId],
-  );
 
   const handleConfirmDelete = () => {
     if (certToDelete) {
@@ -77,188 +72,150 @@ export function CertificateTable({
   const getEventTitle = (eventId) =>
     eventsList.find((e) => String(e.id) === String(eventId))?.title || "—";
 
-  const SortIndicator = ({ field }) => {
-    if (sortField !== field)
-      return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
-    if (sortOrder === "asc")
-      return (
-        <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>
-      );
-    if (sortOrder === "desc")
-      return (
-        <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>
-      );
-    return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
+  const toggleOne = (id, checked) =>
+    onSelectionChange(checked ? [...selectedIds, id] : selectedIds.filter((x) => x !== id));
+
+  const renderSortIndicator = (field) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
+    if (sortOrder === "asc") return <span className="text-primary font-bold text-[11px]">&uarr;</span>;
+    if (sortOrder === "desc") return <span className="text-primary font-bold text-[11px]">&darr;</span>;
+    return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
   };
 
-  const DropdownMenu = ({ cert }) =>
-    createPortal(
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{
-          position: "absolute",
-          top: menuPosition.top,
-          left: menuPosition.left,
-        }}
-        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-9999 animate-in fade-in slide-in-from-top-1 duration-100"
-      >
-        <button
-          type="button"
-          onClick={() => {
-            if (onEditCertificate) onEditCertificate(cert);
-            setActiveMenuId(null);
-          }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <Pencil className="h-3.5 w-3.5 text-slate-400" /> Edit
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (onDuplicateCertificate) onDuplicateCertificate(cert);
-            setActiveMenuId(null);
-          }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/60 cursor-pointer"
-        >
-          <Copy className="h-3.5 w-3.5 text-slate-400" /> Duplicate
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setCertToDelete(cert);
-            setActiveMenuId(null);
-          }}
-          className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete
-        </button>
-      </div>,
-      document.body,
-    );
+  const renderActions = (cert) => (
+    <RowActionsMenu
+      label={`Actions for certificate of ${cert.fullName}`}
+      items={[
+        { label: "Edit", icon: Pencil, hidden: !canEdit, onClick: () => onEditCertificate?.(cert) },
+        { label: "Duplicate", icon: Copy, hidden: !canCreate, onClick: () => onDuplicateCertificate?.(cert) },
+        { label: "Delete", icon: Trash2, destructive: true, hidden: !canDelete, onClick: () => setCertToDelete(cert) },
+      ]}
+    />
+  );
+
+  const allSelected = certificates.length > 0 && selectedIds.length === certificates.length;
+  const toggleAll = (checked) => onSelectionChange(checked ? certificates.map((c) => c.id) : []);
 
   return (
     <div className="w-full flex flex-col">
-      <div className="w-full overflow-x-auto scrollbar-thin">
-        <table className="w-full text-left border-collapse min-w-150 table-fixed">
+      {/* Mobile: record cards */}
+      <div className="md:hidden">
+        {certificates.length > 0 && (
+          <label className="flex items-center gap-2 px-4 py-2.5 border-b border-border text-xs font-medium text-muted-foreground bg-muted/40">
+            <input type="checkbox" className={CHECKBOX_CLASS} checked={allSelected} onChange={(e) => toggleAll(e.target.checked)} />
+            Select all on this page
+          </label>
+        )}
+        <ResponsiveRecordList
+          items={certificates}
+          getKey={(c) => c.id}
+          emptyText="No matching certificates found."
+          renderSelect={(c) => (
+            <input
+              type="checkbox"
+              aria-label={`Select certificate of ${c.fullName}`}
+              className={CHECKBOX_CLASS}
+              checked={selectedIds.includes(c.id)}
+              onChange={(e) => toggleOne(c.id, e.target.checked)}
+            />
+          )}
+          renderTitle={(c) => c.fullName}
+          renderSubtitle={(c) => (
+            <span className="flex items-center gap-1 min-w-0">
+              <span className="font-mono break-all">{c.id}</span>
+              <CopyIdButton id={c.id} />
+            </span>
+          )}
+          renderBadge={(c) => <ProjectBadge complete={c.isProjectComplete} />}
+          fields={[
+            { label: "Event", render: (c) => getEventTitle(c.event) },
+            { label: "Created At", render: (c) => c.createdAt || "—" },
+          ]}
+          renderActions={renderActions}
+        />
+      </div>
+
+      {/* md+: full table */}
+      <div className="hidden md:block w-full overflow-x-auto scrollbar-thin">
+        <table className="w-full text-left border-collapse min-w-200 table-fixed">
           <thead>
-            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
-              <th
-                onClick={() => onHeaderClick("id")}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[50%]"
-              >
-                <div className="flex items-center gap-1.5">
-                  ID <SortIndicator field="id" />
-                </div>
+            <tr className="border-b border-border bg-muted/40 text-muted-foreground font-semibold text-xs select-none">
+              <th className="py-3 px-4 w-[5%]">
+                <input
+                  type="checkbox"
+                  aria-label="Select all certificates on this page"
+                  className={CHECKBOX_CLASS}
+                  checked={allSelected}
+                  onChange={(e) => toggleAll(e.target.checked)}
+                />
               </th>
-              <th
-                onClick={() => onHeaderClick("fullName")}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[25%]"
-              >
-                <div className="flex items-center gap-1.5">
-                  Full Name <SortIndicator field="fullName" />
-                </div>
+              <th onClick={() => onHeaderClick("id")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[25%]">
+                <div className="flex items-center gap-1.5">ID {renderSortIndicator("id")}</div>
               </th>
-              <th
-                onClick={() => onHeaderClick("event")}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[40%]"
-              >
-                <div className="flex items-center gap-1.5">
-                  Event <SortIndicator field="event" />
-                </div>
+              <th onClick={() => onHeaderClick("fullName")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[18%]">
+                <div className="flex items-center gap-1.5">Full Name {renderSortIndicator("fullName")}</div>
               </th>
-              <th className="py-3 px-4 w-[15%]">Project Status</th>
-              <th
-                onClick={() => onHeaderClick("createdAt")}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[14%]"
-              >
-                <div className="flex items-center gap-1.5">
-                  Created At <SortIndicator field="createdAt" />
-                </div>
+              <th onClick={() => onHeaderClick("event")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[20%]">
+                <div className="flex items-center gap-1.5">Event {renderSortIndicator("event")}</div>
               </th>
-              <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
+              <th className="py-3 px-4 w-[12%]">Project Status</th>
+              <th onClick={() => onHeaderClick("createdAt")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[13%]">
+                <div className="flex items-center gap-1.5">Created At {renderSortIndicator("createdAt")}</div>
+              </th>
+              <th className="py-3 px-4 text-right pr-6 w-[7%] sticky right-0 bg-muted/95 border-b border-border">Actions</th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
+          <tbody className="divide-y divide-border text-foreground text-xs">
             {certificates.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  className="py-12 text-center text-slate-400 font-medium bg-white"
-                >
+                <td colSpan={7} className="py-12 text-center text-muted-foreground font-medium bg-card">
                   No matching certificates found.
                 </td>
               </tr>
             ) : (
-              certificates.map((cert) => (
-                <tr
-                  key={cert.id}
-                  className="hover:bg-slate-50/40 transition-colors group h-14 bg-white"
-                >
-                  <td className="py-2 px-4 font-semibold text-slate-900 tabular-nums truncate">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate">{cert.id}</span>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(cert.id)}
-                        className="shrink-0 p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                        title="Copy ID"
-                      >
-                        <Copy size={14} />
-                      </button>
-                    </div>
-                  </td>
-
-                  <td className="py-2 px-4 max-w-xs truncate">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+              certificates.map((cert) => {
+                const selected = selectedIds.includes(cert.id);
+                const rowBg = selected ? "bg-muted/60" : "bg-card";
+                return (
+                  <tr key={cert.id} className={`hover:bg-muted/40 transition-colors group h-14 ${rowBg}`}>
+                    <td className="py-2 px-4">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select certificate of ${cert.fullName}`}
+                        className={CHECKBOX_CLASS}
+                        checked={selected}
+                        onChange={(e) => toggleOne(cert.id, e.target.checked)}
+                      />
+                    </td>
+                    <td className="py-2 px-4 font-semibold text-foreground tabular-nums">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="truncate font-mono text-[11px]" title={cert.id}>{cert.id}</span>
+                        <CopyIdButton id={cert.id} />
+                      </div>
+                    </td>
+                    <td className="py-2 px-4 truncate">
+                      <span className="font-semibold text-foreground group-hover:text-primary transition-colors truncate block" title={cert.fullName}>
                         {cert.fullName}
                       </span>
-                    </div>
-                  </td>
-
-                  <td className="py-2 px-4 text-slate-500 font-normal truncate">
-                    {getEventTitle(cert.event)}
-                  </td>
-
-                  <td className="py-2 px-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        cert.isProjectComplete
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                          : "bg-amber-50 text-amber-700 border-amber-200/60"
-                      }`}
-                    >
-                      {cert.isProjectComplete ? "COMPLETE" : "INCOMPLETE"}
-                    </span>
-                  </td>
-
-                  <td className="py-2 px-4 font-normal text-slate-500 tabular-nums truncate">
-                    {cert.createdAt || "—"}
-                  </td>
-
-                  <td className="py-2 px-4 text-right pr-6">
-                    <button
-                      ref={(el) => (buttonRefs.current[cert.id] = el)}
-                      type="button"
-                      onClick={(e) => handleMenuToggle(e, cert.id)}
-                      className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                        activeMenuId === cert.id
-                          ? "bg-slate-100 text-slate-800"
-                          : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
-                    </button>
-                    {activeMenuId === cert.id && <DropdownMenu cert={cert} />}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="py-2 px-4 text-muted-foreground font-normal truncate" title={getEventTitle(cert.event)}>
+                      {getEventTitle(cert.event)}
+                    </td>
+                    <td className="py-2 px-4 whitespace-nowrap">
+                      <ProjectBadge complete={cert.isProjectComplete} />
+                    </td>
+                    <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums truncate">{cert.createdAt || "—"}</td>
+                    <td className={`py-2 px-4 text-right pr-6 sticky right-0 ${rowBg} group-hover:bg-muted/40 transition-colors`}>{renderActions(cert)}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="border-t border-slate-200/80 bg-slate-50/30">
+      <div className="border-t border-border bg-muted/20">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -270,55 +227,11 @@ export function CertificateTable({
         />
       </div>
 
-      {certToDelete && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div
-            className="bg-white rounded-xl border border-slate-200 max-w-md w-full shadow-xl p-5 animate-in zoom-in-95 duration-150 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setCertToDelete(null)}
-              className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <div className="flex gap-3.5">
-              <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 border border-rose-100">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                  Delete certificate?
-                </h3>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                  Are you sure you want to delete the certificate for{" "}
-                  <span className="font-semibold text-slate-800">
-                    "{certToDelete.fullName}"
-                  </span>
-                  ? This cannot be undone.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
-              <button
-                type="button"
-                onClick={() => setCertToDelete(null)}
-                className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CertificateDeleteDialog
+        cert={certToDelete}
+        onClose={() => setCertToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

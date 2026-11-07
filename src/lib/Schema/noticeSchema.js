@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
+const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export const noticeSchema = z.object({
   title: z
@@ -32,7 +32,7 @@ export const noticeSchema = z.object({
       message: "Max file size is 5MB.",
     })
     .refine(
-      (file) => !file || ACCEPTED_FILE_TYPES.includes(file?.type || (file?.name?.endsWith('.pdf') ? 'application/pdf' : '')),
-      { message: "Only .jpg, .jpeg, .png, .webp, and .pdf formats are supported." }
+      (file) => !file || ACCEPTED_FILE_TYPES.includes(file?.type),
+      { message: "Only .jpg, .jpeg, .png, and .webp formats are supported." }
     ),
 });

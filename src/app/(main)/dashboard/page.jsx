@@ -1,55 +1,109 @@
 "use client";
 
-import React from "react";
-import DashboardHeader from "./_components/DashboardHeader";
-import DashboardStats from "./_components/DashboardStats";
-import RecentActivity from "./_components/RecentActivity";
-import {
-  useDashboardStats,
-  useRecentNotices,
-  useRecentEvents,
-  useRecentCertificates,
-} from "@/hooks/useDashboard";
+import React, { useMemo } from "react";
+import DashboardWelcome from "./_components/DashboardWelcome";
+import StatCard from "./_components/StatCard";
+import RecentCard from "./_components/RecentCard";
+import RecentItem from "./_components/RecentItem";
+import EmptyState from "./_components/EmptyState";
+import SectionError from "./_components/SectionError";
+import QuickActions from "./_components/QuickActions";
+import DashboardSkeleton from "./_components/DashboardSkeleton";
+import { OVERVIEW_MODULES } from "./_config/overviewModules";
+import { usePermission } from "@/hooks/usePermission";
+import { useCurrentUser, useDashboardOverview } from "@/hooks/useDashboard";
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: notices, isLoading: noticesLoading } = useRecentNotices();
-  const { data: events, isLoading: eventsLoading } = useRecentEvents();
-  const { data: certificates, isLoading: certsLoading } = useRecentCertificates();
+  const { can, role, user, roleLabel: permRoleLabel } = usePermission();
+  const { data, isLoading, isError, refetch, isFetching } = useDashboardOverview();
+  const { data: me } = useCurrentUser();
 
-  const isLoading = statsLoading || noticesLoading || eventsLoading || certsLoading;
+  const displayName = me?.name || user?.name || user?.username || "";
+  const roleLabel = me?.role_label || permRoleLabel || user?.role_label || role || "";
+
+
+  // RBAC decides what may appear; the API decides what was returned for this user.
+  const modules = useMemo(() => {
+    const payload = data?.modules || {};
+    return OVERVIEW_MODULES.filter((m) => can(m.permission) && payload[m.key]).map((m) => ({
+      ...m,
+      data: payload[m.key],
+    }));
+  }, [data, can]);
+
+  const quickActions = useMemo(
+    () =>
+      OVERVIEW_MODULES.filter((m) => m.action && can(m.action.permission)).map((m) => m.action),
+    [can]
+  );
+
+  if (isLoading) return <DashboardSkeleton />;
+
+  const retry = () => refetch();
 
   return (
-    <main className="min-h-screen w-full bg-slate-50/40 text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900">
-      <div className="mx-auto p-4 sm:p-6 lg:p-8 space-y-8 md:space-y-10">
-        
-        <DashboardHeader />
-        
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 w-full">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-slate-200 rounded-xl animate-pulse" />
-            ))}
+    <div className="w-full space-y-6">
+      {isFetching && !isLoading && (
+        <div className="progress-bar-track" aria-label="Refreshing dashboard">
+          <div className="progress-bar-indicator" />
+        </div>
+      )}
+      <DashboardWelcome name={displayName} roleLabel={roleLabel} />
+
+      {isError ? (
+        <SectionError
+          message="The overview couldn't be loaded. Check your connection and try again."
+          onRetry={retry}
+          retrying={isFetching}
+        />
+      ) : modules.length === 0 ? (
+        <EmptyState description="There are no modules assigned to your account yet." />
+      ) : (
+        <>
+          <section aria-label="Overview statistics" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {modules
+              .filter((m) => m.stat)
+              .map((m) => {
+                if (m.data.error) {
+                  return (
+                    <StatCard key={m.key} label={m.label} value="—" detail="Unavailable" icon={m.icon} href={m.href} accent={m.accent} />
+                  );
+                }
+                const stat = m.stat(m.data.stats || {});
+                return <StatCard key={m.key} {...stat} icon={m.icon} href={m.href} accent={m.accent} />;
+              })}
+          </section>
+
+          <QuickActions actions={quickActions} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {modules.map((m) => {
+              const action = m.action && can(m.action.permission) ? m.action : null;
+              const records = m.data.recent || [];
+              return (
+                <RecentCard key={m.key} title={m.recentLabel} icon={m.icon} accent={m.accent} viewAllHref={m.href}>
+                  {m.data.error ? (
+                    <div className="pt-3">
+                      <SectionError onRetry={retry} retrying={isFetching} />
+                    </div>
+                  ) : records.length === 0 ? (
+                    <div className="pt-3">
+                      <EmptyState description={m.emptyText} action={action} />
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {records.map((record) => {
+                        const { key, ...row } = m.row(record);
+                        return <RecentItem key={key} {...row} />;
+                      })}
+                    </ul>
+                  )}
+                </RecentCard>
+              );
+            })}
           </div>
-        ) : (
-          <DashboardStats stats={stats} />
-        )}
-        
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-48 bg-slate-200 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <RecentActivity
-            notices={notices || []}
-            events={events || []}
-            certificates={certificates || []}
-          />
-        )}
-        
-      </div>
-    </main>
+        </>
+      )}
+    </div>
   );
 }

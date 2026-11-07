@@ -7,15 +7,18 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Globe } from "lucide-react";
 
 import ProfileSheet from "./ProfileSheet";
+import { ThemeToggle } from "./ThemeToggle";
 
 const Header = () => {
   return (
     <header className="h-16 flex items-center sticky top-0 justify-between px-4 md:px-6 border-b bg-background z-50">
       <div className="flex items-center gap-3">
-        <SidebarTrigger className="h-8 w-8 border bg-slate-200 text-gray-600 cursor-pointer hover:bg-slate-300" />
+        <SidebarTrigger className="h-8 w-8 border bg-slate-200 dark:bg-slate-800 text-gray-600 dark:text-gray-300 cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700" />
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
+
         <Link
           href="https://csitabmc.com"
           target="_blank"

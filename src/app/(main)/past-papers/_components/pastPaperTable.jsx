@@ -1,13 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowUpDown, ExternalLink, Eye, MoreHorizontal,
-  Pencil, Trash2, AlertTriangle, X, FileText, Loader2
+  ArrowUpDown, ExternalLink, Eye,
+  Pencil, Trash2, X, FileText, Loader2
 } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
+import { RowActionsMenu } from "@/components/common/RowActionsMenu";
+import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { SEMESTER_LABELS } from "@/lib/Schema/pastPaperSchema";
+import { PastPaperDeleteDialog } from "./PastPaperDeleteDialog";
+import { usePermission } from "@/hooks/usePermission";
+import { Badge } from "@/components/ui/badge";
 
 function getDriveEmbedUrl(driveLink) {
   const match = driveLink?.match(/\/file\/d\/([^/]+)/);
@@ -18,6 +23,31 @@ function getDriveEmbedUrl(driveLink) {
 function getSemesterLabel(num) {
   return SEMESTER_LABELS.find((s) => s.number === num)?.label || `Semester ${num}`;
 }
+
+const OldCourseTag = () => (
+  <Badge variant="outline" className="text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 shrink-0 select-none">
+    Old Course
+  </Badge>
+);
+
+const TypeBadge = ({ modelSet }) => (
+  <Badge
+    variant="outline"
+    className={`text-[10px] font-bold ${
+      modelSet
+        ? "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20"
+        : "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20"
+    }`}
+  >
+    {modelSet ? "MODEL SET" : "BOARD EXAM"}
+  </Badge>
+);
+
+const PaperIcon = () => (
+  <div className="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+    <FileText className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
+  </div>
+);
 
 export function PastPaperTable({
   papers = [],
@@ -33,47 +63,39 @@ export function PastPaperTable({
   onPageChange,
   onRowsPerPageChange,
 }) {
-  const [activeMenuId, setActiveMenuId] = useState(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const { can } = usePermission();
+  const canEdit = can("papers.edit");
+  const canDelete = can("papers.delete");
+
   const [paperToDelete, setPaperToDelete] = useState(null);
   const [previewPaper, setPreviewPaper] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const buttonRefs = useRef({});
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // Lock page scroll and allow Escape while the preview is open
   useEffect(() => {
-    if (!activeMenuId) return;
-    function handleClose() { setActiveMenuId(null); }
-    document.addEventListener("mousedown", handleClose);
-    document.addEventListener("scroll", handleClose, true);
+    if (!previewPaper) return;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => { if (e.key === "Escape") setPreviewPaper(null); };
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", handleClose);
-      document.removeEventListener("scroll", handleClose, true);
+      document.body.style.overflow = "unset";
+      document.removeEventListener("keydown", onKey);
     };
-  }, [activeMenuId]);
-
-  // Lock scroll when preview is open
-  useEffect(() => {
-    if (previewPaper) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "unset";
-    return () => { document.body.style.overflow = "unset"; };
   }, [previewPaper]);
 
-  const handleMenuToggle = useCallback((e, paperId) => {
-    e.stopPropagation();
-    if (activeMenuId === paperId) { setActiveMenuId(null); return; }
-    const btn = buttonRefs.current[paperId];
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.right + window.scrollX - 128,
-      });
+  const handleConfirmDelete = async () => {
+    if (paperToDelete) {
+      setIsDeleting(true);
+      try {
+        await onDeletePaper(paperToDelete.slug);
+        setPaperToDelete(null);
+      } catch (err) {
+        console.error("Failed to delete paper:", err);
+      } finally {
+        setIsDeleting(false);
+      }
     }
-    setActiveMenuId(paperId);
-  }, [activeMenuId]);
-
-  const handleConfirmDelete = () => {
-    if (paperToDelete) { onDeletePaper(paperToDelete.id); setPaperToDelete(null); }
   };
 
   const handlePreview = (paper) => {
@@ -81,146 +103,122 @@ export function PastPaperTable({
     setPreviewLoading(true);
   };
 
-  const SortIndicator = ({ field }) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
-    if (sortOrder === "asc") return <span className="text-indigo-600 font-bold text-[11px]">&uarr;</span>;
-    if (sortOrder === "desc") return <span className="text-indigo-600 font-bold text-[11px]">&darr;</span>;
-    return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
+  const renderSortIndicator = (field) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
+    if (sortOrder === "asc") return <span className="text-primary font-bold text-[11px]">&uarr;</span>;
+    if (sortOrder === "desc") return <span className="text-primary font-bold text-[11px]">&darr;</span>;
+    return <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />;
   };
 
-  const DropdownMenu = ({ paper }) =>
-    createPortal(
-      <div
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ position: "absolute", top: menuPosition.top, left: menuPosition.left }}
-        className="w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-9999 animate-in fade-in slide-in-from-top-1 duration-100"
-      >
-        <button type="button"
-          onClick={() => { handlePreview(paper); setActiveMenuId(null); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <Eye className="h-3.5 w-3.5 text-slate-400" /> Preview
-        </button>
-        <button type="button"
-          onClick={() => { if (onEditPaper) onEditPaper(paper); setActiveMenuId(null); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/60 cursor-pointer"
-        >
-          <Pencil className="h-3.5 w-3.5 text-slate-400" /> Edit
-        </button>
-        <button type="button"
-          onClick={() => { window.open(paper.drive_link, "_blank"); setActiveMenuId(null); }}
-          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/60 cursor-pointer"
-        >
-          <ExternalLink className="h-3.5 w-3.5 text-slate-400" /> Open
-        </button>
-        <button type="button"
-          onClick={() => { setPaperToDelete(paper); setActiveMenuId(null); }}
-          className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors flex items-center gap-2 border-t border-slate-100/80 cursor-pointer"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Delete
-        </button>
-      </div>,
-      document.body
-    );
+  const renderActions = (paper) => (
+    <RowActionsMenu
+      label={`Actions for ${paper.subject_name}`}
+      items={[
+        { label: "Preview", icon: Eye, onClick: () => handlePreview(paper) },
+        { label: "Edit", icon: Pencil, hidden: !canEdit, onClick: () => onEditPaper?.(paper) },
+        { label: "Open", icon: ExternalLink, onClick: () => window.open(paper.drive_link, "_blank", "noopener,noreferrer") },
+        { label: "Delete", icon: Trash2, destructive: true, hidden: !canDelete, onClick: () => setPaperToDelete(paper) },
+      ]}
+    />
+  );
+
+  const serialFor = (index) => (currentPage - 1) * rowsPerPage + index + 1;
 
   return (
     <div className="w-full flex flex-col">
-      <div className="w-full overflow-x-auto scrollbar-thin">
-        <table className="w-full text-left border-collapse min-w-200 table-fixed">
+      {/* Mobile: record cards */}
+      <ResponsiveRecordList
+        className="md:hidden"
+        items={papers.map((p, index) => ({ ...p, __index: index }))}
+        getKey={(p) => `${p.id}-${p.__index}`}
+        emptyText="No papers found for this semester."
+        renderLeading={() => <PaperIcon />}
+        renderTitle={(p) => (
+          <button type="button" onClick={() => handlePreview(p)} className="text-left break-words cursor-pointer">
+            {p.subject_name}
+          </button>
+        )}
+        renderSubtitle={(p) => `#${serialFor(p.__index)}`}
+        renderBadge={(p) => (
+          <span className="flex flex-wrap items-center gap-1.5">
+            <TypeBadge modelSet={p.model_set} />
+            {p.is_old_course && <OldCourseTag />}
+          </span>
+        )}
+        fields={[
+          { label: "Semester", render: (p) => getSemesterLabel(p.semester) },
+          { label: "Year", render: (p) => p.exam_year },
+        ]}
+        renderActions={renderActions}
+      />
+
+      {/* md+: full table */}
+      <div className="hidden md:block w-full overflow-x-auto scrollbar-thin">
+        <table className="w-full text-left border-collapse min-w-180 table-fixed">
           <thead>
-            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-slate-500 font-semibold text-xs select-none">
-              {/* MODIFIED: Changed field header to S.N. and restricted column layout size */}
+            <tr className="border-b border-border bg-muted/40 text-muted-foreground font-semibold text-xs select-none">
               <th className="py-3 px-4 w-[8%]">
                 <div className="flex items-center gap-1.5">S.N.</div>
               </th>
-              <th onClick={() => onHeaderClick("subject_name")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[32%]">
-                <div className="flex items-center gap-1.5">Subject <SortIndicator field="subject_name" /></div>
+              <th onClick={() => onHeaderClick("subject_name")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[38%]">
+                <div className="flex items-center gap-1.5">Subject {renderSortIndicator("subject_name")}</div>
               </th>
-              <th onClick={() => onHeaderClick("semester")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[18%]">
-                <div className="flex items-center gap-1.5">Semester <SortIndicator field="semester" /></div>
+              <th onClick={() => onHeaderClick("semester")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[18%]">
+                <div className="flex items-center gap-1.5">Semester {renderSortIndicator("semester")}</div>
               </th>
-              <th onClick={() => onHeaderClick("exam_year")} className="py-3 px-4 cursor-pointer hover:bg-slate-100/50 transition-colors w-[12%]">
-                <div className="flex items-center gap-1.5">Year <SortIndicator field="exam_year" /></div>
+              <th onClick={() => onHeaderClick("exam_year")} className="py-3 px-4 cursor-pointer hover:bg-muted/60 transition-colors w-[12%]">
+                <div className="flex items-center gap-1.5">Year {renderSortIndicator("exam_year")}</div>
               </th>
-              <th className="py-3 px-4 w-[12%]">Type</th>
-              <th className="py-3 px-4 text-right pr-6 w-[8%]">Actions</th>
+              <th className="py-3 px-4 w-[14%]">Type</th>
+              <th className="py-3 px-4 text-right pr-6 w-[10%] sticky right-0 bg-muted/95 border-b border-border">Actions</th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
+          <tbody className="divide-y divide-border text-foreground text-xs">
             {papers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-400 font-medium bg-white">
+                <td colSpan={6} className="py-12 text-center text-muted-foreground font-medium bg-card">
                   No papers found for this semester.
                 </td>
               </tr>
             ) : (
-              papers.map((paper, index) => {
-                {/* CALCULATED: Determines sequential number based on current pagination offsets */}
-                const serialNumber = (currentPage - 1) * rowsPerPage + index + 1;
+              papers.map((paper, index) => (
+                <tr
+                  key={`${paper.id}-${index}`}
+                  className="hover:bg-muted/40 transition-colors group h-14 bg-card cursor-pointer"
+                  onClick={() => handlePreview(paper)}
+                >
+                  <td className="py-2 px-4 font-mono font-medium text-muted-foreground tabular-nums">{serialFor(index)}</td>
 
-                return (
-                  <tr
-                   key={`${paper.id}-${index}`}
-                    className="hover:bg-slate-50/40 transition-colors group h-14 bg-white cursor-pointer"
-                    onClick={() => handlePreview(paper)}
-                  >
-                    {/* MODIFIED: Replaced Code output cell with Serial Number calculation */}
-                    <td className="py-2 px-4 font-mono font-medium text-slate-400 tabular-nums">
-                      {serialNumber}
-                    </td>
-
-                    <td className="py-2 px-4 max-w-xs truncate">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
-                          <FileText className="h-3.5 w-3.5 text-rose-500" />
-                        </div>
-                        <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                  <td className="py-2 px-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <PaperIcon />
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold text-foreground group-hover:text-primary transition-colors truncate" title={paper.subject_name}>
                           {paper.subject_name}
                         </span>
+                        {paper.is_old_course && <OldCourseTag />}
                       </div>
-                    </td>
+                    </div>
+                  </td>
 
-                    <td className="py-2 px-4 text-slate-500 font-normal truncate">
-                      {getSemesterLabel(paper.semester)}
-                    </td>
+                  <td className="py-2 px-4 text-muted-foreground font-normal truncate">{getSemesterLabel(paper.semester)}</td>
 
-                    <td className="py-2 px-4 font-semibold text-slate-700 tabular-nums">{paper.exam_year}</td>
+                  <td className="py-2 px-4 font-semibold text-foreground/80 tabular-nums">{paper.exam_year}</td>
 
-                    <td className="py-2 px-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        paper.model_set
-                          ? "bg-violet-50 text-violet-700 border-violet-200/60"
-                          : "bg-sky-50 text-sky-700 border-sky-200/60"
-                      }`}>
-                        {paper.model_set ? "MODEL SET" : "BOARD EXAM"}
-                      </span>
-                    </td>
+                  <td className="py-2 px-4 whitespace-nowrap"><TypeBadge modelSet={paper.model_set} /></td>
 
-                    <td className="py-2 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        ref={(el) => (buttonRefs.current[paper.id] = el)}
-                        type="button"
-                        onClick={(e) => handleMenuToggle(e, paper.id)}
-                        className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                          activeMenuId === paper.id
-                            ? "bg-slate-100 text-slate-800"
-                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                        }`}
-                      >
-                        <MoreHorizontal className="h-4 w-4 stroke-[2.3]" />
-                      </button>
-                      {activeMenuId === paper.id && <DropdownMenu paper={paper} />}
-                    </td>
-                  </tr>
-                );
-              })
+                  <td className="py-2 px-4 text-right pr-6 sticky right-0 bg-card group-hover:bg-muted/40 transition-colors" onClick={(e) => e.stopPropagation()}>
+                    {renderActions(paper)}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="border-t border-slate-200/80 bg-slate-50/30">
+      <div className="border-t border-border bg-muted/20">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -229,126 +227,106 @@ export function PastPaperTable({
           onPageChange={onPageChange}
           onRowsPerPageChange={onRowsPerPageChange}
           isEmbedded={true}
-          />
-        </div>
-  
-        {/* PDF Preview Modal */}
-        {previewPaper && (() => {
-          const embedUrl = getDriveEmbedUrl(previewPaper.drive_link);
-          return createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <div onClick={() => setPreviewPaper(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-              <div className="relative bg-white w-full max-w-4xl rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col z-10 animate-in scale-in-95 duration-200" style={{ height: "88vh" }}>
-                {/* Header */}
-                <div className="flex items-center justify-between gap-4 px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 shrink-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
-                      <FileText className="h-4 w-4 text-rose-500" />
+        />
+      </div>
+
+      {/* PDF Preview Modal — full screen on phones, large panel from sm up */}
+      {previewPaper && (() => {
+        const embedUrl = getDriveEmbedUrl(previewPaper.drive_link);
+        return createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 animate-in fade-in duration-200">
+            <div onClick={() => setPreviewPaper(null)} className="absolute inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm" />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Preview of ${previewPaper.subject_name}`}
+              className="relative bg-card text-foreground w-full max-w-4xl h-dvh sm:h-[88dvh] rounded-none sm:rounded-2xl border-0 sm:border border-border shadow-2xl overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-200"
+            >
+              {/* Header */}
+              <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-border bg-muted/30 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="hidden sm:flex w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 items-center justify-center shrink-0">
+                    <FileText className="h-4 w-4 text-rose-500 dark:text-rose-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{previewPaper.subject_name}</p>
+                      {previewPaper.is_old_course && <OldCourseTag />}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{previewPaper.subject_name}</p>
-                      <p className="text-[11px] text-slate-400 font-normal">
-                        {previewPaper.subject_code} · {getSemesterLabel(previewPaper.semester)} · {previewPaper.exam_year} · {previewPaper.model_set ? "Model Set" : "Board Exam"}
-                      </p>
+                    <p className="text-[11px] text-muted-foreground font-normal break-words">
+                      {[previewPaper.subject_code, getSemesterLabel(previewPaper.semester), previewPaper.exam_year, previewPaper.model_set ? "Model Set" : "Board Exam", previewPaper.is_old_course ? "Old Syllabus" : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={previewPaper.drive_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open in Drive"
+                    className="h-9 px-2.5 sm:px-3 text-xs font-semibold border border-input text-foreground bg-card rounded-lg hover:bg-muted transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Open in Drive</span>
+                  </a>
+                  <button
+                    type="button"
+                    aria-label="Close preview"
+                    onClick={() => setPreviewPaper(null)}
+                    className="h-9 w-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer"
+                  >
+                    <X className="h-4 w-4 stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Embed */}
+              <div className="relative flex-1 min-h-0 bg-muted/30">
+                {previewLoading && embedUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-card z-10">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                      <p className="text-xs text-muted-foreground font-medium">Loading preview</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                )}
+                {embedUrl ? (
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full border-0"
+                    allow="autoplay"
+                    onLoad={() => setPreviewLoading(false)}
+                    title={previewPaper.subject_name}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-4 px-4 text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground font-medium">This link can&apos;t be embedded.</p>
                     <a
                       href={previewPaper.drive_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-8 px-3 text-xs font-semibold border border-slate-200 text-slate-600 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      className="h-9 px-4 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" /> Open in Drive
+                      <ExternalLink className="h-3.5 w-3.5" /> Open in Google Drive
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewPaper(null)}
-                      className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-                    >
-                      <X className="h-4 w-4 stroke-[2.5]" />
-                    </button>
                   </div>
-                </div>
-  
-                {/* Embed */}
-                <div className="relative flex-1 bg-slate-100">
-                  {previewLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-10">
-                      <div className="flex flex-col items-center gap-3">
-                        <Loader2 className="h-6 w-6 text-indigo-500 animate-spin" />
-                        <p className="text-xs text-slate-400 font-medium">Loading preview...</p>
-                      </div>
-                    </div>
-                  )}
-                  {embedUrl ? (
-                    <iframe
-                      src={embedUrl}
-                      className="w-full h-full border-0"
-                      allow="autoplay"
-                      onLoad={() => setPreviewLoading(false)}
-                      title={previewPaper.subject_name}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full gap-4">
-                      <FileText className="h-10 w-10 text-slate-300" />
-                      <p className="text-sm text-slate-500 font-medium">This link can't be embedded.</p>
-                      <a
-                        href={previewPaper.drive_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="h-9 px-4 text-xs font-semibold bg-[#0b2574] text-white rounded-lg hover:bg-[#0b2574]/90 flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" /> Open in Google Drive
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>,
-            document.body
-          );
-        })()}
-  
-        {/* Delete Confirmation */}
-        {paperToDelete && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-            <div
-              className="bg-white rounded-xl border border-slate-200 max-w-md w-full shadow-xl p-5 animate-in zoom-in-95 duration-150 relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button type="button" onClick={() => setPaperToDelete(null)}
-                className="absolute right-4 top-4 p-1 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <div className="flex gap-3.5">
-                <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 shrink-0 border border-rose-100">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-                <div className="space-y-1.5 flex-1">
-                  <h3 className="text-sm font-bold text-slate-900 tracking-tight">Delete past paper?</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                    Are you sure you want to delete{" "}
-                    <span className="font-semibold text-slate-800">"{paperToDelete.subject_name} ({paperToDelete.exam_year})"</span>? This cannot be undone.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100/80 pt-3">
-                <button type="button" onClick={() => setPaperToDelete(null)}
-                  className="h-8.5 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
-                >
-                  Cancel
-                </button>
-                <button type="button" onClick={handleConfirmDelete}
-                  className="h-8.5 px-4 text-xs font-semibold bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all cursor-pointer shadow-2xs"
-                >
-                  Confirm Delete
-                </button>
+                )}
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+          </div>,
+          document.body
+        );
+      })()}
+
+      <PastPaperDeleteDialog
+        paper={paperToDelete}
+        isDeleting={isDeleting}
+        onClose={() => setPaperToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
+    </div>
+  );
+}

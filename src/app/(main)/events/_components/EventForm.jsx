@@ -1,75 +1,44 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { eventSchema, EVENT_CATEGORIES } from "@/lib/Schema/eventSchema";
-import { UploadCloud, Loader2, X, ChevronDown, Check } from "lucide-react";
-import { MarkdownEditor } from "@/components/common/MarkdownEditor"; // <-- Import the clean editor component
+import React, { useEffect } from "react";
+import { EVENT_CATEGORIES } from "@/lib/Schema/eventSchema";
+import { X } from "lucide-react";
+import { MarkdownEditor } from "@/components/common/MarkdownEditor";
+import { FormSection } from "@/components/common/FormSection";
+import { useEventForm } from "./useEventForm";
+import { EventMediaUpload } from "./EventMediaUpload";
+import { EventMentorsSelect } from "./EventMentorsSelect";
+import { MODAL_OVERLAY_CLASS, modalPanelClass } from "@/components/common/ModalShell";
+import { Button } from "@/components/ui/button";
 
-export function EventFormModal({
+export function EventFormModal(props) {
+  if (!props.isOpen) return null;
+  const key = props.initialData?.id || props.initialData?.slug || "new-event";
+  return <EventFormModalContent key={key} {...props} />;
+}
+
+function EventFormModalContent({
   initialData = null,
   isOpen,
   mentorsList = [],
+  tenuresList = [],
   onSubmitSuccess,
   onCancel,
 }) {
-  const [formData, setFormData] = useState({
-    title: "",
-    registrationOpen: true,
-    startDate: "",
-    endDate: "",
-    startTime: "",
-    endTime: "",
-    organizer: "",
-    availableSeats: "",
-    registrationFormUrl: "",
-    registrationFeeBMC: "",
-    registrationFee: "",
-    location: "",
-    category: "",
-    status: "published",
-    tags: "",
-    image: undefined,
-    description: "",
-    mentors: [],
-  });
-
-  const [errors, setErrors] = useState({});
-  const [submitType, setSubmitType] = useState(null);
-  const [mentorDropdownOpen, setMentorDropdownOpen] = useState(false);
-  const mentorDropdownRef = useRef(null);
-  const [fileMeta, setFileMeta] = useState({ preview: null, name: "" });
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        title: initialData?.title || "",
-        registrationOpen: initialData?.registrationOpen ?? true,
-        startDate: initialData?.startDate || "",
-        endDate: initialData?.endDate || "",
-        startTime: initialData?.startTime || "",
-        endTime: initialData?.endTime || "",
-        organizer: initialData?.organizer || "",
-        availableSeats: initialData?.availableSeats ?? "",
-        registrationFormUrl: initialData?.registrationFormUrl || "",
-        registrationFeeBMC: initialData?.registrationFeeBMC ?? "",
-        registrationFee: initialData?.registrationFee ?? "",
-        location: initialData?.location || "",
-        category: initialData?.category || "",
-        status: initialData?.status || "published",
-        tags: Array.isArray(initialData?.tags)
-          ? initialData.tags.join(", ")
-          : initialData?.tags || "",
-        image: undefined,
-        description: initialData?.description || "",
-        mentors: initialData?.mentors || [],
-      });
-      setFileMeta({
-        preview: initialData?.image || null,
-        name: initialData?.image ? "Attached Event Image" : "",
-      });
-      setErrors({});
-    }
-  }, [initialData, isOpen]);
+  const {
+    formData,
+    errors,
+    submitType,
+    fileMeta,
+    handleInputChange,
+    handleFileChange,
+    handleRemoveFile,
+    addMentorAssignment,
+    removeMentorAssignment,
+    updateMentorAssignment,
+    toggleMentor,
+    handleSubmit,
+  } = useEventForm({ initialData });
 
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
@@ -79,600 +48,442 @@ export function EventFormModal({
     };
   }, [isOpen]);
 
-  // Close mentor dropdown on outside click
-  useEffect(() => {
-    if (!mentorDropdownOpen) return;
-    function handleClickOutside(e) {
-      if (
-        mentorDropdownRef.current &&
-        !mentorDropdownRef.current.contains(e.target)
-      ) {
-        setMentorDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [mentorDropdownOpen]);
-
-  if (!isOpen) return null;
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, image: file }));
-      if (errors.image) setErrors((prev) => ({ ...prev, image: undefined }));
-      const reader = new FileReader();
-      reader.onloadend = () =>
-        setFileMeta({ preview: reader.result, name: file.name });
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const toggleMentor = (mentorId) => {
-    setFormData((prev) => {
-      const exists = prev.mentors.includes(mentorId);
-      return {
-        ...prev,
-        mentors: exists
-          ? prev.mentors.filter((id) => id !== mentorId)
-          : [...prev.mentors, mentorId],
-      };
-    });
-    if (errors.mentors) setErrors((prev) => ({ ...prev, mentors: undefined }));
-  };
-
-  const selectedMentorNames = formData.mentors
-    .map((id) => mentorsList.find((m) => String(m.id) === String(id))?.fullName)
-    .filter(Boolean);
-
-  const handleActionClick = async (e, chosenStatus) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setSubmitType(chosenStatus);
-    setErrors({});
-
-    const dataToValidate = {
-      ...formData,
-      status: chosenStatus === "draft" || chosenStatus === "published" ? chosenStatus : formData.status,
-      registrationOpen: chosenStatus === "open" ? true : formData.registrationOpen,
-    };
-    const result = eventSchema.safeParse(dataToValidate);
-
-    if (!result.success) {
-      const formattedErrors = {};
-      result.error.issues.forEach((issue) => {
-        const pathKey = issue.path[0];
-        if (!formattedErrors[pathKey]) formattedErrors[pathKey] = issue.message;
-      });
-      setErrors(formattedErrors);
-      setSubmitType(null);
-      return;
-    }
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (onSubmitSuccess) onSubmitSuccess(result.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitType(null);
-    }
-  };
+  const inputBase =
+    "w-full h-10 px-3.5 border rounded-lg focus:outline-none focus:ring-1 transition-all text-xs bg-background text-foreground shadow-2xs";
+  const inputNormal = `${inputBase} border-input focus:ring-primary`;
+  const inputError = `${inputBase} border-destructive focus:ring-destructive`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none">
+    <div className={MODAL_OVERLAY_CLASS}>
       <div
         onClick={onCancel}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+        className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
       />
 
-      <div className="relative bg-white w-full max-w-3xl rounded-2xl border border-slate-100 shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-in scale-in-95 duration-200 z-10 text-xs">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="font-semibold text-lg text-[#0b2574]">
-            {initialData ? "Edit Event" : "Create Event"}
+      <div className={modalPanelClass("max-w-4xl")}>
+        {/* Header */}
+        <div className="p-5 sm:px-8 border-b border-border/80 dark:border-white/10 flex items-center justify-between bg-muted/40 dark:bg-[#16181e] shrink-0">
+          <div>
+            <h2 className="font-semibold text-lg text-foreground">
+              {initialData ? "Edit Event" : "Create Event"}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              {initialData
+                ? "Update event schedule, registration, mentors, and content details."
+                : "Fill out the sections below to publish or draft a new organization event."}
+            </p>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            aria-label="Close dialog"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10 transition-all cursor-pointer"
           >
             <X className="h-4 w-4 stroke-[2.5]" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 flex-1 w-full">
-          {/* Title & Category */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Event Title *
-              </label>
-              <input
-                name="title"
-                type="text"
-                value={formData.title}
-                onChange={handleInputChange}
-                placeholder="e.g., Intro to Web Development Bootcamp"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.title
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.title && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.title}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Category *</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-2.5 border rounded-lg bg-white focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.category
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              >
-                <option value="">Select Category</option>
-                {EVENT_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-              {errors.category && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.category}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Organizer & Location */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Organizer *
-              </label>
-              <input
-                name="organizer"
-                type="text"
-                value={formData.organizer}
-                onChange={handleInputChange}
-                placeholder="e.g., Code Collective"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.organizer
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.organizer && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.organizer}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Location *</label>
-              <input
-                name="location"
-                type="text"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="e.g., Innovation Hub, Kathmandu / Online"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.location
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.location && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.location}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Date / Time Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 w-full">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Start Date *
-              </label>
-              <input
-                name="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.startDate
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.startDate && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.startDate}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">End Date *</label>
-              <input
-                name="endDate"
-                type="date"
-                value={formData.endDate}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.endDate
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.endDate && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.endDate}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Start Time *
-              </label>
-              <input
-                name="startTime"
-                type="time"
-                value={formData.startTime}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.startTime
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.startTime && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.startTime}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">End Time *</label>
-              <input
-                name="endTime"
-                type="time"
-                value={formData.endTime}
-                onChange={handleInputChange}
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all cursor-pointer ${
-                  errors.endTime
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.endTime && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.endTime}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Seats, Fees */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Available Seats *
-              </label>
-              <input
-                name="availableSeats"
-                type="number"
-                min="0"
-                value={formData.availableSeats}
-                onChange={handleInputChange}
-                placeholder="e.g., 40"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.availableSeats
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.availableSeats && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.availableSeats}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Registration Fee (BMC)
-              </label>
-              <input
-                name="registrationFeeBMC"
-                type="number"
-                min="0"
-                value={formData.registrationFeeBMC}
-                onChange={handleInputChange}
-                placeholder="0"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.registrationFeeBMC
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.registrationFeeBMC && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.registrationFeeBMC}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Registration Fee
-              </label>
-              <input
-                name="registrationFee"
-                type="number"
-                min="0"
-                value={formData.registrationFee}
-                onChange={handleInputChange}
-                placeholder="0"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.registrationFee
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.registrationFee && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.registrationFee}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Registration URL & Tags */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Registration Form URL *
-              </label>
-              <input
-                name="registrationFormUrl"
-                type="text"
-                value={formData.registrationFormUrl}
-                onChange={handleInputChange}
-                placeholder="https://forms.example.com/your-event"
-                className={`w-full h-9 px-3 border rounded-lg focus:outline-none focus:ring-1 transition-all ${
-                  errors.registrationFormUrl
-                    ? "border-rose-400 focus:ring-rose-500"
-                    : "border-slate-200 focus:ring-indigo-500"
-                }`}
-              />
-              {errors.registrationFormUrl && (
-                <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                  {errors.registrationFormUrl}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Tags</label>
-              <input
-                name="tags"
-                type="text"
-                value={formData.tags}
-                onChange={handleInputChange}
-                placeholder="comma, separated, tags"
-                className="w-full h-9 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Mentors multi-select */}
-          <div className="space-y-1.5 w-full" ref={mentorDropdownRef}>
-            <label className="font-semibold text-slate-700">Mentors</label>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMentorDropdownOpen((prev) => !prev)}
-                className="w-full min-h-9 px-3 py-1.5 border border-slate-200 rounded-lg bg-white flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-50 transition-all text-left"
-              >
-                <span className="flex flex-wrap gap-1 flex-1">
-                  {selectedMentorNames.length === 0 ? (
-                    <span className="text-slate-400">
-                      Select mentors for this event
-                    </span>
-                  ) : (
-                    selectedMentorNames.map((name) => (
-                      <span
-                        key={name}
-                        className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[10px] font-semibold border border-indigo-100"
-                      >
-                        {name}
-                      </span>
-                    ))
-                  )}
-                </span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${mentorDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {mentorDropdownOpen && (
-                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1 duration-100">
-                  {mentorsList.length === 0 ? (
-                    <p className="px-3 py-2 text-slate-400 text-[11px]">
-                      No mentors available yet.
-                    </p>
-                  ) : (
-                    mentorsList.map((mentor) => {
-                      const checked = formData.mentors.includes(mentor.id);
-                      return (
-                        <button
-                          key={mentor.id}
-                          type="button"
-                          onClick={() => toggleMentor(mentor.id)}
-                          className="w-full text-left px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center justify-between gap-2 cursor-pointer"
-                        >
-                          <span>
-                            {mentor.fullName}{" "}
-                            <span className="text-slate-400 font-normal">
-                              — {mentor.role}
-                            </span>
-                          </span>
-                          {checked && (
-                            <Check className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Registration Open Toggle */}
-          <div className="flex items-center gap-2.5 w-full">
-            <input
-              id="registrationOpen"
-              name="registrationOpen"
-              type="checkbox"
-              checked={formData.registrationOpen}
-              onChange={handleInputChange}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-            />
-            <label
-              htmlFor="registrationOpen"
-              className="font-semibold text-slate-700 cursor-pointer select-none"
-            >
-              Registration is currently open
-            </label>
-          </div>
-
-          {/* Image Upload */}
-          <div className="space-y-1.5 w-full">
-            <label className="font-semibold text-slate-700">Event Image</label>
-            {!fileMeta.preview ? (
-              <label className="border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer bg-slate-50/40 hover:bg-slate-50 transition-all w-full group">
-                <UploadCloud className="h-5 w-5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                <div className="text-center">
-                  <p className="font-semibold text-slate-700">
-                    Click to upload event image
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-normal mt-0.5">
-                    Supports PNG, JPEG, WEBP (Max 5MB)
-                  </p>
-                </div>
+        {/* Scrollable Form Body with Spacious Semantic Sections */}
+        <div className="p-4 sm:p-8 overflow-y-auto min-h-0 space-y-8 sm:space-y-10 flex-1 w-full overflow-x-hidden">
+          {/* Section 1: Basic Information */}
+          <FormSection
+            title="Basic Information"
+            description="Essential event identity, category classification, and host association."
+            withDivider={false}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-7">
+              <div className="md:col-span-2 space-y-2">
+                <label className="font-semibold text-slate-700 block text-xs">
+                  Event Title <span className="text-rose-500">*</span>
+                </label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
+                  name="title"
+                  type="text"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Intro to Web Development Bootcamp"
+                  className={errors.title ? inputError : inputNormal}
                 />
-              </label>
-            ) : (
-              <div className="relative border border-slate-200 rounded-xl max-w-md bg-slate-50 p-3 pr-12 flex items-center gap-3 group">
-                <div className="h-10 w-10 bg-indigo-50 rounded-lg overflow-hidden border border-indigo-100 shrink-0">
-                  <img
-                    src={fileMeta.preview}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-slate-800 truncate">
-                    {fileMeta.name}
+                {errors.title && (
+                  <p className="text-rose-500 text-[11px] font-medium mt-1">
+                    {errors.title}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-normal">
-                    Image Media Asset
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFileMeta({ preview: null, name: "" })}
-                  className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 rounded-md cursor-pointer shadow-2xs"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                )}
               </div>
-            )}
-            {errors.image && (
-              <p className="text-rose-500 text-[11px] font-medium mt-0.5">
-                {errors.image}
-              </p>
-            )}
-          </div>
 
-          {/* Integrated Reusable Markdown Description Field */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700">
-              Description *
-            </label>
-            <MarkdownEditor
-              id="event-modal-textarea"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              error={errors.description}
-              placeholder="Write detailed event schedule, overview, requirements, or timeline..."
+              <div className="space-y-2">
+                <label className="font-semibold text-slate-700 block text-xs">
+                  Category <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className={`cursor-pointer ${errors.category ? inputError : inputNormal}`}
+                >
+                  <option value="">Select Category</option>
+                  {EVENT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+                {errors.category && (
+                  <p className="text-rose-500 text-[11px] font-medium mt-1">
+                    {errors.category}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-semibold text-slate-700 block text-xs">
+                  Associated Tenure
+                </label>
+                <select
+                  name="tenure"
+                  value={formData.tenure || ""}
+                  onChange={handleInputChange}
+                  className={`cursor-pointer ${inputNormal}`}
+                >
+                  <option value="">General (No Tenure)</option>
+                  {tenuresList.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2 space-y-2">
+                <label className="font-semibold text-slate-700 block text-xs">
+                  Organizer <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  name="organizer"
+                  type="text"
+                  value={formData.organizer}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Code Collective / CSIT Association"
+                  className={errors.organizer ? inputError : inputNormal}
+                />
+                {errors.organizer && (
+                  <p className="text-rose-500 text-[11px] font-medium mt-1">
+                    {errors.organizer}
+                  </p>
+                )}
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Section 2: Schedule & Location */}
+          <FormSection
+            title="Schedule & Location"
+            description="Specify when and where the event will take place."
+          >
+            <div className="space-y-6 sm:space-y-7">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    Start Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={handleInputChange}
+                    className={`cursor-pointer ${errors.startDate ? inputError : inputNormal}`}
+                  />
+                  {errors.startDate && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.startDate}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    End Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={handleInputChange}
+                    className={`cursor-pointer ${errors.endDate ? inputError : inputNormal}`}
+                  />
+                  {errors.endDate && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.endDate}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    Start Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="startTime"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={handleInputChange}
+                    className={`cursor-pointer ${errors.startTime ? inputError : inputNormal}`}
+                  />
+                  {errors.startTime && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.startTime}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    End Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="endTime"
+                    type="time"
+                    value={formData.endTime}
+                    onChange={handleInputChange}
+                    className={`cursor-pointer ${errors.endTime ? inputError : inputNormal}`}
+                  />
+                  {errors.endTime && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.endTime}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-semibold text-slate-700 block text-xs">
+                  Location / Venue <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  name="location"
+                  type="text"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Innovation Hub, Hall B / Google Meet"
+                  className={errors.location ? inputError : inputNormal}
+                />
+                {errors.location && (
+                  <p className="text-rose-500 text-[11px] font-medium mt-1">
+                    {errors.location}
+                  </p>
+                )}
+              </div>
+            </div>
+          </FormSection>
+
+          {/* Section 3: Registration & Capacity */}
+          <FormSection
+            title="Registration & Capacity"
+            description="Manage capacity limits, ticketing fees, and registration links."
+          >
+            <div className="space-y-6 sm:space-y-7">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    Available Seats <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="availableSeats"
+                    type="number"
+                    min="0"
+                    value={formData.availableSeats}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 40"
+                    className={errors.availableSeats ? inputError : inputNormal}
+                  />
+                  {errors.availableSeats && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.availableSeats}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    Registration Fee (BMC)
+                  </label>
+                  <input
+                    name="registrationFeeBMC"
+                    type="number"
+                    min="0"
+                    value={formData.registrationFeeBMC}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    className={errors.registrationFeeBMC ? inputError : inputNormal}
+                  />
+                  {errors.registrationFeeBMC && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.registrationFeeBMC}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-semibold text-slate-700 block text-xs">
+                    Registration Fee (General)
+                  </label>
+                  <input
+                    name="registrationFee"
+                    type="number"
+                    min="0"
+                    value={formData.registrationFee}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    className={errors.registrationFee ? inputError : inputNormal}
+                  />
+                  {errors.registrationFee && (
+                    <p className="text-rose-500 text-[11px] font-medium mt-1">
+                      {errors.registrationFee}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-semibold text-slate-700 block text-xs">
+                  Registration Form URL
+                </label>
+                <input
+                  name="registrationFormUrl"
+                  type="text"
+                  value={formData.registrationFormUrl}
+                  onChange={handleInputChange}
+                  placeholder="https://forms.example.com/your-event"
+                  className={errors.registrationFormUrl ? inputError : inputNormal}
+                />
+                {errors.registrationFormUrl && (
+                  <p className="text-rose-500 text-[11px] font-medium mt-1">
+                    {errors.registrationFormUrl}
+                  </p>
+                )}
+              </div>
+
+              {/* Registration Status Checkbox */}
+              <label
+                htmlFor="registrationOpen"
+                className="flex items-center gap-3.5 p-4 sm:p-5 rounded-xl border border-slate-200/90 hover:bg-slate-50/70 transition-colors cursor-pointer select-none bg-slate-50/30"
+              >
+                <input
+                  id="registrationOpen"
+                  name="registrationOpen"
+                  type="checkbox"
+                  checked={formData.registrationOpen}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-slate-800 block text-xs">
+                    Registration is currently open
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-normal block leading-relaxed">
+                    Enable or disable attendee registrations on the public portal.
+                  </span>
+                </div>
+              </label>
+            </div>
+          </FormSection>
+
+          {/* Section 4: Mentors & Facilitators */}
+          <FormSection
+            title="Mentors & Facilitators"
+            description="Assign mentors to this event, designate their specific roles, and outline their responsibilities."
+          >
+            <div className="space-y-3">
+              <EventMentorsSelect
+                mentorsList={mentorsList}
+                assignments={formData.assignments}
+                onAddMentor={addMentorAssignment}
+                onRemoveMentor={removeMentorAssignment}
+                onUpdateAssignment={updateMentorAssignment}
+              />
+              {errors.assignments && (
+                <p className="text-rose-500 text-[11px] font-medium">
+                  {errors.assignments}
+                </p>
+              )}
+            </div>
+          </FormSection>
+
+          {/* Section 5: Media & Attachments */}
+          <FormSection
+            title="Media & Banner"
+            description="Upload a high-resolution promotional cover image or banner."
+          >
+            <EventMediaUpload
+              fileMeta={fileMeta}
+              onFileChange={handleFileChange}
+              onRemoveFile={handleRemoveFile}
+              error={errors.image}
             />
-          </div>
+          </FormSection>
+
+          {/* Section 6: Description & Overview */}
+          <FormSection
+            title="Event Description & Schedule"
+            description="Comprehensive event details, prerequisites, and timeline formatted with Markdown."
+          >
+            <div className="space-y-2">
+              <label className="font-semibold text-slate-700 block text-xs">
+                Description <span className="text-rose-500">*</span>
+              </label>
+              <MarkdownEditor
+                id="event-modal-textarea"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                error={errors.description}
+                placeholder="Write detailed event schedule, overview, requirements, or timeline..."
+              />
+            </div>
+          </FormSection>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/30 w-full shrink-0">
-          <button
+        {/* Footer with Ergonomic Responsive Layout */}
+        <div className="px-4 py-3 sm:p-5 sm:px-8 border-t border-border/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/40 dark:bg-[#16181e] w-full shrink-0">
+          <Button
             type="button"
+            variant="outline"
             disabled={submitType !== null}
             onClick={onCancel}
-            className="h-9 w-full sm:w-auto px-4 order-3 sm:order-1 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+            className="w-full sm:w-auto order-2 sm:order-1 shadow-2xs"
           >
             Cancel
-          </button>
+          </Button>
 
-          <div className="flex gap-2 w-full sm:w-auto order-2 sm:order-2">
-            <button
+          <div className="grid grid-cols-2 gap-3 w-full order-1 sm:order-2 sm:flex sm:w-auto sm:items-center">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitType !== null}
+              loading={submitType === "draft"}
+              loadingText="Saving..."
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit("draft", onSubmitSuccess);
+              }}
+              className="w-full sm:w-auto shadow-2xs"
+            >
+              Save as Draft
+            </Button>
+
+            <Button
               type="button"
               disabled={submitType !== null}
-              onClick={(e) => handleActionClick(e, "draft")}
-              className="h-9 px-4 text-xs font-semibold border border-slate-200 text-slate-700 bg-white rounded-lg hover:bg-slate-50 cursor-pointer shadow-2xs"
+              loading={submitType === "published"}
+              loadingText={initialData ? "Saving..." : "Publishing..."}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit("published", onSubmitSuccess);
+              }}
+              className="w-full sm:w-auto shadow-2xs"
             >
-              {submitType === "draft" ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
-              ) : (
-                "Save as Draft"
-              )}
-            </button>
-
-            <button
-              type="button"
-              disabled={submitType !== null}
-              onClick={(e) => handleActionClick(e, "published")}
-              className="h-9 px-4 text-xs font-semibold bg-[#0b2574] hover:bg-[#0b2574]/90 text-white rounded-lg cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
-            >
-              {submitType === "publish" ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Publishing...</>
-              ) : initialData ? (
-                "Save Changes"
-              ) : (
-                "Publish"
-              )}
-            </button>
+              {initialData ? "Save Changes" : "Publish Event"}
+            </Button>
           </div>
         </div>
       </div>

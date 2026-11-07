@@ -1,36 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, LogIn } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { Mail, Lock, LogIn, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLogin } from "@/hooks/useAuth";
 import { loginSchema } from "@/lib/Schema/loginSchema";
+import { parseServerError } from "@/lib/errorUtils";
 
-export default function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+function LoginForm() {
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
-  const [error, setError] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard";
 
   const loginMutation = useLogin();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setServerError("");
     setErrors({});
 
-    // Validate with Zod
+    // Client-side validation
     const result = loginSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors = {};
-      result.error.issues.forEach((issue) => { 
+      result.error.issues.forEach((issue) => {
         const pathKey = issue.path[0];
         if (!fieldErrors[pathKey]) fieldErrors[pathKey] = issue.message;
       });
@@ -38,148 +38,166 @@ export default function LoginPage() {
       return;
     }
 
-    loginMutation.mutate(formData, {
-      onSuccess: () => {
-        toast.success("Login successful! Welcome back.");
-        router.push("/dashboard");
-      },
-      onError: () => {
-        toast.error("Invalid email or password. Please try again.");
-        setError("Invalid email or password");
-      },
-    });
+    try {
+      await loginMutation.mutateAsync(formData);
+      const isSafeRedirect =
+        returnUrl.startsWith("/") &&
+        !returnUrl.startsWith("//") &&
+        !returnUrl.includes("\\");
+      router.replace(isSafeRedirect ? returnUrl : "/dashboard");
+    } catch (err) {
+      if (err?.response?.status === 429) {
+        const retryAfter = err.response.headers?.["retry-after"] || err.response.headers?.["Retry-After"];
+        const serverDetail = err.response.data?.detail;
+        const msg = serverDetail || (retryAfter ? `Too many failed login attempts. Please try again in ${retryAfter} seconds.` : "Too many requests. Please wait before trying again.");
+        setServerError(msg);
+      } else {
+        const message = parseServerError(
+          err,
+          "Invalid email or password. Please try again."
+        );
+        setServerError(message);
+      }
+    }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear field error on change
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (serverError) setServerError("");
   };
 
+  const isPending = loginMutation.isPending;
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Title Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#0b2574] text-white mb-4">
-            <LogIn className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h1>
-          <p className="text-sm text-slate-600">Sign in to your admin dashboard</p>
+    <div className="w-full max-w-md mx-auto">
+      {/* Header Section */}
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary border border-primary/20 mb-3 shadow-inner">
+          <LogIn className="w-7 h-7" strokeWidth={2} />
         </div>
-
-        {/* Login Form Card */}
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Server Error Message */}
-            {error && (
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Email Field */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-                Email Address
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className={`pl-10 h-11 ${errors.email ? "border-red-500 focus:ring-red-500" : ""}`}
-                  disabled={loginMutation.isPending}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-slate-700">
-                Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className={`pl-10 h-11 ${errors.password ? "border-red-500 focus:ring-red-500" : ""}`}
-                  disabled={loginMutation.isPending}
-                />
-              </div>
-              {errors.password && (
-                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-              )}
-            </div>
-
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-slate-300 text-[#0b2574] focus:ring-[#0b2574]"
-                />
-                <span className="text-slate-600">Remember me</span>
-              </label>
-              <button
-                type="button"
-                className="text-[#0b2574] hover:underline font-medium"
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full h-11 bg-[#0b2574] hover:bg-[#0b2574]/90 text-white font-medium"
-              disabled={loginMutation.isPending}
-            >
-              {loginMutation.isPending ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Sign In
-                </>
-              )}
-            </Button>
-          </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 rounded-lg bg-slate-50 border border-slate-200">
-            <p className="text-xs font-semibold text-slate-700 mb-2">Demo Credentials:</p>
-            <p className="text-xs text-slate-600">Email: admin@example.com</p>
-            <p className="text-xs text-slate-600">Password: any password</p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-sm text-slate-500 mt-6">
-          © 2026 Admin Dashboard. All rights reserved.
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight mb-1.5">
+          Welcome Back
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Sign in to your admin dashboard
         </p>
       </div>
+
+      {/* Login Card */}
+      <div className="bg-card text-card-foreground rounded-2xl shadow-xl border border-border p-6 sm:p-8">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {/* Server Error Banner */}
+          {serverError && (
+            <div
+              role="alert"
+              className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-2.5 animate-in fade-in"
+            >
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span className="leading-snug">{serverError}</span>
+            </div>
+          )}
+
+          {/* Email Field */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-foreground">
+              Email Address
+            </Label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="admin@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                className={`pl-10 h-11 bg-background border-input text-foreground focus-visible:ring-primary ${
+                  errors.email ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
+                disabled={isPending}
+              />
+            </div>
+            {errors.email && (
+              <p className="text-destructive text-xs mt-1">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Password Field */}
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-foreground">
+              Password
+            </Label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                className={`pl-10 pr-10 h-11 bg-background border-input text-foreground focus-visible:ring-primary ${
+                  errors.password ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
+                disabled={isPending}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus:outline-none p-1"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-destructive text-xs mt-1">{errors.password}</p>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl cursor-pointer transition-colors shadow-sm"
+            disabled={isPending}
+          >
+            {isPending ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                <span>Signing in...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <LogIn className="w-4 h-4" />
+                <span>Sign In</span>
+              </div>
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-48 w-full items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
