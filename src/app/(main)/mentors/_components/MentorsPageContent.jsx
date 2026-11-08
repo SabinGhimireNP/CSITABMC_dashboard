@@ -90,7 +90,7 @@ export function MentorsPageContent({ initialModalMode = null }) {
     pageSize: rowsPerPage,
   });
 
-  const { data: eventsData } = useEvents({ pageSize: 100 });
+  const { data: eventsData } = useEvents({ pageSize: 100 }, { enabled: formMode.isOpen });
   const eventsList = eventsData?.data || [];
 
   const mentorsList = mentorsData?.data || [];

@@ -8,6 +8,7 @@ import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { CertificateDeleteDialog } from "./CertificateDeleteDialog";
 import { usePermission } from "@/hooks/usePermission";
 import { Badge } from "@/components/ui/badge";
+import { formatNepalDateTime } from "@/lib/dateTime";
 
 const CHECKBOX_CLASS =
   "rounded border-input text-primary focus:ring-primary w-4 h-4 cursor-pointer bg-background";
@@ -129,7 +130,7 @@ export function CertificateTable({
           renderBadge={(c) => <ProjectBadge complete={c.isProjectComplete} />}
           fields={[
             { label: "Event", render: (c) => getEventTitle(c.event) },
-            { label: "Created At", render: (c) => c.createdAt || "—" },
+            { label: "Created At", render: (c) => formatNepalDateTime(c.createdAt) },
           ]}
           renderActions={renderActions}
         />
@@ -205,7 +206,7 @@ export function CertificateTable({
                     <td className="py-2 px-4 whitespace-nowrap">
                       <ProjectBadge complete={cert.isProjectComplete} />
                     </td>
-                    <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums truncate">{cert.createdAt || "—"}</td>
+                    <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums whitespace-nowrap">{formatNepalDateTime(cert.createdAt)}</td>
                     <td className={`py-2 px-4 text-right pr-6 sticky right-0 ${rowBg} group-hover:bg-muted/40 transition-colors`}>{renderActions(cert)}</td>
                   </tr>
                 );

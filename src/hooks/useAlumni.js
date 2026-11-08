@@ -25,9 +25,26 @@ export const mapAlumniFromBackend = (alumni) => ({
   status: "active",
 });
 
-// Alumni are paginated in the browser, so the full list is fetched once.
-const fetchAlumni = createThrottle(async () => {
-  const { data } = await apiClient.get("/alumni/", { params: { all: true, _: Date.now() } });
+const fetchAlumni = createThrottle(async (queryParams = {}) => {
+  const {
+    search = "",
+    id = "",
+    ordering = "",
+    page = 1,
+    pageSize = 10,
+    signal,
+  } = queryParams;
+
+  const params = {
+    page,
+    page_size: pageSize,
+  };
+
+  if (search && search.trim()) params.search = search.trim();
+  if (id) params.id = id;
+  if (ordering) params.ordering = ordering;
+
+  const { data } = await apiClient.get("/alumni/", { params, signal });
 
   const rawResults = Array.isArray(data)
     ? data
@@ -35,14 +52,30 @@ const fetchAlumni = createThrottle(async () => {
       ? data.results
       : [];
   const fetchedAlumni = rawResults.map(mapAlumniFromBackend);
+  const count = typeof data?.count === "number" ? data.count : rawResults.length;
+  const totalPages = Math.ceil(count / pageSize) || 1;
 
-  return { data: fetchedAlumni };
+  return {
+    count,
+    totalPages,
+    data: fetchedAlumni,
+  };
 });
 
-export const useAlumni = () => {
+export const useAlumni = (queryParams = {}, options = {}) => {
+  const {
+    search = "",
+    id = "",
+    ordering = "",
+    page = 1,
+    pageSize = 10,
+  } = queryParams;
+
   return useQuery({
-    queryKey: ["alumni"],
-    queryFn: () => fetchAlumni(),
+    queryKey: ["alumni", search, id, ordering, page, pageSize],
+    queryFn: ({ signal }) => fetchAlumni({ search, id, ordering, page, pageSize, signal }),
+    placeholderData: (previousData) => previousData,
+    ...options,
   });
 };
 

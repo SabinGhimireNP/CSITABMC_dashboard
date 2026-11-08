@@ -10,6 +10,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { canDeleteAccount, canManageAccount } from "@/lib/roles";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { formatNepalDateTime } from "@/lib/dateTime";
 
 const getRoleStyle = (role) => {
   switch (role) {
@@ -121,7 +122,7 @@ export function AdminTable({
     );
   };
 
-  const formatJoined = (admin) => (admin.date_joined ? new Date(admin.date_joined).toLocaleDateString() : "—");
+  const formatJoined = (admin) => formatNepalDateTime(admin.date_joined);
   const keyFor = (admin, index) => admin.id ?? `admin-${index}`;
 
   return (
@@ -190,7 +191,7 @@ export function AdminTable({
                   <td className="py-2 px-4 text-muted-foreground font-normal truncate" title={admin.email}>{admin.email}</td>
                   <td className="py-2 px-4 whitespace-nowrap"><RoleBadge role={admin.role} label={admin.role_label} /></td>
                   <td className="py-2 px-4 whitespace-nowrap">{renderStatusToggle(admin)}</td>
-                  <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums truncate">{formatJoined(admin)}</td>
+                  <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums whitespace-nowrap">{formatJoined(admin)}</td>
                   <td className="py-2 px-4 text-right pr-6 sticky right-0 bg-card group-hover:bg-muted/40 transition-colors">{renderActions(admin)}</td>
                 </tr>
               ))

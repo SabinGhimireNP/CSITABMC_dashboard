@@ -1,3 +1,5 @@
+import { formatNepalDateTime } from "@/lib/dateTime";
+
 /** Lowercase, hyphenated, ASCII slug (mirrors Django's slugify closely enough for previews). */
 export function slugifyText(text = "") {
   return text
@@ -33,8 +35,5 @@ export function truncateText(text = "", limit = 160) {
 }
 
 export function formatDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return formatNepalDateTime(value);
 }

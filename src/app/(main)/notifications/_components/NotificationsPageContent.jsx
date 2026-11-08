@@ -162,6 +162,10 @@ export function NotificationsPageContent() {
     );
   }
 
+  if (isLoading) {
+    return <NotificationsSkeleton />;
+  }
+
   return (
     <div className="w-full space-y-6">
       {/* Page Header */}
@@ -227,9 +231,7 @@ export function NotificationsPageContent() {
       />
 
       {/* Main Content Area */}
-      {isLoading ? (
-        <NotificationsSkeleton />
-      ) : isError ? (
+      {isError ? (
         <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-8 text-center">
           <p className="text-sm font-medium text-destructive">
             Failed to load notifications. Please check your connection and try again.

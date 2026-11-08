@@ -8,6 +8,7 @@ import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { NoticeDeleteDialog } from "./NoticeDeleteDialog";
 import { usePermission } from "@/hooks/usePermission";
 import { Badge } from "@/components/ui/badge";
+import { formatNepalDateTime } from "@/lib/dateTime";
 
 const getStatusStyle = (status) => {
   switch (status?.toLowerCase()) {
@@ -97,7 +98,7 @@ export function NoticeTable({
         renderBadge={(n) => <StatusBadge status={n.status} />}
         fields={[
           { label: "Category", render: (n) => n.category },
-          { label: "Date Created", render: (n) => n.createdAt },
+          { label: "Date Created", render: (n) => formatNepalDateTime(n.createdAt) },
         ]}
         renderActions={renderActions}
       />
@@ -156,7 +157,7 @@ export function NoticeTable({
 
                   <td className="py-2 px-4 font-medium text-foreground/80 truncate">{notice.category}</td>
 
-                  <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums truncate">{notice.createdAt}</td>
+                  <td className="py-2 px-4 font-normal text-muted-foreground tabular-nums whitespace-nowrap">{formatNepalDateTime(notice.createdAt)}</td>
 
                   <td className="py-2 px-4 whitespace-nowrap">
                     <StatusBadge status={notice.status} />

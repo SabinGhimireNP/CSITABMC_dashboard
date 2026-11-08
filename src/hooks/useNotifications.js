@@ -47,7 +47,6 @@ const fetchInbox = createThrottle(async (queryParams = {}) => {
   } = queryParams;
 
   const params = {
-    _: Date.now(),
     page,
     page_size: pageSize,
   };
@@ -72,7 +71,7 @@ const fetchInbox = createThrottle(async (queryParams = {}) => {
   };
 });
 
-export const useNotifications = (queryParams = {}) => {
+export const useNotifications = (queryParams = {}, options = {}) => {
   const {
     search = "",
     sourceModule = "",
@@ -93,6 +92,7 @@ export const useNotifications = (queryParams = {}) => {
         signal,
       }),
     placeholderData: (previousData) => previousData,
+    ...options,
   });
 };
 
@@ -147,7 +147,6 @@ const fetchSent = createThrottle(async (queryParams = {}) => {
   const { search = "", page = 1, pageSize = 10 } = queryParams;
 
   const params = {
-    _: Date.now(),
     page,
     page_size: pageSize,
   };
@@ -170,13 +169,14 @@ const fetchSent = createThrottle(async (queryParams = {}) => {
   };
 });
 
-export const useSentNotifications = (queryParams = {}) => {
+export const useSentNotifications = (queryParams = {}, options = {}) => {
   const { search = "", page = 1, pageSize = 10 } = queryParams;
 
   return useQuery({
     queryKey: ["notifications", "sent", search, page, pageSize],
     queryFn: ({ signal }) => fetchSent({ search, page, pageSize, signal }),
     placeholderData: (previousData) => previousData,
+    ...options,
   });
 };
 

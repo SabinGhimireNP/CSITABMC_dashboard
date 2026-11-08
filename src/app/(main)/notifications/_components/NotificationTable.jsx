@@ -5,6 +5,7 @@ import { Eye, Check, CheckCheck, Users } from "lucide-react";
 import { Pagination } from "@/components/common/pagination";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { Button } from "@/components/ui/button";
+import { formatNepalDateTime } from "@/lib/dateTime";
 import {
   getNotificationProfile,
   getReadStatusBadge,
@@ -32,14 +33,7 @@ export function NotificationTable({
         emptyText={isSentView ? "No sent notifications found." : "No received notifications found."}
         renderCard={(item) => {
           const profile = getNotificationProfile(item.sourceModule);
-          const formattedDate = item.sentAt || item.createdAt
-            ? new Date(item.sentAt || item.createdAt).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "";
+          const formattedDate = formatNepalDateTime(item.sentAt || item.createdAt);
 
           return (
             <div className={`p-4 space-y-3 border-l-4 ${profile.accentBorder}`}>
@@ -142,14 +136,7 @@ export function NotificationTable({
             ) : (
               notifications.map((item) => {
                 const profile = getNotificationProfile(item.sourceModule);
-                const formattedDate = item.sentAt || item.createdAt
-                  ? new Date(item.sentAt || item.createdAt).toLocaleString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "";
+                const formattedDate = formatNepalDateTime(item.sentAt || item.createdAt);
 
                 return (
                   <tr

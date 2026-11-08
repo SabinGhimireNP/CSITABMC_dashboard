@@ -86,7 +86,10 @@ export function CertificatesPageContent({ initialModalMode = null }) {
   const deleteCertificateMutation = useDeleteCertificate();
   const bulkUpdateStatusMutation = useBulkUpdateCertificateStatus();
 
-  const { data: eventsData, isLoading: eventsLoading } = useEvents({ pageSize: 100 });
+  const { data: eventsData, isLoading: eventsLoading } = useEvents(
+    { pageSize: 100 },
+    { enabled: formMode.isOpen }
+  );
   const eventsList = eventsData?.data || [];
 
   const {

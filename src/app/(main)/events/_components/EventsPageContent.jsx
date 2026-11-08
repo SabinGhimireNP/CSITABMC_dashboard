@@ -115,8 +115,11 @@ export function EventsPageContent({ initialModalMode = null }) {
     pageSize: rowsPerPage,
   });
 
-  const { data: mentorsData, isLoading: mentorsLoading } = useMentors({ pageSize: 100 });
-  const { data: tenuresData } = useTenures();
+  const { data: mentorsData, isLoading: mentorsLoading } = useMentors(
+    { pageSize: 100 },
+    { enabled: formMode.isOpen }
+  );
+  const { data: tenuresData } = useTenures({ enabled: formMode.isOpen });
 
   const eventsList = eventsData?.data || [];
   const totalRows = eventsData?.count || 0;

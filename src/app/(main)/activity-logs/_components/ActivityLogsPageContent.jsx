@@ -19,6 +19,7 @@ import { useActivityLogs, useActivityLogSummary, useActivityLogDetail } from "@/
 import { ActivityLogDetailModal, formatNepalTime, formatSysId } from "./ActivityLogDetailModal";
 import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
+import ActivityLogsSkeleton from "./ActivityLogsSkeleton";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/common/pagination";
 
@@ -164,6 +165,10 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
   const hasActiveFilters = Boolean(
     moduleFilter || actionFilter || startDate || endDate || searchInput
   );
+
+  if (isLogsLoading && isSummaryLoading) {
+    return <ActivityLogsSkeleton />;
+  }
 
   return (
     <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6">

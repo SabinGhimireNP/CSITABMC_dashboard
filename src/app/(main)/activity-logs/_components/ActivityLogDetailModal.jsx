@@ -13,25 +13,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { ModalShell } from "@/components/common/ModalShell";
+import { formatNepalTime, formatNepalDateTime } from "@/lib/dateTime";
 
-export function formatNepalTime(dateString) {
-  if (!dateString) return "—";
-  try {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kathmandu",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}
+export { formatNepalTime, formatNepalDateTime };
 
 export function formatSysId(id) {
   if (id === null || id === undefined || id === "") return "—";

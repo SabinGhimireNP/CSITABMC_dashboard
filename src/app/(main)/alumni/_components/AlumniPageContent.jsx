@@ -73,50 +73,21 @@ export function AlumniPageContent({ initialModalMode = null }) {
     isLoading: alumniLoading,
     isError: alumniError,
     isFetching,
-  } = useAlumni();
+  } = useAlumni({
+    search: searchQuery,
+    id: idQuery,
+    ordering: orderingQuery,
+    page: currentPage,
+    pageSize: rowsPerPage,
+  });
 
   const createAlumniMutation = useCreateAlumni();
   const updateAlumniMutation = useUpdateAlumni();
   const deleteAlumniMutation = useDeleteAlumni();
 
-  // Frontend-side pagination: search, tab filter, sort and slicing over the full list.
-  const processedAlumni = useMemo(() => {
-    let dataset = alumniData?.data ?? [];
-    if (activeTab !== "all") {
-      dataset = dataset.filter((a) => a.status === activeTab);
-    }
-    if (idQuery) {
-      dataset = dataset.filter((a) => String(a.id) === idQuery);
-    }
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      dataset = dataset.filter((a) =>
-        [a.fullName, a.email, a.memberId, a.graduationYear].some((v) =>
-          String(v ?? "").toLowerCase().includes(q)
-        )
-      );
-    }
-    const field = orderingQuery.replace("-", "");
-    if (field) {
-      const dir = orderingQuery.startsWith("-") ? -1 : 1;
-      dataset = [...dataset].sort((a, b) => {
-        const valA = a[field] ?? "";
-        const valB = b[field] ?? "";
-        if (typeof valA === "number" && typeof valB === "number") return (valA - valB) * dir;
-        return String(valA).localeCompare(String(valB), undefined, { numeric: true }) * dir;
-      });
-    }
-    return dataset;
-  }, [alumniData, activeTab, idQuery, searchQuery, orderingQuery]);
-
-  const totalRows = processedAlumni.length;
-  const totalPages = Math.max(Math.ceil(totalRows / rowsPerPage), 1);
-  // Clamp to the last page when filters or deletes shrink the list.
-  const effectivePage = Math.min(currentPage, totalPages);
-  const liveAlumni = useMemo(
-    () => processedAlumni.slice((effectivePage - 1) * rowsPerPage, effectivePage * rowsPerPage),
-    [processedAlumni, effectivePage, rowsPerPage]
-  );
+  const liveAlumni = alumniData?.data || [];
+  const totalRows = alumniData?.count || 0;
+  const totalPages = alumniData?.totalPages || 1;
 
   // ── URL query params helpers ────────────────────────────────────────────
   const updateQuery = useCallback(
@@ -250,7 +221,7 @@ export function AlumniPageContent({ initialModalMode = null }) {
           onDeleteAlumni={handleDeleteAlumni}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleRowsPerPageChange}
-          currentPage={effectivePage}
+          currentPage={currentPage}
           onPageChange={handlePageChange}
           totalPages={totalPages}
           totalRows={totalRows}

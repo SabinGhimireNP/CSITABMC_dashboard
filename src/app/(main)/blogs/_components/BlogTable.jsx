@@ -194,9 +194,9 @@ export function BlogTable({
                     <StatusBadge status={blog.status} />
                   </td>
 
-                  <td className="py-2 px-4 text-muted-foreground tabular-nums truncate">{formatDate(blog.createdAt)}</td>
-                  <td className="py-2 px-4 text-muted-foreground tabular-nums truncate">{formatDate(blog.publishedAt)}</td>
-                  <td className="py-2 px-4 text-muted-foreground tabular-nums truncate">{formatDate(blog.updatedAt)}</td>
+                  <td className="py-2 px-4 text-muted-foreground tabular-nums whitespace-nowrap">{formatDate(blog.createdAt)}</td>
+                  <td className="py-2 px-4 text-muted-foreground tabular-nums whitespace-nowrap">{formatDate(blog.publishedAt)}</td>
+                  <td className="py-2 px-4 text-muted-foreground tabular-nums whitespace-nowrap">{formatDate(blog.updatedAt)}</td>
 
                   <td className="py-2 px-4 text-right pr-6 sticky right-0 bg-card group-hover:bg-muted/40 transition-colors">
                     {renderActions(blog)}

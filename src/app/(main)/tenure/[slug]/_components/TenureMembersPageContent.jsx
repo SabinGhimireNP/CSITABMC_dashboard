@@ -8,6 +8,7 @@ import { MemberTable } from "../../_components/MemberTable";
 import { MemberTabs } from "../../_components/MemberTabs";
 import { TenureAssignmentModal } from "./TenureAssignmentModal";
 import { TenureMembersPageHeader } from "./TenureMembersPageHeader";
+import MembersSkeleton from "../../_components/MembersSkeleton";
 import { parseServerError } from "@/lib/errorUtils";
 
 export function TenureMembersPageContent() {
@@ -115,13 +116,7 @@ export function TenureMembersPageContent() {
   }, [processedMembers, effectivePage, rowsPerPage]);
 
   if (tenuresLoading) {
-    return (
-      <div className="w-full mx-auto px-1 sm:px-6 lg:px-5 py-4 flex flex-col gap-6 animate-pulse">
-        <div className="h-8 w-48 rounded-md bg-slate-200" />
-        <div className="h-4 w-72 rounded-md bg-slate-200" />
-        <div className="h-96 rounded-sm bg-slate-200" />
-      </div>
-    );
+    return <MembersSkeleton />;
   }
 
   return (

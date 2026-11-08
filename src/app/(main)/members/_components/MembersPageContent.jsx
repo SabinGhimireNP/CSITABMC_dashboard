@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, useTransition, useEffect } from 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
-import { useMembers, useMembersList, useMemberDetail, useDeleteMember } from "@/hooks/useMembers";
+import { useMembers, useMemberDetail, useDeleteMember } from "@/hooks/useMembers";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { MembersTabs } from "./MembersTabs";
 import { MembersTable } from "./MembersTable";
@@ -87,8 +87,6 @@ export function MembersPageContent({ initialModalMode = null }) {
     pageSize: rowsPerPage,
   });
 
-  // Flat list for global tab counts
-  const { data: allMembers = [] } = useMembersList();
   const deleteMemberMutation = useDeleteMember();
 
   // URL query synchronizer
@@ -163,13 +161,10 @@ export function MembersPageContent({ initialModalMode = null }) {
   };
 
   const tabCounts = useMemo(() => {
-    const list = Array.isArray(allMembers) ? allMembers : [];
     return {
-      all: list.length,
-      published: list.filter((m) => m.status !== "draft").length,
-      draft: list.filter((m) => m.status === "draft").length,
+      [activeTab]: membersData?.count,
     };
-  }, [allMembers]);
+  }, [activeTab, membersData?.count]);
 
   const members = membersData?.data || [];
   const totalRows = membersData?.count || 0;

@@ -53,10 +53,11 @@ const fetchTenures = createThrottle(async (queryParams = {}) => {
   };
 });
 
-export const useTenures = () => {
+export const useTenures = (options = {}) => {
   return useQuery({
     queryKey: ["tenures"],
     queryFn: ({ signal }) => fetchTenures({ signal }),
+    ...options,
   });
 };
 

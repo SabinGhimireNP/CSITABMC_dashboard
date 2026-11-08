@@ -32,10 +32,13 @@ export function NotificationBell() {
   const containerRef = useRef(null);
 
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
-  const { data: inboxData, isLoading } = useNotifications({
-    page: 1,
-    pageSize: 5,
-  });
+  const { data: inboxData, isLoading } = useNotifications(
+    {
+      page: 1,
+      pageSize: 5,
+    },
+    { enabled: isOpen }
+  );
 
   const markReadMutation = useMarkNotificationRead();
   const markAllReadMutation = useMarkAllNotificationsRead();

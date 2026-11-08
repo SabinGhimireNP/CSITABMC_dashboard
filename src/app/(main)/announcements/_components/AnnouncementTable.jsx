@@ -7,6 +7,7 @@ import { RowActionsMenu } from "@/components/common/RowActionsMenu";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { usePermission } from "@/hooks/usePermission";
+import { formatNepalDateTime } from "@/lib/dateTime";
 
 const AnnouncementThumb = ({ item }) =>
   item.image ? (
@@ -86,12 +87,8 @@ export function AnnouncementTable({
                   <h4 className="font-semibold text-xs text-slate-900 dark:text-white truncate">
                     {item.title}
                   </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    {new Date(item.createdAt).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                  <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
+                    {formatNepalDateTime(item.createdAt)}
                   </p>
                 </div>
               </div>
@@ -187,12 +184,8 @@ export function AnnouncementTable({
                         <span className="text-slate-400 dark:text-slate-600 text-[11px]">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                      {new Date(item.createdAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums text-xs">
+                      {formatNepalDateTime(item.createdAt)}
                     </td>
                     <td className="py-3 px-4 text-right">
                       {renderActions(item)}

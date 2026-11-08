@@ -57,13 +57,14 @@ const fetchMentors = createThrottle(async (queryParams = {}) => {
   };
 });
 
-export const useMentors = (queryParams = {}) => {
+export const useMentors = (queryParams = {}, options = {}) => {
   const { search = "", status = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
   return useQuery({
     queryKey: ["mentors", search, status, id, ordering, page, pageSize],
     queryFn: ({ signal }) => fetchMentors({ search, status, id, ordering, page, pageSize, signal }),
     placeholderData: (previousData) => previousData,
+    ...options,
   });
 };
 

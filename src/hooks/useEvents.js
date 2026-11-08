@@ -108,13 +108,14 @@ const fetchEvents = createThrottle(async (queryParams = {}) => {
   };
 });
 
-export const useEvents = (queryParams = {}) => {
+export const useEvents = (queryParams = {}, options = {}) => {
   const { search = "", status = "", category = "", date = "", id = "", ordering = "", page = 1, pageSize = 5 } = queryParams;
 
   return useQuery({
     queryKey: ["events", search, status, category, date, id, ordering, page, pageSize],
     queryFn: ({ signal }) => fetchEvents({ search, status, category, date, id, ordering, page, pageSize, signal }),
     placeholderData: (previousData) => previousData,
+    ...options,
   });
 };
 
