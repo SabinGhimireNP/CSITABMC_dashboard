@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   History,
   Activity,
-  LogIn,
-  Edit3,
-  Layers,
   Search,
   Filter,
   Calendar,
@@ -15,11 +12,11 @@ import {
   RefreshCw,
   Loader2,
   X,
-  Shield,
-  Info,
+  Edit3,
+  Layers,
 } from "lucide-react";
 import { useActivityLogs, useActivityLogSummary, useActivityLogDetail } from "@/hooks/useActivityLogs";
-import { ActivityLogDetailModal, formatNepalTime } from "./ActivityLogDetailModal";
+import { ActivityLogDetailModal, formatNepalTime, formatSysId } from "./ActivityLogDetailModal";
 import { ResourceNotFoundDialog } from "@/components/common/ResourceNotFoundDialog";
 import { ResponsiveRecordList } from "@/components/common/ResponsiveRecordList";
 import { Button } from "@/components/ui/button";
@@ -28,6 +25,7 @@ import { Pagination } from "@/components/common/pagination";
 const MODULE_OPTIONS = [
   { value: "", label: "All Sections" },
   { value: "auth", label: "Login & Auth" },
+  { value: "accounts", label: "Accounts" },
   { value: "users", label: "Users" },
   { value: "events", label: "Events" },
   { value: "notices", label: "Notices" },
@@ -35,6 +33,7 @@ const MODULE_OPTIONS = [
   { value: "tenure", label: "Tenure & Members" },
   { value: "certificates", label: "Certificates" },
   { value: "papers", label: "Past Papers" },
+  { value: "media", label: "Media" },
 ];
 
 const ACTION_OPTIONS = [
@@ -45,13 +44,19 @@ const ACTION_OPTIONS = [
   { value: "publish", label: "Publish" },
   { value: "unpublish", label: "Unpublish" },
   { value: "login", label: "Login" },
+  { value: "failed_login", label: "Failed Login" },
   { value: "logout", label: "Logout" },
   { value: "password_change", label: "Password Change" },
   { value: "password_reset", label: "Password Reset" },
 ];
 
-function getActionBadge(action) {
-  switch (action) {
+function cleanUsername(val) {
+  if (!val) return "";
+  return String(val).replace(/^@+/, "").trim();
+}
+
+function getActionBadgeStyle(action) {
+  switch (action?.toLowerCase()) {
     case "create":
       return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20";
     case "update":
@@ -64,11 +69,26 @@ function getActionBadge(action) {
       return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20";
     case "login":
       return "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20";
+    case "failed_login":
+      return "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20";
     case "logout":
       return "bg-muted text-muted-foreground border-border";
     case "password_change":
     case "password_reset":
       return "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20";
+    default:
+      return "bg-muted text-muted-foreground border-border";
+  }
+}
+
+function getRoleBadgeStyle(role) {
+  switch (role?.toLowerCase()) {
+    case "superadmin":
+      return "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20";
+    case "admin":
+      return "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20";
+    case "cms_user":
+      return "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20";
     default:
       return "bg-muted text-muted-foreground border-border";
   }
@@ -158,31 +178,31 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
           </p>
         </div>
 
-        <div className="shrink-0">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="gap-1.5 shadow-2xs w-full sm:w-auto cursor-pointer"
+            className="h-9 px-3 gap-1.5 shadow-2xs font-semibold"
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin text-primary" : "text-muted-foreground"}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
       </div>
 
-      {/* 4 Summary Metric Cards */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Activities */}
         <div className="bg-card p-3 sm:p-5 rounded-xl border border-slate-200/90 dark:border-border shadow-2xs flex items-center justify-between gap-2 min-w-0">
           <div className="space-y-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate">Total Activities</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-              {isSummaryLoading ? "—" : summary?.total_activities ?? 0}
+              {isSummaryLoading ? "—" : summary?.total_logs ?? 0}
             </p>
           </div>
-          <div className="hidden sm:block p-3 shrink-0 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+          <div className="hidden sm:block p-3 shrink-0 bg-primary/10 rounded-xl border border-primary/20 text-primary">
             <Activity className="h-5 w-5" />
           </div>
         </div>
@@ -196,7 +216,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
             </p>
           </div>
           <div className="hidden sm:block p-3 shrink-0 bg-sky-500/10 rounded-xl border border-sky-500/20 text-sky-600 dark:text-sky-400">
-            <LogIn className="h-5 w-5" />
+            <History className="h-5 w-5" />
           </div>
         </div>
 
@@ -240,7 +260,7 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
                 setSearchInput(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search by user, item, or details…"
+              placeholder="Search by name, username, email, or details…"
               className="w-full h-9 pl-9 pr-8 text-xs bg-background border border-input text-foreground rounded-lg focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
             />
             {searchInput && (
@@ -298,18 +318,18 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
                 onClick={handleResetFilters}
                 className="w-full justify-center shadow-2xs"
               >
-                <X className="h-3.5 w-3.5" /> Clear Filters
+                <Filter className="h-3.5 w-3.5 mr-1.5" /> Reset
               </Button>
             </div>
           )}
         </div>
 
-        {/* Date Range Row */}
-        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border text-xs text-muted-foreground">
-          <span className="font-semibold text-muted-foreground flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Date:
+        {/* Date Filter Row */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-xs">
+          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Date Range:
           </span>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 flex-1 sm:flex-none">
             <input
               type="date"
               aria-label="Start date"
@@ -349,29 +369,55 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
               items={logs}
               getKey={(log) => log.id}
               emptyText="No activities match your filters."
-              renderTitle={(log) => log.target_repr || `${log.action} · ${log.module}`}
+              renderTitle={(log) => log.description || `${log.action} · ${log.module}`}
               renderSubtitle={(log) => formatNepalTime(log.timestamp)}
               renderBadge={(log) => (
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getActionBadge(log.action)}`}>
-                    {log.action}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-muted-foreground capitalize">
-                    {log.module}
-                  </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getActionBadgeStyle(log.action)}`}>
+                  {log.action}
                 </span>
               )}
               fields={[
                 {
-                  label: "User",
+                  label: "ID",
                   render: (log) => (
-                    <span className="break-all text-foreground">
-                      {log.user_email_snapshot || "System"}
-                      <span className="block text-[10px] text-primary">{log.user_role_snapshot || "system"}</span>
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {log.actor_sys_id || log.actor_sys_id_snapshot || "—"}
                     </span>
                   ),
                 },
-                { label: "IP Address", render: (log) => <span className="font-mono text-[11px] text-muted-foreground">{log.ip_address || "—"}</span> },
+                {
+                  label: "Actor",
+                  render: (log) => {
+                    const name = log.actor_name || log.actor_name_snapshot || (log.user_email_snapshot ? "Name unavailable" : "System");
+                    const username = cleanUsername(log.actor_username || log.actor_username_snapshot);
+                    return (
+                      <div className="flex flex-col text-foreground">
+                        <span className="font-semibold text-xs">{name}</span>
+                        {username && <span className="text-[10px] text-muted-foreground">{username}</span>}
+                      </div>
+                    );
+                  },
+                },
+                {
+                  label: "Role",
+                  render: (log) => {
+                    const role = log.actor_role_label || log.role_label || log.actor_role || log.user_role_snapshot || "System";
+                    return (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getRoleBadgeStyle(log.actor_role || log.user_role_snapshot)}`}>
+                        {role}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  label: "Env",
+                  render: (log) => (
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {log.ip_address || "—"}
+                      {log.browser_name ? ` (${log.browser_name} · ${log.os_name || log.device_type})` : ""}
+                    </span>
+                  ),
+                },
               ]}
               renderActions={(log) => (
                 <Button
@@ -388,17 +434,18 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
           )}
         </div>
 
+        {/* Desktop Table: Order: id, Actor, Role, Action, env then date and time then detials. */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-muted/40 border-b border-border text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                <th className="py-3 px-4">Date & Time</th>
-                <th className="py-3 px-4">User</th>
-                <th className="py-3 px-4">Action</th>
-                <th className="py-3 px-4">Section</th>
-                <th className="py-3 px-4">Item</th>
-                <th className="py-3 px-4">IP Address</th>
-                <th className="py-3 px-4 text-right">Details</th>
+                <th className="py-3 px-4 w-[11%]">id</th>
+                <th className="py-3 px-4 w-[22%]">Actor</th>
+                <th className="py-3 px-4 w-[14%]">Role</th>
+                <th className="py-3 px-4 w-[14%]">Action</th>
+                <th className="py-3 px-4 w-[16%]">env</th>
+                <th className="py-3 px-4 w-[15%]">date and time</th>
+                <th className="py-3 px-4 w-[8%] text-right">details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border text-foreground">
@@ -418,80 +465,84 @@ export function ActivityLogsPageContent({ initialModalMode = null }) {
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-muted/40 transition-colors">
-                    {/* Timestamp */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="font-semibold text-foreground">
-                        {formatNepalTime(log.timestamp)}
-                      </span>
-                    </td>
+                logs.map((log) => {
+                  const actorSysId = log.actor_sys_id || log.actor_sys_id_snapshot || (log.actor_id_snapshot ? `SYS-${log.actor_id_snapshot}` : "—");
+                  const actorName = log.actor_name || log.actor_name_snapshot || (log.user_email_snapshot ? "Name unavailable" : "System");
+                  const rawUsername = log.actor_username || log.actor_username_snapshot || "";
+                  const displayUsername = cleanUsername(rawUsername);
+                  const actorRole = log.actor_role_label || log.role_label || log.actor_role || log.user_role_snapshot || "System";
 
-                    {/* User */}
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground break-all max-w-56" title={log.user_email_snapshot}>
-                          {log.user_email_snapshot || "System"}
+                  return (
+                    <tr key={log.id} className="hover:bg-muted/40 transition-colors">
+                      {/* 1. id */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="font-mono text-xs font-semibold text-foreground">
+                          {actorSysId}
                         </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20">
-                            {log.user_role_snapshot || "system"}
+                      </td>
+
+                      {/* 2. Actor */}
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col min-w-0 max-w-[240px]">
+                          <span className="font-semibold text-foreground text-xs truncate" title={actorName}>
+                            {actorName}
+                          </span>
+                          {displayUsername && (
+                            <span className="text-[11px] text-muted-foreground truncate" title={displayUsername}>
+                              {displayUsername}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 3. Role */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getRoleBadgeStyle(log.actor_role || log.user_role_snapshot)}`}>
+                          {actorRole}
+                        </span>
+                      </td>
+
+                      {/* 4. Action */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getActionBadgeStyle(log.action)}`}>
+                          {log.action}
+                        </span>
+                      </td>
+
+                      {/* 5. env */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-xs text-foreground font-medium">
+                            {log.ip_address || "—"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground truncate max-w-[150px]" title={log.browser_name ? `${log.browser_name} · ${log.os_name || log.device_type}` : ""}>
+                            {log.browser_name ? `${log.browser_name} · ${log.os_name || log.device_type}` : "—"}
                           </span>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Action */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getActionBadge(
-                          log.action
-                        )}`}
-                      >
-                        {log.action}
-                      </span>
-                    </td>
-
-                    {/* Module */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-muted-foreground capitalize">
-                        {log.module}
-                      </span>
-                    </td>
-
-                    {/* Target / Description */}
-                    <td className="py-3 px-4 max-w-xs">
-                      <div className="flex items-start gap-1.5 min-w-0">
-                        <span className="font-semibold text-foreground line-clamp-2 break-words" title={log.target_repr}>
-                          {log.target_repr || "—"}
+                      {/* 6. date and time */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="font-medium text-foreground text-[11px]">
+                          {formatNepalTime(log.timestamp)}
                         </span>
-                        {log.target_id && (
-                          <span className="shrink-0 px-1 py-0.2 rounded text-[10px] bg-muted text-muted-foreground font-mono">
-                            #{log.target_id}
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Client IP */}
-                    <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-muted-foreground">
-                      {log.ip_address || "—"}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/activity-logs/${log.id}`)}
-                        className="text-primary hover:text-primary hover:bg-primary/10"
-                      >
-                        <Eye className="h-3 w-3" /> View
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                      {/* 7. details */}
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/activity-logs/${log.id}`)}
+                          className="text-primary hover:text-primary hover:bg-primary/10 h-7 px-2.5 text-xs font-semibold"
+                        >
+                          <Eye className="h-3 w-3" /> View
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
